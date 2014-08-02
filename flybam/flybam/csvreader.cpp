@@ -71,6 +71,7 @@ void CsvReader::ConvertPixelToVoltage(float64 *data)
 
     int maxVoltage = 3.0;
 
-    data[0] = x/imageWidth * maxVoltage;
-    data[1] = y/imageHeight * maxVoltage;
+    data[0] = (x/imageWidth * maxVoltage) - maxVoltage/2;
+    data[1] = (y/imageHeight * maxVoltage) - maxVoltage/2;
+
 }
