@@ -2,9 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "fmfreader.h"
-#include "csvreader.h"
-#include <NIDAQmx.h>
 
 using namespace std;
 using namespace cv;
@@ -40,7 +37,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	TaskHandle	taskHandleX=0;
 	TaskHandle	taskHandleY=0;
 
-	float64     data[2] = {0.0, 0.0};
+	float64     dataX[1] = {0.0};
+	float64     dataY[1] = {0.0};
 
 	// DAQmx Configure Code
 	DAQmxCreateTask("",&taskHandleX);
@@ -79,29 +77,34 @@ int _tmain(int argc, _TCHAR* argv[])
 				frame = fmf.ConvertToCvMat();
 
 				imshow("raw image", frame);
-
 				//mog_cpu(frame, fgmask, 0.01);
-
 				//imshow("FG mask", fgmask);
 
 		}
-		else
+		else if (ftype == 2)
 		{
 				success = csv.ReadLine();
-				success = csv.ConvertPixelToVoltage(&data);
+				csv.ConvertPixelToVoltage(dataX, dataY);
 		}
 
+		//printf("%f %f\n", dataX[0], dataY[0]);
+
 		// DAQmx Write Code
-		DAQmxWriteAnalogF64(taskHandleX,1,1,10.0,DAQmx_Val_GroupByChannel,data[0],NULL,NULL);
-		DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,data[1],NULL,NULL);
+		DAQmxWriteAnalogF64(taskHandleX,1,1,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
+		DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
 
-		char key = waitKey(1);
+		waitKey(1);
 
-		if (key == 27)		//press [ESC] to exit
+		if ( GetAsyncKeyState(VK_ESCAPE) )
 			break;
 	}
 
-	printf("\nDone! Press Enter to exit...\n");
+	if (ftype == 1)
+		fmf.Close();
+	else if (ftype == 2)
+		csv.Close();
+
+	printf("\nPress Enter to exit...\n");
 	getchar();
 
 	return 0;

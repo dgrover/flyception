@@ -5,9 +5,7 @@ CsvReader::CsvReader()
 {}
 
 CsvReader::~CsvReader()
-{
-  Close();
-}
+{}
 
 int CsvReader::Open(_TCHAR* fname)
 {
@@ -36,17 +34,17 @@ int CsvReader::Close()
   return 1;
 }
 
-int ReadLine()
+int CsvReader::ReadLine()
 {
 
-  if (fscanf(fp, "%g,%g\n", &x, &y) == 2)
-    return 1;
+  if (fscanf(fp, "%s %f %f\n", n, &x, &y) == 3)
+	  return 1;
   else
-    return -1;
+	  return -1;
 
 }
 
-int GetFrameCount()
+int CsvReader::GetFrameCount()
 {
   int n = 0;
   int ch;
@@ -64,14 +62,14 @@ int GetFrameCount()
   return n;
 }
 
-void CsvReader::ConvertPixelToVoltage(float64 *data)
+void CsvReader::ConvertPixelToVoltage(float64 dataX[], float64 dataY[])
 {
     int imageWidth = 512;
     int imageHeight = 512;
 
     int maxVoltage = 3.0;
 
-    data[0] = (x/imageWidth * maxVoltage) - maxVoltage/2;
-    data[1] = (y/imageHeight * maxVoltage) - maxVoltage/2;
+    dataX[0] = (x/imageWidth * maxVoltage) - maxVoltage/2;
+    dataY[0] = (y/imageHeight * maxVoltage) - maxVoltage/2;
 
 }

@@ -15,5 +15,10 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
 
+#include <NIDAQmx.h>
+
+#include "fmfreader.h"
+#include "csvreader.h"
+
 
 // TODO: reference additional headers your program requires here

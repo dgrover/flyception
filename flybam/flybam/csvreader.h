@@ -6,16 +6,18 @@ class CsvReader
   private:
     FILE *fp;
     float x,y;
+	std::string n;
 
   public:
 
-    CsvReader();
+	CsvReader();
     ~CsvReader();
 
     int Open(_TCHAR *fname);
     int Close();
     int ReadLine();
-    void ConvertPixelToVoltage(float64 *data);
+	int GetFrameCount();
+    void ConvertPixelToVoltage(float64 dataX[], float64 dataY[]);
 };
 
 #endif

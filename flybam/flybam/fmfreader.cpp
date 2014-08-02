@@ -5,9 +5,7 @@ FmfReader::FmfReader()
 {}
 
 FmfReader::~FmfReader()
-{
-		Close();
-}
+{}
 
 int FmfReader::Open(_TCHAR* fname)
 {
