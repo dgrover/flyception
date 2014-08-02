@@ -14,10 +14,14 @@ class FmfReader
 
 	public:
 
+		FmfReader();
+		~FmfReader();
+
 		int Open(_TCHAR *fname);
 		int Close();
 
 		int ReadHeader();
+		int GetFrameCount();
 		int ReadFrame(unsigned long frameIndex);
 		Mat ConvertToCvMat();
 

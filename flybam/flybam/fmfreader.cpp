@@ -1,6 +1,14 @@
 #include "stdafx.h"
 #include "fmfreader.h"
 
+FmfReader::FmfReader()
+{}
+
+FmfReader::~FmfReader()
+{
+		Close();
+}
+
 int FmfReader::Open(_TCHAR* fname)
 {
 	fp = fopen(fname, "rb");
@@ -8,7 +16,7 @@ int FmfReader::Open(_TCHAR* fname)
 	if(fp == NULL) // Cannot open File
 	{
 		printf("Cannot open input video file\n");
-		return -1;	
+		return -1;
 	}
 
 	return 1;
@@ -37,7 +45,7 @@ int FmfReader::ReadHeader()
 	fread(&nframes, sizeof(unsigned __int64), 1, fp);
 
 	buf = new char[bytesPerChunk];
-			
+
 	maxFramesInFile = (unsigned long int)nframes;
 
 	printf(
@@ -47,13 +55,18 @@ int FmfReader::ReadHeader()
 		"Width: %d\n"
 		"Frame Size: %d\n"
 		"Number of Frames: %d\n",
-		fmfVersion, 
-		SizeY, 
-		SizeX, 
-		bytesPerChunk-sizeof(double), 
+		fmfVersion,
+		SizeY,
+		SizeX,
+		bytesPerChunk-sizeof(double),
 		nframes);
 
 	return 1;
+}
+
+int FmfReader::GetFrameCount()
+{
+		return nframes;
 }
 
 int FmfReader::ReadFrame(unsigned long frameIndex)
@@ -65,13 +78,13 @@ int FmfReader::ReadFrame(unsigned long frameIndex)
 
 	fread(buf, sizeof(double), 1, fp);
 	fread(buf, bytesPerChunk-sizeof(double), 1, fp);
-	
-	return 1;	
+
+	return 1;
 }
 
 Mat FmfReader::ConvertToCvMat()
 {
 	Mat frame = Mat(SizeY, SizeX, CV_8UC1, buf, (bytesPerChunk-sizeof(double))/SizeY); //byte size of each row of frame
-	
+
 	return frame;
 }
