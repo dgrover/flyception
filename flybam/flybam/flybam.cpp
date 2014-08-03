@@ -6,6 +6,16 @@
 using namespace std;
 using namespace cv;
 
+struct mouse_pos { int x,y; };
+struct mouse_pos mouse_info = {-1,-1}, last_mouse;
+
+void on_mouse(int event, int x, int y, int flags, void* param)
+{
+    last_mouse = mouse_info;
+    mouse_info.x = x;
+    mouse_info.y = y;
+}
+
 string GetFileExtension(const string& FileName)
 {
     if(FileName.find_last_of(".") != string::npos)
@@ -15,24 +25,53 @@ string GetFileExtension(const string& FileName)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	if (argc != 2)
-	{
-		printf("Filename not specified... exiting\n");
-		return -1;
-	}
 
-	string fname = string(argv[1]);
-	string fext = GetFileExtension(fname);
+  int ftype = 0;
 
-	int ftype;
+  string fext;
+  int nframes, success;
 
-	if (fext == "fmf")
-		ftype = 1;
-	else if (fext == "txt")
-		ftype = 2;
+  CsvReader csv;
+  FmfReader fmf;
 
-	CsvReader csv;
-	FmfReader fmf;
+  Mat mimg(512, 512, CV_8UC3);
+
+  if (argc == 2)
+  {
+      fext = GetFileExtension(string(argv[1]));
+
+      if (fext == "fmf")
+      {
+        ftype = 1;
+        success = fmf.Open(argv[1]);
+        success = fmf.ReadHeader();
+        nframes = fmf.GetFrameCount();
+      }
+      else if (fext == "txt")
+      {
+        ftype = 2;
+        success = csv.Open(argv[1]);
+        nframes = csv.GetFrameCount();
+      }
+  }
+  else
+  {
+      printf("Filename not specified. Switching to mouse control...\n");
+
+      nframes = -1;
+      namedWindow("mouse kalman");
+      setMouseCallback("mouse kalman", on_mouse, 0);
+
+      if (mouse_info.x < 0 || mouse_info.y < 0)
+      {
+          imshow("mouse kalman", mimg);
+          waitKey(30);
+          continue;
+      }
+  }
+  
+  Tracker tkf(mouse_info.x, mouse_info.y);
+
 
 	TaskHandle	taskHandleX=0;
 	TaskHandle	taskHandleY=0;
@@ -51,24 +90,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	DAQmxStartTask(taskHandleY);
 
 	BackgroundSubtractorMOG mog_cpu;
-
 	Mat frame, fgmask;
 
-	int nframes, success;
-
-	if (ftype == 1)
-	{
-			success = fmf.Open(argv[1]);
-			success = fmf.ReadHeader();
-			nframes = fmf.GetFrameCount();
-	}
-	else
-	{
-			success = csv.Open(argv[1]);
-			nframes = csv.GetFrameCount();
-	}
-
-	for (int imageCount = 0; imageCount < nframes; imageCount++)
+	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 
 		if (ftype == 1)
@@ -86,6 +110,25 @@ int _tmain(int argc, _TCHAR* argv[])
 				success = csv.ReadLine();
 				csv.ConvertPixelToVoltage(dataX, dataY);
 		}
+    else if (ftype == 0)
+    {
+        tkf.Predict(mouse_info.x, mouse_info.y);
+        tkf.Correct();
+
+        int ms = tkf.mousev.size();
+        int ks = tkf.kalmanv.size();
+
+        if (ms > 1)
+          line(mimg, tkf.mousev[ms-1], tkf.mousev[ms-2], Scalar(255,255,0), 1);
+
+        if (ks > 1)
+          line(mimg, tkf.kalmanv[ks-1], tkf.kalmanv[ks-2], Scalar(0,255,0), 1);
+
+        imshow( "mouse kalman", mimg );
+
+        tkf.ConvertPixelToVoltage(dataX, dataY);
+
+    }
 
 		//printf("%f %f\n", dataX[0], dataY[0]);
 
