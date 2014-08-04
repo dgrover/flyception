@@ -32,7 +32,7 @@ int _tmain(int argc, _TCHAR* argv[])
   CsvReader csv;
   FmfReader fmf;
 
-  Mat img(512, 512, CV_8UC3);
+  Mat img(512, 512, CV_8UC3, Scalar(0,0,0));
 
   if (argc == 2)
   {
@@ -60,13 +60,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
       namedWindow("mouse kalman");
       setMouseCallback("mouse kalman", on_mouse, 0);
-
-      if (mouse_info.x < 0 || mouse_info.y < 0)
-      {
-          imshow("mouse kalman", img);
-          waitKey(30);
-          continue;
-      }
   }
 
   Tracker tkf(mouse_info.x, mouse_info.y);
@@ -120,11 +113,11 @@ int _tmain(int argc, _TCHAR* argv[])
           line(img, tkf.mmtv[ms-1], tkf.mmtv[ms-2], Scalar(255,255,0), 1);
 
         if (es > 1)
-          line(img, tkf.estv[ks-1], tkf.estv[ks-2], Scalar(0,255,0), 1);
+          line(img, tkf.estv[es-1], tkf.estv[es-2], Scalar(0,255,0), 1);
 
-        imshow( "mouse kalman", img );
+		imshow( "mouse kalman", img );
 
-        tkf.ConvertPixelToVoltage(dataX, dataY);
+        tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
 
     }
 

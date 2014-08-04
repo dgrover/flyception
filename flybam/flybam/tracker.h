@@ -8,9 +8,9 @@ class Tracker
 {
     private:
 
-      KalmanFilter KF(4, 2, 0);
-      Mat_<float> measurement(2,1);
-
+      KalmanFilter KF;
+	  Mat_<float> measurement;
+      
     public:
 
       vector<Point> mmtv, predv, estv;
@@ -20,7 +20,7 @@ class Tracker
 
       void Predict(int x, int y);
       void Correct();
-      void ConvertPixelToVoltage(float64 dataX[], float64 dataY[]);
+      void ConvertPixelToVoltage(int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[]);
 };
 
 #endif
