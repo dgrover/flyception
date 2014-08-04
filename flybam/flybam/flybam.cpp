@@ -7,11 +7,10 @@ using namespace std;
 using namespace cv;
 
 struct mouse_pos { int x,y; };
-struct mouse_pos mouse_info = {-1,-1}, last_mouse;
+struct mouse_pos mouse_info = {-1,-1};
 
 void on_mouse(int event, int x, int y, int flags, void* param)
 {
-    last_mouse = mouse_info;
     mouse_info.x = x;
     mouse_info.y = y;
 }
@@ -25,7 +24,6 @@ string GetFileExtension(const string& FileName)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-
   int ftype = 0;
 
   string fext;
@@ -34,7 +32,7 @@ int _tmain(int argc, _TCHAR* argv[])
   CsvReader csv;
   FmfReader fmf;
 
-  Mat mimg(512, 512, CV_8UC3);
+  Mat img(512, 512, CV_8UC3);
 
   if (argc == 2)
   {
@@ -56,22 +54,22 @@ int _tmain(int argc, _TCHAR* argv[])
   }
   else
   {
-      printf("Filename not specified. Switching to mouse control...\n");
+      printf("File not specified. Switching to mouse control...\n");
 
       nframes = -1;
+
       namedWindow("mouse kalman");
       setMouseCallback("mouse kalman", on_mouse, 0);
 
       if (mouse_info.x < 0 || mouse_info.y < 0)
       {
-          imshow("mouse kalman", mimg);
+          imshow("mouse kalman", img);
           waitKey(30);
           continue;
       }
   }
-  
-  Tracker tkf(mouse_info.x, mouse_info.y);
 
+  Tracker tkf(mouse_info.x, mouse_info.y);
 
 	TaskHandle	taskHandleX=0;
 	TaskHandle	taskHandleY=0;
@@ -101,8 +99,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				frame = fmf.ConvertToCvMat();
 
 				imshow("raw image", frame);
-				//mog_cpu(frame, fgmask, 0.01);
-				//imshow("FG mask", fgmask);
+				mog_cpu(frame, fgmask, 0.01);
+				imshow("FG mask", fgmask);
 
 		}
 		else if (ftype == 2)
@@ -115,16 +113,16 @@ int _tmain(int argc, _TCHAR* argv[])
         tkf.Predict(mouse_info.x, mouse_info.y);
         tkf.Correct();
 
-        int ms = tkf.mousev.size();
-        int ks = tkf.kalmanv.size();
+        int ms = tkf.mmtv.size();
+        int es = tkf.estv.size();
 
         if (ms > 1)
-          line(mimg, tkf.mousev[ms-1], tkf.mousev[ms-2], Scalar(255,255,0), 1);
+          line(img, tkf.mmtv[ms-1], tkf.mmtv[ms-2], Scalar(255,255,0), 1);
 
-        if (ks > 1)
-          line(mimg, tkf.kalmanv[ks-1], tkf.kalmanv[ks-2], Scalar(0,255,0), 1);
+        if (es > 1)
+          line(img, tkf.estv[ks-1], tkf.estv[ks-2], Scalar(0,255,0), 1);
 
-        imshow( "mouse kalman", mimg );
+        imshow( "mouse kalman", img );
 
         tkf.ConvertPixelToVoltage(dataX, dataY);
 
