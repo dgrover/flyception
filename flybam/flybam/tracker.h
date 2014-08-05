@@ -15,7 +15,7 @@ class Tracker
 
       vector<Point> mmtv, predv, estv;
 
-      Tracker(int x, int y);
+      Tracker();
       ~Tracker();
 
       void Predict(int x, int y);

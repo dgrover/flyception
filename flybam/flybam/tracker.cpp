@@ -1,15 +1,15 @@
 #include "stdafx.h"
 #include "tracker.h"
 
-Tracker::Tracker(int x, int y)
+Tracker::Tracker()
 {
     KF.init(4, 2, 0);
 	
 	measurement.create(2,1);
 	measurement.setTo(Scalar(0));
 
-    KF.statePre.at<float>(0) = x;
-    KF.statePre.at<float>(1) = y;
+    KF.statePre.at<float>(0) = -1;
+    KF.statePre.at<float>(1) = -1;
     KF.statePre.at<float>(2) = 0;
     KF.statePre.at<float>(3) = 0;
     KF.transitionMatrix = *(Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
