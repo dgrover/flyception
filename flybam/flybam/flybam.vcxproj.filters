@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="csvreader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="flybam.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -35,9 +32,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="csvreader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="fmfreader.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -10,10 +10,9 @@ class Tracker
 
       KalmanFilter KF;
 	  Mat_<float> measurement;
-      
-    public:
+	  vector<Point> mt, pred, est;
 
-      vector<Point> mmtv, predv, estv;
+    public:
 
       Tracker();
       ~Tracker();

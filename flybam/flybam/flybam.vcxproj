@@ -171,7 +171,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="csvreader.cpp" />
     <ClCompile Include="flybam.cpp" />
     <ClCompile Include="flycam.cpp" />
     <ClCompile Include="fmfreader.cpp" />
@@ -184,7 +183,6 @@
     <ClCompile Include="tracker.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="csvreader.h" />
     <ClInclude Include="flycam.h" />
     <ClInclude Include="fmfreader.h" />
     <ClInclude Include="stdafx.h" />

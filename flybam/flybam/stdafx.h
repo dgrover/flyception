@@ -24,7 +24,6 @@
 
 #include "flycam.h"
 #include "fmfreader.h"
-#include "csvreader.h"
 #include "tracker.h"
 
 // TODO: reference additional headers your program requires here

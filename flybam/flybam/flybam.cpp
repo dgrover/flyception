@@ -7,20 +7,10 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-string GetFileExtension(const string& FileName)
-{
-    if(FileName.find_last_of(".") != string::npos)
-        return FileName.substr(FileName.find_last_of(".")+1);
-    return "";
-}
-
 int _tmain(int argc, _TCHAR* argv[])
 {
 	
-	Flycam wcam;
-
-	int ftype = 0;
-	bool track = false;
+	Flycam arena_cam;
 
 	BusManager busMgr;
 	unsigned int numCameras;
@@ -28,31 +18,18 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Error error;
 	
-	string fext;
 	int nframes, success;
 
-	CsvReader csv;
 	FmfReader fmf;
-
-	//Mat img(512, 512, CV_8UC3, Scalar(0,0,0));
 
 	if (argc == 2)
 	{
-		fext = GetFileExtension(string(argv[1]));
+		fmf.GetFileExtension(string(argv[1]));
 
-		if (fext == "fmf")
-		{
-			ftype = 1;
-			success = fmf.Open(argv[1]);
-			success = fmf.ReadHeader();
-			nframes = fmf.GetFrameCount();
-		}
-		else if (fext == "txt")
-		{
-			ftype = 2;
-			success = csv.Open(argv[1]);
-			nframes = csv.GetFrameCount();
-		}
+		success = fmf.Open(argv[1]);
+
+		success = fmf.ReadHeader();
+		nframes = fmf.GetFrameCount();
 	}
 	else
 	{
@@ -82,7 +59,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
-		error = wcam.Connect(guid);
+		error = arena_cam.Connect(guid);
 
 		if (error != PGRERROR_OK)
 		{
@@ -90,7 +67,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
-		error = wcam.SetCameraParameters();
+		error = arena_cam.SetCameraParameters();
 
 		if (error != PGRERROR_OK)
 		{
@@ -99,15 +76,13 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 
 		// Start wide-field camera
-		error = wcam.Start();
+		error = arena_cam.Start();
 		
 		if (error != PGRERROR_OK)
 		{
 			error.PrintErrorTrace();
 			return -1;
 		}
-
-		printf("Streaming. Press [SPACE] to start tracking\n\n");
 	}
 
 	Tracker tkf;
@@ -137,57 +112,49 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		if (ftype != 2)
+		if (argc == 2)
 		{
-			if (ftype == 1)
-			{
-				success = fmf.ReadFrame(imageCount);
-				frame = fmf.ConvertToCvMat();
-
-			}
-			else if (ftype == 0)
-			{
-				error = wcam.GrabFrame();
-				
-				if (error != PGRERROR_OK)
-				{
-					error.PrintErrorTrace();
-					return -1;
-				}
-
-				frame = wcam.ConvertImage2Mat();
-			}
-
-			mog_cpu(frame, fgmask, 0.01);
-
-			findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
-			vector<RotatedRect> minEllipse(contours.size());
-
-			for (int i = 0; i < contours.size(); i++)
-			{
-				if (contours[i].size() > 25)
-				{
-					minEllipse[i] = fitEllipse(Mat(contours[i]));
-					drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
-					circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-					ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
-
-					tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
-					tkf.Correct();
-
-					tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
-				}
-			}
-								
-			imshow("raw image", frame);
-			imshow("FG mask", fgmask);
-
+			success = fmf.ReadFrame(imageCount);
+			
+			if (fmf.fext == "fmf")
+				frame = fmf.ConvertToMat();
 		}
-		else if (ftype == 2)
+		else
 		{
-				success = csv.ReadLine();
-				csv.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
+			error = arena_cam.GrabFrame();
+			
+			if (error != PGRERROR_OK)
+			{
+				error.PrintErrorTrace();
+				return -1;
+			}
+
+			frame = arena_cam.ConvertImage2Mat();
 		}
+
+		mog_cpu(frame, fgmask, 0.01);
+
+		findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+		vector<RotatedRect> minEllipse(contours.size());
+
+		for (int i = 0; i < contours.size(); i++)
+		{
+			if (contours[i].size() > 25)
+			{
+				minEllipse[i] = fitEllipse(Mat(contours[i]));
+				drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
+				circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+				ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
+
+				tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
+				tkf.Correct();
+
+				tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
+			}
+		}
+
+		imshow("raw image", frame);
+		imshow("FG mask", fgmask);
 
 		//printf("%f %f\n", dataX[0], dataY[0]);
 
@@ -201,13 +168,11 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 	}
 
-	if (ftype == 0)
-		wcam.Stop();
-	else if (ftype == 1)
+	if (argc == 2)
 		fmf.Close();
-	else if (ftype == 2)
-		csv.Close();
-
+	else
+		arena_cam.Stop();
+	
 	printf("\nPress Enter to exit...\n");
 	getchar();
 

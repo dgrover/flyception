@@ -7,13 +7,21 @@ FmfReader::FmfReader()
 FmfReader::~FmfReader()
 {}
 
+void FmfReader::GetFileExtension(const string& fname)
+{
+	if (fname.find_last_of(".") != string::npos)
+		fext = fname.substr(fname.find_last_of(".") + 1);
+	else 
+		fext = "";
+}
+
 int FmfReader::Open(_TCHAR* fname)
 {
 	fp = fopen(fname, "rb");
 
-	if(fp == NULL) // Cannot open File
+	if(fp == NULL) // Cannot open file
 	{
-		printf("Cannot open input video file\n");
+		printf("Cannot open input file\n");
 		return -1;
 	}
 
@@ -36,51 +44,81 @@ int FmfReader::Close()
 
 int FmfReader::ReadHeader()
 {
-	fread(&fmfVersion, sizeof(unsigned __int32), 1, fp);
-	fread(&SizeY, sizeof(unsigned __int32), 1, fp);
-	fread(&SizeX, sizeof(unsigned __int32), 1, fp);
-	fread(&bytesPerChunk, sizeof(unsigned __int64), 1, fp);
-	fread(&nframes, sizeof(unsigned __int64), 1, fp);
+	if (fext == "fmf")
+	{
+		fread(&fmfVersion, sizeof(unsigned __int32), 1, fp);
+		fread(&SizeY, sizeof(unsigned __int32), 1, fp);
+		fread(&SizeX, sizeof(unsigned __int32), 1, fp);
+		fread(&bytesPerChunk, sizeof(unsigned __int64), 1, fp);
+		fread(&nframes, sizeof(unsigned __int64), 1, fp);
 
-	buf = new char[bytesPerChunk];
+		buf = new char[bytesPerChunk];
 
-	maxFramesInFile = (unsigned long int)nframes;
+		maxFramesInFile = (unsigned long int)nframes;
 
-	printf(
-		"\n*** VIDEO INFORMATION ***\n"
-		"FMF Version: %d\n"
-		"Height: %d\n"
-		"Width: %d\n"
-		"Frame Size: %d\n"
-		"Number of Frames: %d\n",
-		fmfVersion,
-		SizeY,
-		SizeX,
-		bytesPerChunk-sizeof(double),
-		nframes);
+		printf(
+			"\n*** VIDEO INFORMATION ***\n"
+			"FMF Version: %d\n"
+			"Height: %d\n"
+			"Width: %d\n"
+			"Frame Size: %d\n"
+			"Number of Frames: %d\n",
+			fmfVersion,
+			SizeY,
+			SizeX,
+			bytesPerChunk - sizeof(double),
+			nframes);
+	}
 
 	return 1;
 }
 
 int FmfReader::GetFrameCount()
 {
-		return nframes;
+	if (fext == "txt")
+	{
+		nframes = 0;
+		int ch;
+
+		while (!feof(fp))
+		{
+			ch = fgetc(fp);
+			if (ch == '\n')
+				nframes++;
+		}
+
+		//seek to beginning of file after counting number of lines
+		rewind(fp);
+	}
+
+	return nframes;
 }
 
 int FmfReader::ReadFrame(unsigned long frameIndex)
 {
-	if((long)frameIndex>=0L && (long)frameIndex < maxFramesInFile)
-		fseek (fp, frameIndex*bytesPerChunk + 28 , SEEK_SET );
-	else
-		return -1; // Cannot grab .. illegal frame number
+	if (fext == "fmf")
+	{
+		if ((long)frameIndex >= 0L && (long)frameIndex < maxFramesInFile)
+			fseek(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
+		else
+			return -1; // Cannot grab .. illegal frame number
 
-	fread(buf, sizeof(double), 1, fp);
-	fread(buf, bytesPerChunk-sizeof(double), 1, fp);
+		fread(buf, sizeof(double), 1, fp);
+		fread(buf, bytesPerChunk - sizeof(double), 1, fp);
+
+	}
+	else if (fext == "txt")
+	{
+		if (fscanf(fp, "%f %f\n", &x, &y) == 2)
+			return 1;
+		else
+			return -1;
+	}
 
 	return 1;
 }
 
-Mat FmfReader::ConvertToCvMat()
+Mat FmfReader::ConvertToMat()
 {
 	Mat frame = Mat(SizeY, SizeX, CV_8UC1, buf, (bytesPerChunk-sizeof(double))/SizeY); //byte size of each row of frame
 
