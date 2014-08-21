@@ -62,13 +62,8 @@ int CsvReader::GetFrameCount()
   return n;
 }
 
-void CsvReader::ConvertPixelToVoltage(float64 dataX[], float64 dataY[])
+void CsvReader::ConvertPixelToVoltage(int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[])
 {
-    int imageWidth = 512;
-    int imageHeight = 512;
-
-    int maxVoltage = 3.0;
-
     dataX[0] = (x/imageWidth * maxVoltage) - maxVoltage/2;
     dataY[0] = (y/imageHeight * maxVoltage) - maxVoltage/2;
 

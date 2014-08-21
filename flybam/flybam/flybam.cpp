@@ -4,18 +4,8 @@
 #include "stdafx.h"
 
 using namespace std;
+using namespace FlyCapture2;
 using namespace cv;
-
-//struct mouse_pos { int x,y; };
-//struct mouse_pos mouse_info = {-1,-1};
-
-Point center;
-
-void on_mouse(int event, int x, int y, int flags, void* param)
-{
-    center.x = x;
-    center.y = y;
-}
 
 string GetFileExtension(const string& FileName)
 {
@@ -26,15 +16,25 @@ string GetFileExtension(const string& FileName)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	int ftype = 0;
+	
+	Flycam wcam;
 
+	int ftype = 0;
+	bool track = false;
+
+	BusManager busMgr;
+	unsigned int numCameras;
+	PGRGuid guid;
+
+	Error error;
+	
 	string fext;
 	int nframes, success;
 
 	CsvReader csv;
 	FmfReader fmf;
 
-	Mat img(512, 512, CV_8UC3, Scalar(0,0,0));
+	//Mat img(512, 512, CV_8UC3, Scalar(0,0,0));
 
 	if (argc == 2)
 	{
@@ -56,12 +56,58 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	else
 	{
-		printf("File not specified. Switching to mouse control...\n");
-
 		nframes = -1;
 
-		namedWindow("mouse kalman");
-		setMouseCallback("mouse kalman", on_mouse, 0);
+		error = busMgr.GetNumOfCameras(&numCameras);
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		printf("Number of cameras detected: %u\n", numCameras);
+
+		if (numCameras < 1)
+		{
+			printf("Insufficient number of cameras... exiting\n");
+			return -1;
+		}
+
+		error = busMgr.GetCameraFromIndex(0, &guid);
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		error = wcam.Connect(guid);
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		error = wcam.SetCameraParameters();
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		// Start wide-field camera
+		error = wcam.Start();
+		
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		printf("Streaming. Press [SPACE] to start tracking\n\n");
 	}
 
 	Tracker tkf;
@@ -91,60 +137,56 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		if (ftype == 1)
+		if (ftype != 2)
 		{
+			if (ftype == 1)
+			{
 				success = fmf.ReadFrame(imageCount);
 				frame = fmf.ConvertToCvMat();
 
-				mog_cpu(frame, fgmask, 0.01);
-
-				findContours( fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
-				vector<RotatedRect> minEllipse( contours.size() );
+			}
+			else if (ftype == 0)
+			{
+				error = wcam.GrabFrame();
 				
-				for( int i = 0; i < contours.size(); i++ )
+				if (error != PGRERROR_OK)
 				{
-	       			if( contours[i].size() > 25 )
-					{	
-						minEllipse[i] = fitEllipse( Mat(contours[i]) );
-						
-						drawContours( fgmask, contours, 0, Scalar(255,255,255), CV_FILLED, 8, hierarchy );		
-						circle( frame, minEllipse[i].center, 1, Scalar(255,255,255), CV_FILLED, 1 );
-						ellipse( frame, minEllipse[i], Scalar(255,255,255), 1, 1 );
-					
-						tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
-						tkf.Correct();
-
-						tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
-					}
-				
+					error.PrintErrorTrace();
+					return -1;
 				}
+
+				frame = wcam.ConvertImage2Mat();
+			}
+
+			mog_cpu(frame, fgmask, 0.01);
+
+			findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+			vector<RotatedRect> minEllipse(contours.size());
+
+			for (int i = 0; i < contours.size(); i++)
+			{
+				if (contours[i].size() > 25)
+				{
+					minEllipse[i] = fitEllipse(Mat(contours[i]));
+					drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
+					circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+					ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
+
+					tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
+					tkf.Correct();
+
+					tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
+				}
+			}
 								
-				imshow("raw image", frame);
-				imshow("FG mask", fgmask);
+			imshow("raw image", frame);
+			imshow("FG mask", fgmask);
+
 		}
 		else if (ftype == 2)
 		{
 				success = csv.ReadLine();
-				csv.ConvertPixelToVoltage(dataX, dataY);
-		}
-		else if (ftype == 0)
-		{
-			tkf.Predict(center.x, center.y);
-			tkf.Correct();
-
-			int ms = tkf.mmtv.size();
-			int es = tkf.estv.size();
-
-			if (ms > 1)
-			  line(img, tkf.mmtv[ms-1], tkf.mmtv[ms-2], Scalar(255,255,0), 1);
-
-			if (es > 1)
-			  line(img, tkf.estv[es-1], tkf.estv[es-2], Scalar(0,255,0), 1);
-
-			imshow( "mouse kalman", img );
-
-			tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
-
+				csv.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
 		}
 
 		//printf("%f %f\n", dataX[0], dataY[0]);
@@ -159,7 +201,9 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 	}
 
-	if (ftype == 1)
+	if (ftype == 0)
+		wcam.Stop();
+	else if (ftype == 1)
 		fmf.Close();
 	else if (ftype == 2)
 		csv.Close();
