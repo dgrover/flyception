@@ -7,15 +7,15 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-void ConvertPixelToVoltage(Point p, int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[])
+void ConvertPixelToVoltage(Point2f p, int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[])
 {
-	dataX[0] = ((float)(p.x) / imageWidth * maxVoltage) - maxVoltage / 2;
-	dataY[0] = ((float)(p.y) / imageHeight * maxVoltage) - maxVoltage / 2;
+	dataX[0] = (p.x / imageWidth * maxVoltage) - maxVoltage / 2;
+	dataY[0] = (p.y / imageHeight * maxVoltage) - maxVoltage / 2;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	Point p;
+	Point2f p;
 
 	Flycam arena_cam;
 
@@ -155,7 +155,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		else
 			p = fmf.ReadFrame();		//Read coordinates from txt file
 
-		ConvertPixelToVoltage(p, imageWidth, imageHeight, 3.0, dataX, dataY);
+		ConvertPixelToVoltage(p, imageWidth, imageHeight, 5.0, dataX, dataY);
 		//printf("%f %f\n", dataX[0], dataY[0]);
 
 		// DAQmx Write Code

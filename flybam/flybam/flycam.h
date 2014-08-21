@@ -37,7 +37,8 @@ public:
 	Error SetCameraParameters();
 	Error Start();
 	Error Stop();
-	Error GrabFrame();
+	Mat GrabFrame();
+	void GetImageSize(int &imageWidth, int &imageHeight);
 };
 
 #endif

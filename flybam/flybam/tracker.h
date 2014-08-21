@@ -19,7 +19,7 @@ class Tracker
 
       void Predict(int x, int y);
       void Correct();
-	  void GetTrackedPoint(Point &p);
+	  void GetTrackedPoint(Point2f &p);
 };
 
 #endif

@@ -121,17 +121,17 @@ Mat FmfReader::ReadFrame(unsigned long frameIndex)
 	return frame;
 }
 
-Point FmfReader::ReadFrame()
+Point2f FmfReader::ReadFrame()
 {
-	Point p;
+	Point2f p;
 
 	string n;
 	float x,y;
 
 	if (fscanf(fp, "%s %f %f\n", n, &x, &y) == 3)
 	{
-		(float)(p.x) = x;
-		(float)(p.y) = y;
+		p.x = x;
+		p.y = y;
 	}
 
 	return p;

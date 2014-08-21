@@ -47,7 +47,7 @@ void Tracker::Correct()
     est.push_back(statePt);
 }
 
-void Tracker::GetTrackedPoint(Point &p)
+void Tracker::GetTrackedPoint(Point2f &p)
 {
 	int size = est.size();
 
