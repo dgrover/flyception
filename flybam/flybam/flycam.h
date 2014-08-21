@@ -10,7 +10,7 @@ class Flycam
 private:
 	Camera cam;
 	CameraInfo camInfo;
-	
+
 	Image rawImage, convertedImage;
 	TimeStamp timestamp;
 
@@ -38,8 +38,6 @@ public:
 	Error Start();
 	Error Stop();
 	Error GrabFrame();
-	cv::Mat ConvertImage2Mat();
-
 };
 
 #endif

@@ -11,7 +11,7 @@ void FmfReader::GetFileExtension(const string &fname)
 {
 	if (fname.find_last_of(".") != string::npos)
 		fext = fname.substr(fname.find_last_of(".") + 1);
-	else 
+	else
 		fext = "";
 }
 
@@ -25,8 +25,9 @@ int FmfReader::Open(_TCHAR* fname)
 		return -1;
 	}
 
-	return 1;
+	GetFileExtension(string(fname));
 
+	return 1;
 }
 
 int FmfReader::Close()
@@ -112,7 +113,7 @@ Mat FmfReader::ReadFrame(unsigned long frameIndex)
 {
 	if ((long)frameIndex >= 0L && (long)frameIndex < maxFramesInFile)
 		fseek(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
-	
+
 	fread(buf, sizeof(double), 1, fp);
 	fread(buf, bytesPerChunk - sizeof(double), 1, fp);
 
@@ -120,10 +121,18 @@ Mat FmfReader::ReadFrame(unsigned long frameIndex)
 	return frame;
 }
 
-int FmfReader::ReadFrame()
+Point FmfReader::ReadFrame()
 {
-	if (fscanf(fp, "%f %f\n", &x, &y) == 2)
-		return 1;
-	else
-		return -1;
+	Point p;
+
+	string n;
+	float x,y;
+
+	if (fscanf(fp, "%s %f %f\n", n, &x, &y) == 3)
+	{
+		(float)(p.x) = x;
+		(float)(p.y) = y;
+	}
+
+	return p;
 }

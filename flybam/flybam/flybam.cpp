@@ -24,16 +24,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	PGRGuid guid;
 
 	Error error;
-	
-	int nframes, success;
 
-	int imageWidth, imageHeight;
+	int nframes, imageWidth, imageHeight, success;
 
 	FmfReader fmf;
 
 	if (argc == 2)
 	{
-		fmf.GetFileExtension(string(argv[1]));
+		//fmf.GetFileExtension(string(argv[1]));
 
 		success = fmf.Open(argv[1]);
 		success = fmf.ReadHeader();
@@ -60,6 +58,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
+		//Get arena camera information
 		error = busMgr.GetCameraFromIndex(0, &guid);
 
 		if (error != PGRERROR_OK)
@@ -84,9 +83,11 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
-		// Start wide-field camera
+		arena_cam.GetImageSize(imageWidth, imageHeight);
+
+		// Start arena camera
 		error = arena_cam.Start();
-		
+
 		if (error != PGRERROR_OK)
 		{
 			error.PrintErrorTrace();
@@ -124,40 +125,35 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (argc == 2)
 			frame = fmf.ReadFrame(imageCount);
 		else
+		 	frame = arena_cam.GrabFrame();
+
+		if (!frame.empty())
 		{
-			error = arena_cam.GrabFrame();
-			
-			if (error != PGRERROR_OK)
-			{
-				error.PrintErrorTrace();
-				return -1;
-			}
+					mog_cpu(frame, fgmask, 0.01);
 
-			frame = arena_cam.ConvertImage2Mat();
+					findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+					vector<RotatedRect> minEllipse(contours.size());
+
+					for (int i = 0; i < contours.size(); i++)
+					{
+						if (contours[i].size() > 25)
+						{
+							minEllipse[i] = fitEllipse(Mat(contours[i]));
+							drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
+							circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+							ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
+
+							tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
+							tkf.Correct();
+							tkf.GetTrackedPoint(p);
+						}
+					}
+
+					imshow("raw image", frame);
+					imshow("FG mask", fgmask);
 		}
-
-		mog_cpu(frame, fgmask, 0.01);
-
-		findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
-		vector<RotatedRect> minEllipse(contours.size());
-
-		for (int i = 0; i < contours.size(); i++)
-		{
-			if (contours[i].size() > 25)
-			{
-				minEllipse[i] = fitEllipse(Mat(contours[i]));
-				drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
-				circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-				ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
-
-				tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
-				tkf.Correct();
-				tkf.GetTrackedPoint(p);
-			}
-		}
-
-		imshow("raw image", frame);
-		imshow("FG mask", fgmask);
+		else
+			p = fmf.ReadFrame();		//Read coordinates from txt file
 
 		ConvertPixelToVoltage(p, imageWidth, imageHeight, 3.0, dataX, dataY);
 		//printf("%f %f\n", dataX[0], dataY[0]);
@@ -176,7 +172,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		fmf.Close();
 	else
 		arena_cam.Stop();
-	
+
 	printf("\nPress Enter to exit...\n");
 	getchar();
 

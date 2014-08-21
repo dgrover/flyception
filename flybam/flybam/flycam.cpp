@@ -5,7 +5,6 @@ Flycam::Flycam()
 {
 	k_fmt7Mode = MODE_0;
 	k_fmt7PixFmt = PIXEL_FORMAT_RAW8;
-
 }
 
 Flycam::~Flycam()
@@ -55,7 +54,7 @@ Error Flycam::Start()
 {
 	// Start capturing images
 	error = cam.StartCapture();
-	
+
 	return error;
 }
 
@@ -70,7 +69,7 @@ Error Flycam::Stop()
 	return error;
 }
 
-Error Flycam::GrabFrame()
+Mat Flycam::GrabFrame()
 {
 	// Retrieve an image
 	error = cam.RetrieveBuffer(&rawImage);
@@ -81,11 +80,6 @@ Error Flycam::GrabFrame()
 	// Convert the raw image
 	error = rawImage.Convert(PIXEL_FORMAT_MONO8, &convertedImage);
 
-	return error;
-}
-
-Mat Flycam::ConvertImage2Mat()
-{
 	// convert to OpenCV Mat
 	unsigned int rowBytes = (double)convertedImage.GetReceivedDataSize() / (double)convertedImage.GetRows();
 	Mat frame = Mat(convertedImage.GetRows(), convertedImage.GetCols(), CV_8UC1, convertedImage.GetData(), rowBytes);
@@ -93,4 +87,8 @@ Mat Flycam::ConvertImage2Mat()
 	return frame;
 }
 
-
+void Flycam::GetImageSize(int &imageWidth, int &imageHeight)
+{
+		imageWidth = fmt7ImageSettings.width;
+		imageHeight = fmt7ImageSettings.height;
+}

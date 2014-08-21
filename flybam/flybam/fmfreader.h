@@ -7,13 +7,11 @@ class FmfReader
 {
 	private:
 		FILE *fp;
-		
+
 		unsigned __int32 fmfVersion, SizeY, SizeX;
 		unsigned __int64 bytesPerChunk, nframes;
 		long maxFramesInFile;
 		char *buf;
-
-		float x, y;
 
 		string fext;
 
@@ -22,16 +20,16 @@ class FmfReader
 		FmfReader();
 		~FmfReader();
 
-		void GetFileExtension(const string& fname);
+		void GetFileExtension(const string &fname);
 
 		int Open(_TCHAR *fname);
 		int Close();
 
 		int ReadHeader();
-		int ReadFrame();
+		Point ReadFrame();
 		Mat ReadFrame(unsigned long frameIndex);
 		int GetFrameCount();
-		void GetImageSize(int& imageWidth, int& imageHeight);
+		void GetImageSize(int &imageWidth, int &imageHeight);
 };
 
 #endif
