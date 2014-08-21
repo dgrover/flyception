@@ -47,10 +47,12 @@ void Tracker::Correct()
     est.push_back(statePt);
 }
 
-void Tracker::ConvertPixelToVoltage(int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[])
+void Tracker::GetTrackedPoint(Point &p)
 {
-    int size = est.size();
+	int size = est.size();
 
-    dataX[0] = ( (float)(est[size-1].x) / imageWidth * maxVoltage ) - maxVoltage/2;
-    dataY[0] = ( (float)(est[size-1].y) / imageHeight * maxVoltage ) - maxVoltage/2;
+	p.x = est[size - 1].x;
+	p.y = est[size - 1].y;
+
 }
+

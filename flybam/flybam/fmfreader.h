@@ -15,9 +15,9 @@ class FmfReader
 
 		float x, y;
 
-	public:
-
 		string fext;
+
+	public:
 
 		FmfReader();
 		~FmfReader();
@@ -28,9 +28,10 @@ class FmfReader
 		int Close();
 
 		int ReadHeader();
+		int ReadFrame();
+		Mat ReadFrame(unsigned long frameIndex);
 		int GetFrameCount();
-		int ReadFrame(unsigned long frameIndex);
-		Mat ConvertToMat();
+		void GetImageSize(int& imageWidth, int& imageHeight);
 };
 
 #endif

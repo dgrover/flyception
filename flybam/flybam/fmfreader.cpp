@@ -7,7 +7,7 @@ FmfReader::FmfReader()
 FmfReader::~FmfReader()
 {}
 
-void FmfReader::GetFileExtension(const string& fname)
+void FmfReader::GetFileExtension(const string &fname)
 {
 	if (fname.find_last_of(".") != string::npos)
 		fext = fname.substr(fname.find_last_of(".") + 1);
@@ -94,33 +94,36 @@ int FmfReader::GetFrameCount()
 	return nframes;
 }
 
-int FmfReader::ReadFrame(unsigned long frameIndex)
+void FmfReader::GetImageSize(int &imageWidth, int &imageHeight)
 {
 	if (fext == "fmf")
 	{
-		if ((long)frameIndex >= 0L && (long)frameIndex < maxFramesInFile)
-			fseek(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
-		else
-			return -1; // Cannot grab .. illegal frame number
-
-		fread(buf, sizeof(double), 1, fp);
-		fread(buf, bytesPerChunk - sizeof(double), 1, fp);
-
+		imageWidth = SizeX;
+		imageHeight = SizeY;
 	}
 	else if (fext == "txt")
 	{
-		if (fscanf(fp, "%f %f\n", &x, &y) == 2)
-			return 1;
-		else
-			return -1;
+		imageWidth = 512;
+		imageHeight = 512;
 	}
-
-	return 1;
 }
 
-Mat FmfReader::ConvertToMat()
+Mat FmfReader::ReadFrame(unsigned long frameIndex)
 {
-	Mat frame = Mat(SizeY, SizeX, CV_8UC1, buf, (bytesPerChunk-sizeof(double))/SizeY); //byte size of each row of frame
+	if ((long)frameIndex >= 0L && (long)frameIndex < maxFramesInFile)
+		fseek(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
+	
+	fread(buf, sizeof(double), 1, fp);
+	fread(buf, bytesPerChunk - sizeof(double), 1, fp);
 
+	Mat frame = Mat(SizeY, SizeX, CV_8UC1, buf, (bytesPerChunk - sizeof(double)) / SizeY); //byte size of each row of frame
 	return frame;
+}
+
+int FmfReader::ReadFrame()
+{
+	if (fscanf(fp, "%f %f\n", &x, &y) == 2)
+		return 1;
+	else
+		return -1;
 }

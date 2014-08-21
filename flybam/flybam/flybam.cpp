@@ -7,9 +7,16 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+void ConvertPixelToVoltage(Point p, int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[])
+{
+	dataX[0] = ((float)(p.x) / imageWidth * maxVoltage) - maxVoltage / 2;
+	dataY[0] = ((float)(p.y) / imageHeight * maxVoltage) - maxVoltage / 2;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-	
+	Point p;
+
 	Flycam arena_cam;
 
 	BusManager busMgr;
@@ -20,6 +27,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	int nframes, success;
 
+	int imageWidth, imageHeight;
+
 	FmfReader fmf;
 
 	if (argc == 2)
@@ -27,9 +36,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		fmf.GetFileExtension(string(argv[1]));
 
 		success = fmf.Open(argv[1]);
-
 		success = fmf.ReadHeader();
 		nframes = fmf.GetFrameCount();
+		fmf.GetImageSize(imageWidth, imageHeight);
 	}
 	else
 	{
@@ -113,12 +122,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		if (argc == 2)
-		{
-			success = fmf.ReadFrame(imageCount);
-			
-			if (fmf.fext == "fmf")
-				frame = fmf.ConvertToMat();
-		}
+			frame = fmf.ReadFrame(imageCount);
 		else
 		{
 			error = arena_cam.GrabFrame();
@@ -148,14 +152,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
 				tkf.Correct();
-
-				tkf.ConvertPixelToVoltage(512, 512, 3.0, dataX, dataY);
+				tkf.GetTrackedPoint(p);
 			}
 		}
 
 		imshow("raw image", frame);
 		imshow("FG mask", fgmask);
 
+		ConvertPixelToVoltage(p, imageWidth, imageHeight, 3.0, dataX, dataY);
 		//printf("%f %f\n", dataX[0], dataY[0]);
 
 		// DAQmx Write Code
