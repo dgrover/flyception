@@ -13,6 +13,24 @@ void ConvertPixelToVoltage(Point2f p, int imageWidth, int imageHeight, int maxVo
 	dataY[0] = (p.y / imageHeight * maxVoltage) - maxVoltage / 2;
 }
 
+Point2f backProject(Point2f p, Mat invPm)
+{
+	Mat M(3, 1, CV_64FC1);
+	M.at<float>(0, 0) = p.x;
+	M.at<float>(1, 0) = p.y;
+	M.at<float>(2, 0) = 1;
+
+	Mat N(4, 1, CV_64FC1);
+
+	N = invPm * M;
+
+	Point2f b;
+	b.x = N.at<float>(0, 0);
+	b.y = N.at<float>(1, 0);
+
+	return b;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	Point2f p;
@@ -28,6 +46,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	int nframes, imageWidth, imageHeight, success;
 
 	FmfReader fmf;
+
+	Mat Pm(3, 4, CV_64FC1);
+	Mat invPm(3, 4, CV_64FC1);
+
+	//read projection matrix from file
+	invert(Pm, invPm, DECOMP_SVD);
 
 	if (argc == 2)
 	{
@@ -143,7 +167,11 @@ int _tmain(int argc, _TCHAR* argv[])
 							circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 							ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
 
-							tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
+							Point2f p2 = backProject(minEllipse[i].center, invPm);
+							
+							//tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
+							
+							tkf.Predict(p2.x, p2.y);
 							tkf.Correct();
 							tkf.GetTrackedPoint(p);
 						}
