@@ -32,10 +32,10 @@ Error Flycam::SetCameraParameters()
 		printf("Pixel format is not supported\n");
 
 	fmt7ImageSettings.mode = k_fmt7Mode;
-	fmt7ImageSettings.offsetX = 0;
-	fmt7ImageSettings.offsetY = 0;
-	fmt7ImageSettings.width = fmt7Info.maxWidth;
-	fmt7ImageSettings.height = fmt7Info.maxHeight;
+	fmt7ImageSettings.offsetX = 384; // 0;
+	fmt7ImageSettings.offsetY = 256; // 0;
+	fmt7ImageSettings.width = 512; // fmt7Info.maxWidth;
+	fmt7ImageSettings.height = 512; // fmt7Info.maxHeight;
 	fmt7ImageSettings.pixelFormat = k_fmt7PixFmt;
 
 	// Validate the settings to make sure that they are valid

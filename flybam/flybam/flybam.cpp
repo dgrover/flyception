@@ -13,27 +13,18 @@ void ConvertPixelToVoltage(Point2f p, int imageWidth, int imageHeight, int maxVo
 	dataY[0] = (p.y / imageHeight * maxVoltage) - maxVoltage / 2;
 }
 
-Point2f backProject(Point2f p, Mat invPm)
-{
-	Mat M(3, 1, CV_64FC1);
-	M.at<float>(0, 0) = p.x;
-	M.at<float>(1, 0) = p.y;
-	M.at<float>(2, 0) = 1;
-
-	Mat N(4, 1, CV_64FC1);
-
-	N = invPm * M;
-
-	Point2f b;
-	b.x = N.at<float>(0, 0);
-	b.y = N.at<float>(1, 0);
-
-	return b;
-}
-
 int _tmain(int argc, _TCHAR* argv[])
 {
 	Point2f p;
+
+	Mat cameraMatrix, distCoeffs;
+
+	std::vector<cv::Point2f> imagePoints;
+	std::vector<cv::Point3f> objectPoints;
+
+	cv::Mat rvec(1, 3, cv::DataType<double>::type);
+	cv::Mat tvec(1, 3, cv::DataType<double>::type);
+	cv::Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
 	Flycam arena_cam;
 
@@ -46,12 +37,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	int nframes, imageWidth, imageHeight, success;
 
 	FmfReader fmf;
-
-	Mat Pm(3, 4, CV_64FC1);
-	Mat invPm(3, 4, CV_64FC1);
-
-	//read projection matrix from file
-	invert(Pm, invPm, DECOMP_SVD);
 
 	if (argc == 2)
 	{
@@ -117,6 +102,31 @@ int _tmain(int argc, _TCHAR* argv[])
 			error.PrintErrorTrace();
 			return -1;
 		}
+
+		FileStorage fs("..\\..\\calib\\images\\out_camera_data.xml", FileStorage::READ);
+
+		fs["Camera_Matrix"] >> cameraMatrix;
+		fs["Distortion_Coefficients"] >> distCoeffs;
+
+		fs.release();
+
+		//x,y coordinates in camera image
+		imagePoints.push_back(cv::Point2f(258., 258.));
+		imagePoints.push_back(cv::Point2f(208., 258.));
+		imagePoints.push_back(cv::Point2f(313., 259.));
+		imagePoints.push_back(cv::Point2f(258., 208.));
+		imagePoints.push_back(cv::Point2f(258., 306.));
+
+		//object points (measured in millimeters because calibration is done in mm)
+		objectPoints.push_back(cv::Point3f(0., 0., 0.));
+		objectPoints.push_back(cv::Point3f(-50., 0., 0.));
+		objectPoints.push_back(cv::Point3f(50., 0., 0.));
+		objectPoints.push_back(cv::Point3f(0., 50., 0.));
+		objectPoints.push_back(cv::Point3f(0., -50., 0.));
+
+		cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
+		cv::Rodrigues(rvec, rotationMatrix);
+
 	}
 
 	Tracker tkf;
@@ -167,13 +177,28 @@ int _tmain(int argc, _TCHAR* argv[])
 							circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 							ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
 
-							Point2f p2 = backProject(minEllipse[i].center, invPm);
+							
+							cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); //u,v,1
+							uvPoint.at<double>(0, 0) = minEllipse[i].center.x; //got this point using mouse callback
+							uvPoint.at<double>(1, 0) = minEllipse[i].center.y;
+
+							cv::Mat tempMat, tempMat2;
+							double s;
+
+							tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
+							tempMat2 = rotationMatrix.inv() * tvec;
+							s = tempMat2.at<double>(2, 0); //height Zconst is zero
+							s /= tempMat.at<double>(2, 0);
+							//std::cout << "P = " << rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec) << std::endl;
+							
+							cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
 							
 							//tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
-							
-							tkf.Predict(p2.x, p2.y);
-							tkf.Correct();
-							tkf.GetTrackedPoint(p);
+							//tkf.Correct();
+							//tkf.GetTrackedPoint(p);
+
+							printf("%f %f \n", pt.at<double>(0, 0), pt.at<double>(1, 0));
+
 						}
 					}
 
@@ -183,12 +208,12 @@ int _tmain(int argc, _TCHAR* argv[])
 		else
 			p = fmf.ReadFrame();		//Read coordinates from txt file
 
-		ConvertPixelToVoltage(p, imageWidth, imageHeight, 5.0, dataX, dataY);
+		//ConvertPixelToVoltage(p, imageWidth, imageHeight, 5.0, dataX, dataY);
 		//printf("%f %f\n", dataX[0], dataY[0]);
 
 		// DAQmx Write Code
-		DAQmxWriteAnalogF64(taskHandleX,1,1,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
-		DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
+		//DAQmxWriteAnalogF64(taskHandleX,1,1,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
+		//DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
 
 		waitKey(1);
 
