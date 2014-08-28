@@ -17,14 +17,12 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	Point2f p;
 
+	string filename = "..\\..\\images\\out_camera_data.xml";
+
 	Mat cameraMatrix, distCoeffs;
-
-	std::vector<cv::Point2f> imagePoints;
-	std::vector<cv::Point3f> objectPoints;
-
-	cv::Mat rvec(1, 3, cv::DataType<double>::type);
-	cv::Mat tvec(1, 3, cv::DataType<double>::type);
-	cv::Mat rotationMatrix(3, 3, cv::DataType<double>::type);
+	Mat rvec(1, 3, cv::DataType<double>::type);
+	Mat tvec(1, 3, cv::DataType<double>::type);
+	Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
 	Flycam arena_cam;
 
@@ -102,32 +100,17 @@ int _tmain(int argc, _TCHAR* argv[])
 			error.PrintErrorTrace();
 			return -1;
 		}
-
-		FileStorage fs("..\\..\\calib\\images\\out_camera_data.xml", FileStorage::READ);
-
-		fs["Camera_Matrix"] >> cameraMatrix;
-		fs["Distortion_Coefficients"] >> distCoeffs;
-
-		fs.release();
-
-		//x,y coordinates in camera image
-		imagePoints.push_back(cv::Point2f(258., 258.));
-		imagePoints.push_back(cv::Point2f(208., 258.));
-		imagePoints.push_back(cv::Point2f(313., 259.));
-		imagePoints.push_back(cv::Point2f(258., 208.));
-		imagePoints.push_back(cv::Point2f(258., 306.));
-
-		//object points (measured in millimeters because calibration is done in mm)
-		objectPoints.push_back(cv::Point3f(0., 0., 0.));
-		objectPoints.push_back(cv::Point3f(-50., 0., 0.));
-		objectPoints.push_back(cv::Point3f(50., 0., 0.));
-		objectPoints.push_back(cv::Point3f(0., 50., 0.));
-		objectPoints.push_back(cv::Point3f(0., -50., 0.));
-
-		cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
-		cv::Rodrigues(rvec, rotationMatrix);
-
 	}
+
+	FileStorage fs(filename, FileStorage::READ);
+
+	fs["Camera_Matrix"] >> cameraMatrix;
+	fs["Distortion_Coefficients"] >> distCoeffs;
+	fs["rvec"] >> rvec;
+	fs["tvec"] >> tvec;
+	fs["Rotation_Matrix"] >> rotationMatrix;
+
+	fs.release();
 
 	Tracker tkf;
 
@@ -177,9 +160,10 @@ int _tmain(int argc, _TCHAR* argv[])
 							circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 							ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
 
-							
-							cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); //u,v,1
-							uvPoint.at<double>(0, 0) = minEllipse[i].center.x; //got this point using mouse callback
+							printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
+
+							cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
+							uvPoint.at<double>(0, 0) = minEllipse[i].center.x;
 							uvPoint.at<double>(1, 0) = minEllipse[i].center.y;
 
 							cv::Mat tempMat, tempMat2;
@@ -189,15 +173,19 @@ int _tmain(int argc, _TCHAR* argv[])
 							tempMat2 = rotationMatrix.inv() * tvec;
 							s = tempMat2.at<double>(2, 0); //height Zconst is zero
 							s /= tempMat.at<double>(2, 0);
-							//std::cout << "P = " << rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec) << std::endl;
-							
+														
 							cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
+							printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+
+							cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
+							printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
 							
+							//project center point back to image coordinate system
+							circle(frame, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 0, 0), CV_FILLED, 1);
+
 							//tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
 							//tkf.Correct();
 							//tkf.GetTrackedPoint(p);
-
-							printf("%f %f \n", pt.at<double>(0, 0), pt.at<double>(1, 0));
 
 						}
 					}
