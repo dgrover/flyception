@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<calibration_Time>"08/28/14 13:59:29"</calibration_Time>
+<calibration_Time>"08/28/14 19:12:01"</calibration_Time>
 <nrOfFrames>8</nrOfFrames>
 <image_Width>512</image_Width>
 <image_Height>512</image_Height>
@@ -263,30 +263,4 @@
     1.42466751e+002 3.26231171e+002 1.97573746e+002 3.26999054e+002
     2.52221664e+002 3.27531189e+002 3.10953918e+002 3.28185974e+002
     3.65757782e+002 3.28718994e+002 4.20906952e+002 3.29337433e+002</data></Image_points>
- <!-- resumed -->
-
-<rvec type_id="opencv-matrix">
-  <rows>3</rows>
-  <cols>1</cols>
-  <dt>d</dt>
-  <data>
-    -3.5374704855662292e-001 4.5497577667088271e-002
-    2.4363688110058740e-001</data></rvec>
-<tvec type_id="opencv-matrix">
-  <rows>3</rows>
-  <cols>1</cols>
-  <dt>d</dt>
-  <data>
-    -1.1565477266715959e+001 -1.7615434316242428e+001
-    1.9059030229157736e+002</data></tvec>
-<Rotation_Matrix type_id="opencv-matrix">
-  <rows>3</rows>
-  <cols>3</cols>
-  <dt>d</dt>
-  <data>
-    9.6976008348491827e-001 -2.4405449234289214e-001
-    1.6689058024669037e-003 2.2820853344502898e-001
-    9.0917735227523377e-001 3.4830648482717719e-001
-    -8.6523093692917580e-002 -3.3739286725870288e-001
-    9.3737922282327013e-001</data></Rotation_Matrix>
 </opencv_storage>

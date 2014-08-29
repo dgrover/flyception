@@ -25,7 +25,8 @@ std::vector<cv::Point3f> Create3DChessboardCorners(cv::Size boardSize, float squ
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	string filename = "..\\..\\images\\out_camera_data.xml";
+	string infilename = "..\\..\\images\\out_camera_data.xml";
+	string outfilename = "..\\..\\images\\camera_projection_data.xml";
 	string imgfile = "..\\..\\images\\cbview.jpg";
 
 	int boardHeight, boardWidth;
@@ -42,7 +43,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	cv::Mat tvec(1, 3, cv::DataType<double>::type);
 	cv::Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
-	FileStorage fs(filename, FileStorage::READ);
+	FileStorage fs(infilename, FileStorage::READ);
 
 	fs["Camera_Matrix"] >> cameraMatrix;
 	fs["Distortion_Coefficients"] >> distCoeffs;
@@ -76,8 +77,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			<< tvec.at<double>(1, 0) << ", "
 			<< tvec.at<double>(2, 0) << "]" << endl;
 
-		FileStorage fs(filename, FileStorage::APPEND);
+		FileStorage fs(outfilename, FileStorage::WRITE);
 
+		fs << "Camera_Matrix" << cameraMatrix;
+		fs << "Distortion_Coefficients" << distCoeffs;
 		fs << "rvec" << rvec;
 		fs << "tvec" << tvec;
 		fs << "Rotation_Matrix" << rotationMatrix;

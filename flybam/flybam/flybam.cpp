@@ -17,7 +17,7 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	Point2f p;
 
-	string filename = "..\\..\\images\\out_camera_data.xml";
+	string filename = "..\\..\\images\\camera_projection_data.xml";
 
 	Mat cameraMatrix, distCoeffs;
 	Mat rvec(1, 3, cv::DataType<double>::type);
@@ -38,8 +38,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	if (argc == 2)
 	{
-		//fmf.GetFileExtension(string(argv[1]));
-
 		success = fmf.Open(argv[1]);
 		success = fmf.ReadHeader();
 		nframes = fmf.GetFrameCount();
@@ -132,7 +130,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	BackgroundSubtractorMOG mog_cpu;
 	mog_cpu.set("nmixtures", 3);
-	Mat frame, fgmask;
+	Mat frame, fgmask, cframe;
 
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
@@ -157,8 +155,11 @@ int _tmain(int argc, _TCHAR* argv[])
 						{
 							minEllipse[i] = fitEllipse(Mat(contours[i]));
 							drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
-							circle(frame, minEllipse[i].center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-							ellipse(frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
+							
+							cvtColor(frame, cframe, CV_GRAY2RGB);
+							
+							circle(cframe, minEllipse[i].center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
+							ellipse(frame, minEllipse[i], Scalar(255, 0, 0), 1, 1);
 
 							printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
 
@@ -173,6 +174,8 @@ int _tmain(int argc, _TCHAR* argv[])
 							tempMat2 = rotationMatrix.inv() * tvec;
 							s = tempMat2.at<double>(2, 0); //height Zconst is zero
 							s /= tempMat.at<double>(2, 0);
+
+							printf("%f ", s);
 														
 							cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
 							printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
@@ -181,7 +184,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
 							
 							//project center point back to image coordinate system
-							circle(frame, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 0, 0), CV_FILLED, 1);
+							circle(frame, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 255, 0), CV_FILLED, 1);
 
 							//tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
 							//tkf.Correct();
