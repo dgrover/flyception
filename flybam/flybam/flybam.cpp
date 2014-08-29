@@ -142,6 +142,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		else
 		 	frame = arena_cam.GrabFrame();
 
+		cvtColor(frame, cframe, CV_GRAY2RGB);
+
 		if (!frame.empty())
 		{
 					mog_cpu(frame, fgmask, 0.01);
@@ -156,12 +158,10 @@ int _tmain(int argc, _TCHAR* argv[])
 							minEllipse[i] = fitEllipse(Mat(contours[i]));
 							drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
 							
-							cvtColor(frame, cframe, CV_GRAY2RGB);
-							
-							circle(cframe, minEllipse[i].center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
-							ellipse(frame, minEllipse[i], Scalar(255, 0, 0), 1, 1);
+							//circle(cframe, minEllipse[i].center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
+							//ellipse(cframe, minEllipse[i], Scalar(255, 0, 0), 1, 1);
 
-							printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
+							//printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
 
 							cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
 							uvPoint.at<double>(0, 0) = minEllipse[i].center.x;
@@ -175,16 +175,16 @@ int _tmain(int argc, _TCHAR* argv[])
 							s = tempMat2.at<double>(2, 0); //height Zconst is zero
 							s /= tempMat.at<double>(2, 0);
 
-							printf("%f ", s);
+							//printf("%f ", s);
 														
 							cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-							printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+							//printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
 
 							cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
-							printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
+							//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
 							
 							//project center point back to image coordinate system
-							circle(frame, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 255, 0), CV_FILLED, 1);
+							circle(cframe, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 255, 0), CV_FILLED, 1);
 
 							//tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
 							//tkf.Correct();
@@ -193,7 +193,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 					}
 
-					imshow("raw image", frame);
+					imshow("raw image", cframe);
 					imshow("FG mask", fgmask);
 		}
 		else
