@@ -1,4 +1,4 @@
 flyBAM
 ======
 
-Brain Activity Monitoring in freely moving fruit flies
+Brain activity monitoring in freely moving fruit flies.
