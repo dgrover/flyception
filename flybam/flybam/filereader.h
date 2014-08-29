@@ -1,9 +1,9 @@
-#ifndef FMFREADER_H
-#define FMFREADER_H
+#ifndef FILEREADER_H
+#define FILEREADER_H
 
 using namespace cv;
 
-class FmfReader
+class FileReader
 {
 	private:
 		FILE *fp;
@@ -17,8 +17,8 @@ class FmfReader
 
 	public:
 
-		FmfReader();
-		~FmfReader();
+		FileReader();
+		~FileReader();
 
 		void GetFileExtension(const string &fname);
 
@@ -26,8 +26,10 @@ class FmfReader
 		int Close();
 
 		int ReadHeader();
+		
 		Point2f ReadFrame();
 		Mat ReadFrame(unsigned long frameIndex);
+		
 		int GetFrameCount();
 		void GetImageSize(int &imageWidth, int &imageHeight);
 };

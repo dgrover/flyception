@@ -34,14 +34,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int nframes, imageWidth, imageHeight, success;
 
-	FmfReader fmf;
+	FileReader f;
 
 	if (argc == 2)
 	{
-		success = fmf.Open(argv[1]);
-		success = fmf.ReadHeader();
-		nframes = fmf.GetFrameCount();
-		fmf.GetImageSize(imageWidth, imageHeight);
+		success = f.Open(argv[1]);
+		success = f.ReadHeader();
+		nframes = f.GetFrameCount();
+		f.GetImageSize(imageWidth, imageHeight);
 	}
 	else
 	{
@@ -138,7 +138,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		if (argc == 2)
-			frame = fmf.ReadFrame(imageCount);
+			frame = f.ReadFrame(imageCount);
 		else
 		 	frame = arena_cam.GrabFrame();
 
@@ -197,7 +197,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					imshow("FG mask", fgmask);
 		}
 		else
-			p = fmf.ReadFrame();		//Read coordinates from txt file
+			p = f.ReadFrame();		//Read coordinates from txt file
 
 		//ConvertPixelToVoltage(p, imageWidth, imageHeight, 5.0, dataX, dataY);
 		//printf("%f %f\n", dataX[0], dataY[0]);
@@ -213,7 +213,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	if (argc == 2)
-		fmf.Close();
+		f.Close();
 	else
 		arena_cam.Stop();
 

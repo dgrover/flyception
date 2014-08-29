@@ -1,4 +1,4 @@
-// estpose.cpp : Defines the entry point for the console application.
+// projection.cpp : Defines the entry point for the console application.
 //
 
 #include "stdafx.h"
@@ -6,14 +6,23 @@
 using namespace std;
 using namespace cv;
 
-std::vector<cv::Point3f> Create3DChessboardCorners(cv::Size boardSize, float squareSize)
+std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squareSize)
 {
 	// create the 3D points of your chessboard in its own coordinate system
 	std::vector<cv::Point3f> corners;
 
-	for (int i = 0; i < boardSize.height; i++)
+	//for (int i = 0; i < boardSize.height; i++)
+	//{
+	//	for (int j = 0; j < boardSize.width; j++)
+	//	{
+	//		corners.push_back(cv::Point3f(float(j*squareSize),
+	//			float(i*squareSize), 0));
+	//	}
+	//}
+
+	for (int i = -boardSize.height / 2; i <= boardSize.height / 2; i++)
 	{
-		for (int j = 0; j < boardSize.width; j++)
+		for (int j = -boardSize.width / 2; j <= boardSize.width / 2; j++)
 		{
 			corners.push_back(cv::Point3f(float(j*squareSize),
 				float(i*squareSize), 0));
@@ -32,7 +41,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	int boardHeight, boardWidth;
 	float squareSize;
 
-	Mat img = imread(imgfile, CV_LOAD_IMAGE_GRAYSCALE);
+	Mat img = imread(imgfile);
 
 	Mat cameraMatrix, distCoeffs;
 
@@ -61,10 +70,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 
 		drawChessboardCorners(img, cbSize, imagePoints, found);
-		imshow("image view", img);
-		
-		objectPoints = Create3DChessboardCorners(cbSize, squareSize);
-		
+		imshow("image", img);
+
+		objectPoints = create3DChessboardCorners(cbSize, squareSize);
+
 		cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
 		cv::Rodrigues(rvec, rotationMatrix);
 

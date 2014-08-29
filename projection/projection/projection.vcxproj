@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{53D5BBFE-1FB7-4964-99F9-4B7BFE9B633F}</ProjectGuid>
+    <ProjectGuid>{552D1DAA-8792-44F1-9D73-2E5BFAEFB9DA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>estpose</RootNamespace>
+    <RootNamespace>projection</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -149,7 +149,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="estpose.cpp" />
+    <ClCompile Include="projection.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

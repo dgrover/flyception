@@ -171,9 +171,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="filereader.cpp" />
     <ClCompile Include="flybam.cpp" />
     <ClCompile Include="flycam.cpp" />
-    <ClCompile Include="fmfreader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -183,8 +183,8 @@
     <ClCompile Include="tracker.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="filereader.h" />
     <ClInclude Include="flycam.h" />
-    <ClInclude Include="fmfreader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="tracker.h" />

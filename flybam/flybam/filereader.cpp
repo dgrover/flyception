@@ -1,13 +1,13 @@
 #include "stdafx.h"
-#include "fmfreader.h"
+#include "filereader.h"
 
-FmfReader::FmfReader()
+FileReader::FileReader()
 {}
 
-FmfReader::~FmfReader()
+FileReader::~FileReader()
 {}
 
-void FmfReader::GetFileExtension(const string &fname)
+void FileReader::GetFileExtension(const string &fname)
 {
 	if (fname.find_last_of(".") != string::npos)
 		fext = fname.substr(fname.find_last_of(".") + 1);
@@ -15,7 +15,7 @@ void FmfReader::GetFileExtension(const string &fname)
 		fext = "";
 }
 
-int FmfReader::Open(_TCHAR* fname)
+int FileReader::Open(_TCHAR* fname)
 {
 	fp = fopen(fname, "rb");
 
@@ -30,7 +30,7 @@ int FmfReader::Open(_TCHAR* fname)
 	return 1;
 }
 
-int FmfReader::Close()
+int FileReader::Close()
 {
 	if (fp != NULL)
 		fclose(fp);
@@ -43,7 +43,7 @@ int FmfReader::Close()
 	return 1;
 }
 
-int FmfReader::ReadHeader()
+int FileReader::ReadHeader()
 {
 	if (fext == "fmf")
 	{
@@ -74,7 +74,7 @@ int FmfReader::ReadHeader()
 	return 1;
 }
 
-int FmfReader::GetFrameCount()
+int FileReader::GetFrameCount()
 {
 	if (fext == "txt")
 	{
@@ -95,7 +95,7 @@ int FmfReader::GetFrameCount()
 	return nframes;
 }
 
-void FmfReader::GetImageSize(int &imageWidth, int &imageHeight)
+void FileReader::GetImageSize(int &imageWidth, int &imageHeight)
 {
 	if (fext == "fmf")
 	{
@@ -109,7 +109,7 @@ void FmfReader::GetImageSize(int &imageWidth, int &imageHeight)
 	}
 }
 
-Mat FmfReader::ReadFrame(unsigned long frameIndex)
+Mat FileReader::ReadFrame(unsigned long frameIndex)
 {
 	if ((long)frameIndex >= 0L && (long)frameIndex < maxFramesInFile)
 		fseek(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
@@ -121,7 +121,7 @@ Mat FmfReader::ReadFrame(unsigned long frameIndex)
 	return frame;
 }
 
-Point2f FmfReader::ReadFrame()
+Point2f FileReader::ReadFrame()
 {
 	Point2f p;
 
