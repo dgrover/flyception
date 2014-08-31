@@ -11,7 +11,7 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	Point2f p;
 
-	string filename = "..\\..\\images\\camera_projection_data.xml";
+	string filename = "..\\..\\arena\\camera_projection_data.xml";
 
 	Mat cameraMatrix, distCoeffs;
 	Mat rvec(1, 3, cv::DataType<double>::type);
@@ -147,13 +147,11 @@ int _tmain(int argc, _TCHAR* argv[])
 					circle(cframe, minEllipse.center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
 					ellipse(cframe, minEllipse, Scalar(255, 0, 0), 1, 1);
 
-					//printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
+					//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
 					
 					cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
 					uvPoint.at<double>(0, 0) = minEllipse.center.x;
 					uvPoint.at<double>(1, 0) = minEllipse.center.y;
-					//uvPoint.at<double>(0, 0) = p.x;
-					//uvPoint.at<double>(1, 0) = p.y;
 
 					cv::Mat tempMat, tempMat2;
 					double s;
@@ -166,12 +164,14 @@ int _tmain(int argc, _TCHAR* argv[])
 					//printf("%f ", s);
 														
 					cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-					//printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+					//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
 
 					tkf.Predict(pt.at<double>(0, 0), pt.at<double>(1, 0));
-					//tkf.Predict(minEllipse.center.x, minEllipse.center.y);
 					tkf.Correct();
 					tkf.GetTrackedPoint(p);
+
+					//p.x = pt.at<double>(0, 0);
+					//p.y = pt.at<double>(1, 0);
 
 					//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
 					//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
@@ -189,8 +189,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		else
 			p = f.ReadFrame();		//Read coordinates from txt file
 
-		//ndq.ConvertPixelToVoltage(p);
-		//ndq.write();
+		ndq.ConvertPixelToVoltage(p);
+		ndq.write();
 
 		waitKey(1);
 

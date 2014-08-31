@@ -17,7 +17,7 @@ class Tracker
       Tracker();
       ~Tracker();
 
-      void Predict(int x, int y);
+      void Predict(float x, float y);
       void Correct();
 	  void GetTrackedPoint(Point2f &p);
 };

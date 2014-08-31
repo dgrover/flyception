@@ -6,7 +6,7 @@
 using namespace std;
 using namespace cv;
 
-#define HEIGHT_FROM_BASE 0
+#define HEIGHT_FROM_BASE 0.3
 
 std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squareSize)
 {
@@ -36,9 +36,9 @@ std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squ
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	string infilename = "..\\..\\images\\out_camera_data.xml";
-	string outfilename = "..\\..\\images\\camera_projection_data.xml";
-	string imgfile = "..\\..\\images\\cbview.jpg";
+	string infilename = "..\\..\\arena\\out_camera_data.xml";
+	string outfilename = "..\\..\\arena\\camera_projection_data.xml";
+	string imgfile = "..\\..\\arena\\cbview.jpg";
 
 	int boardHeight, boardWidth;
 	float squareSize;

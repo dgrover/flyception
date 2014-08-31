@@ -27,7 +27,7 @@ Tracker::Tracker()
 Tracker::~Tracker()
 {}
 
-void Tracker::Predict(int x, int y)
+void Tracker::Predict(float x, float y)
 {
     Mat prediction = KF.predict();
     Point predictPt(prediction.at<float>(0),prediction.at<float>(1));

@@ -9,7 +9,7 @@ Daq::Daq()
 	taskHandleY = 0;
 
 	voltperdeg = 0.5;
-	galvoheight = 10.0;
+	galvoheight = 100.0;
 
 	dataX[1] = { 0.0 };
 	dataY[1] = { 0.0 };
@@ -46,6 +46,6 @@ void Daq::ConvertPixelToVoltage(Point2f p)
 	float thetax = atan(p.x / galvoheight) * 180 / PI;
 	float thetay = atan(p.y / galvoheight) * 180 / PI;
 
-	dataX[0] = thetax * voltperdeg;
-	dataY[0] = thetay * voltperdeg;
+	dataX[0] = thetax/2 * voltperdeg;
+	dataY[0] = thetay/2 * voltperdeg;
 }
