@@ -30,6 +30,9 @@
     <ClCompile Include="filereader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="daq.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -45,6 +48,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="filereader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="daq.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

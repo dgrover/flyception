@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <vector>
+//#include <math.h>
 
 #include "FlyCapture2.h"
 
@@ -27,5 +28,6 @@
 #include "flycam.h"
 #include "filereader.h"
 #include "tracker.h"
+#include "daq.h"
 
 // TODO: reference additional headers your program requires here

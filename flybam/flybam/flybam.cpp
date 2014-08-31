@@ -7,12 +7,6 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-void ConvertPixelToVoltage(Point2f p, int imageWidth, int imageHeight, int maxVoltage, float64 dataX[], float64 dataY[])
-{
-	dataX[0] = (p.x / imageWidth * maxVoltage) - maxVoltage / 2;
-	dataY[0] = (p.y / imageHeight * maxVoltage) - maxVoltage / 2;
-}
-
 int _tmain(int argc, _TCHAR* argv[])
 {
 	Point2f p;
@@ -35,6 +29,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	int nframes, imageWidth, imageHeight, success;
 
 	FileReader f;
+
+	Tracker tkf;
+	Daq ndq;
 
 	if (argc == 2)
 	{
@@ -110,29 +107,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	fs.release();
 
-	Tracker tkf;
-
-	TaskHandle	taskHandleX=0;
-	TaskHandle	taskHandleY=0;
-
-	float64     dataX[1] = {0.0};
-	float64     dataY[1] = {0.0};
-
-	// DAQmx Configure Code
-	DAQmxCreateTask("",&taskHandleX);
-	DAQmxCreateTask("",&taskHandleY);
-	DAQmxCreateAOVoltageChan(taskHandleX,"Dev1/ao0","",-10.0,10.0,DAQmx_Val_Volts,"");
-	DAQmxCreateAOVoltageChan(taskHandleY,"Dev1/ao1","",-10.0,10.0,DAQmx_Val_Volts,"");
-
-	// DAQmx Start Code
-	DAQmxStartTask(taskHandleX);
-	DAQmxStartTask(taskHandleY);
-
+	//configure and start NIDAQ
+	ndq.configure();
+	ndq.start();
+	
 	BackgroundSubtractorMOG mog_cpu;
 	mog_cpu.set("nmixtures", 3);
 	Mat frame, fgmask, cframe;
 
-	vector<vector<Point> > contours;
+	vector<vector<Point> > contours, flycontour(1);
 	vector<Vec4i> hierarchy;
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
@@ -143,68 +126,71 @@ int _tmain(int argc, _TCHAR* argv[])
 		 	frame = arena_cam.GrabFrame();
 
 		cvtColor(frame, cframe, CV_GRAY2RGB);
-
+		
 		if (!frame.empty())
 		{
-					mog_cpu(frame, fgmask, 0.01);
+			mog_cpu(frame, fgmask, 0.01);
 
-					findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
-					vector<RotatedRect> minEllipse(contours.size());
+			findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE);
+			
+			RotatedRect minEllipse;
+			
+			for (int i = 0; i < contours.size(); i++)
+				flycontour[0].insert(end(flycontour[0]), begin(contours[i]), end(contours[i]));
 
-					for (int i = 0; i < contours.size(); i++)
-					{
-						if (contours[i].size() > 25)
-						{
-							minEllipse[i] = fitEllipse(Mat(contours[i]));
-							drawContours(fgmask, contours, 0, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
-							
-							//circle(cframe, minEllipse[i].center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
-							//ellipse(cframe, minEllipse[i], Scalar(255, 0, 0), 1, 1);
+			if (flycontour[0].size() > 25)
+			{
+					minEllipse = fitEllipse(Mat(flycontour[0]));
+					//drawContours(fgmask, contours, i, Scalar(255, 255, 255), CV_FILLED, 8, hierarchy);
+					drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
 
-							//printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
+					circle(cframe, minEllipse.center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
+					ellipse(cframe, minEllipse, Scalar(255, 0, 0), 1, 1);
 
-							cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
-							uvPoint.at<double>(0, 0) = minEllipse[i].center.x;
-							uvPoint.at<double>(1, 0) = minEllipse[i].center.y;
+					//printf("[%f %f] ", minEllipse[i].center.x, minEllipse[i].center.y);
+					
+					cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
+					uvPoint.at<double>(0, 0) = minEllipse.center.x;
+					uvPoint.at<double>(1, 0) = minEllipse.center.y;
+					//uvPoint.at<double>(0, 0) = p.x;
+					//uvPoint.at<double>(1, 0) = p.y;
 
-							cv::Mat tempMat, tempMat2;
-							double s;
+					cv::Mat tempMat, tempMat2;
+					double s;
 
-							tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
-							tempMat2 = rotationMatrix.inv() * tvec;
-							s = tempMat2.at<double>(2, 0); //height Zconst is zero
-							s /= tempMat.at<double>(2, 0);
+					tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
+					tempMat2 = rotationMatrix.inv() * tvec;
+					s = tempMat2.at<double>(2, 0); //height Zconst is zero
+					s /= tempMat.at<double>(2, 0);
 
-							//printf("%f ", s);
+					//printf("%f ", s);
 														
-							cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-							//printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+					cv::Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
+					//printf("[%f %f %f] ", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
 
-							cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
-							//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
+					tkf.Predict(pt.at<double>(0, 0), pt.at<double>(1, 0));
+					//tkf.Predict(minEllipse.center.x, minEllipse.center.y);
+					tkf.Correct();
+					tkf.GetTrackedPoint(p);
+
+					//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
+					//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
 							
-							//project center point back to image coordinate system
-							circle(cframe, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 255, 0), CV_FILLED, 1);
+					//project center point back to image coordinate system
+					//circle(cframe, cvPoint(backPt.at<double>(0, 0), backPt.at<double>(1, 0)), 1, Scalar(0, 255, 0), CV_FILLED, 1);
+			}
 
-							//tkf.Predict(minEllipse[i].center.x, minEllipse[i].center.y);
-							//tkf.Correct();
-							//tkf.GetTrackedPoint(p);
+			imshow("raw image", cframe);
+			imshow("FG mask", fgmask);
 
-						}
-					}
+			flycontour[0].clear();
 
-					imshow("raw image", cframe);
-					imshow("FG mask", fgmask);
 		}
 		else
 			p = f.ReadFrame();		//Read coordinates from txt file
 
-		//ConvertPixelToVoltage(p, imageWidth, imageHeight, 5.0, dataX, dataY);
-		//printf("%f %f\n", dataX[0], dataY[0]);
-
-		// DAQmx Write Code
-		//DAQmxWriteAnalogF64(taskHandleX,1,1,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
-		//DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
+		//ndq.ConvertPixelToVoltage(p);
+		//ndq.write();
 
 		waitKey(1);
 
