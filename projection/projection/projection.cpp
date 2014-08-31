@@ -6,6 +6,8 @@
 using namespace std;
 using namespace cv;
 
+#define HEIGHT_FROM_BASE 0
+
 std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squareSize)
 {
 	// create the 3D points of your chessboard in its own coordinate system
@@ -25,7 +27,7 @@ std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squ
 		for (int j = -boardSize.width / 2; j <= boardSize.width / 2; j++)
 		{
 			corners.push_back(cv::Point3f(float(j*squareSize),
-				float(i*squareSize), 0));
+				float(i*squareSize), HEIGHT_FROM_BASE));
 		}
 	}
 
