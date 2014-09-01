@@ -117,6 +117,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	mog_cpu.set("nmixtures", 3);
 	Mat frame, fgmask, cframe;
 
+	Mat prev, rigid_mat, dst;
+
 	vector<vector<Point>> contours, flycontour(1);
 	vector<Vec4i> hierarchy;
 
@@ -184,9 +186,17 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (p.x + 30 < 512 && p.y + 30 < 512 && p.x - 30 >= 0 && p.y - 30 >= 0)
 			{
 				Mat subImage(frame, cv::Rect(p.x - 30, p.y - 30, 60, 60));
-				Mat rotImage = rotate(subImage, angle);
 
-				imshow("sub image", rotImage);
+				if (prev.empty())
+					prev = subImage.clone();
+
+				rigid_mat = estimateRigidTransform(prev, subImage, false);
+				warpAffine(subImage, dst, rigid_mat, subImage.size(), INTER_NEAREST | WARP_INVERSE_MAP, BORDER_CONSTANT);
+				//Mat rotImage = rotate(dst, angle);
+
+				imshow("sub image", dst);
+				prev = subImage.clone();
+
 			}
 
 			flycontour[0].clear();
