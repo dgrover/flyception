@@ -38,13 +38,10 @@ void Daq::write()
 	DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
 }
 
-void Daq::ConvertPixelToVoltage(Point2f p)
+void Daq::ConvertPixelToVoltage(Mat pt)
 {
-	//dataX[0] = (p.x / imageWidth * maxVoltage) - maxVoltage / 2;
-	//dataY[0] = (p.y / imageHeight * maxVoltage) - maxVoltage / 2;
-
-	float thetax = atan(p.x / galvoheight) * 180 / PI;
-	float thetay = atan(p.y / galvoheight) * 180 / PI;
+	float thetax = atan(pt.at<double>(0, 0) / galvoheight) * 180 / PI;
+	float thetay = atan(pt.at<double>(1, 0) / galvoheight) * 180 / PI;
 
 	dataX[0] = thetax/2 * voltperdeg;
 	dataY[0] = thetay/2 * voltperdeg;

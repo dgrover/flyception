@@ -20,7 +20,7 @@ class Daq
 		void configure();
 		void start();
 		void write();
-		void ConvertPixelToVoltage(Point2f p);
+		void ConvertPixelToVoltage(Mat pt);
 
 
 };

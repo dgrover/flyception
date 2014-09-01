@@ -121,18 +121,18 @@ Mat FileReader::ReadFrame(unsigned long frameIndex)
 	return frame;
 }
 
-Point2f FileReader::ReadFrame()
+Mat FileReader::ReadFrame()
 {
-	Point2f p;
+	Mat pt = Mat::zeros(2, 1, cv::DataType<double>::type);
 
 	string n;
 	float x,y;
 
 	if (fscanf(fp, "%s %f %f\n", n, &x, &y) == 3)
 	{
-		p.x = x;
-		p.y = y;
+		pt.at<double>(0, 0) = x;
+		pt.at<double>(1, 0) = y;
 	}
 
-	return p;
+	return pt;
 }

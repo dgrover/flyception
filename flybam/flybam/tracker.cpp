@@ -18,41 +18,27 @@ Tracker::Tracker()
     setIdentity(KF.processNoiseCov, Scalar::all(1e-2));
     setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
     setIdentity(KF.errorCovPost, Scalar::all(.1));
-
-    mt.clear();
-    pred.clear();
-    est.clear();
 }
 
 Tracker::~Tracker()
 {}
 
-void Tracker::Predict(float x, float y)
+Point2f Tracker::Predict()
 {
-    Mat prediction = KF.predict();
-    Point predictPt(prediction.at<float>(0),prediction.at<float>(1));
-    pred.push_back(predictPt);
-
-    measurement(0) = x;
-    measurement(1) = y;
-
-    Point measPt(measurement(0),measurement(1));
-    mt.push_back(measPt);
+    prediction = KF.predict();
+    Point2f predictPt(prediction.at<float>(0),prediction.at<float>(1));
+    
+	return predictPt;
 }
 
-void Tracker::Correct()
+Point2f Tracker::Correct(Point2f measPt)
 {
-    Mat estimated = KF.correct(measurement);
-    Point statePt(estimated.at<float>(0),estimated.at<float>(1));
-    est.push_back(statePt);
+	measurement(0) = measPt.x;
+	measurement(1) = measPt.y;
+
+    estimated = KF.correct(measurement);
+
+	Point2f statePt(estimated.at<float>(0), estimated.at<float>(1));
+
+	return statePt;
 }
-
-void Tracker::GetTrackedPoint(Point2f &p)
-{
-	int size = est.size();
-
-	p.x = est[size - 1].x;
-	p.y = est[size - 1].y;
-
-}
-

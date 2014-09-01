@@ -27,7 +27,7 @@ class FileReader
 
 		int ReadHeader();
 		
-		Point2f ReadFrame();
+		Mat ReadFrame();
 		Mat ReadFrame(unsigned long frameIndex);
 		
 		int GetFrameCount();

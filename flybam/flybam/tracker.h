@@ -9,17 +9,14 @@ class Tracker
     private:
 
       KalmanFilter KF;
-	  Mat_<float> measurement;
-	  vector<Point> mt, pred, est;
-
+	  Mat_<float> measurement, prediction, estimated;
     public:
 
       Tracker();
       ~Tracker();
 
-      void Predict(float x, float y);
-      void Correct();
-	  void GetTrackedPoint(Point2f &p);
+      Point2f Predict();
+      Point2f Correct(Point2f measPt);
 };
 
 #endif
