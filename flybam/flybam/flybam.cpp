@@ -7,14 +7,14 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-Mat rotate(Mat src, double angle)
-{
-	Mat dst;
-	Point2f pt(src.cols / 2., src.rows / 2.);
-	Mat r = getRotationMatrix2D(pt, angle, 1.0);
-	warpAffine(src, dst, r, Size(src.cols, src.rows));
-	return dst;
-}
+//Mat rotate(Mat src, double angle)
+//{
+//	Mat dst;
+//	Point2f pt(src.cols / 2., src.rows / 2.);
+//	Mat r = getRotationMatrix2D(pt, angle, 1.0);
+//	warpAffine(src, dst, r, Size(src.cols, src.rows));
+//	return dst;
+//}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -117,10 +117,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	mog_cpu.set("nmixtures", 3);
 	Mat frame, fgmask, cframe;
 
-	Mat prev, rigid_mat, dst;
+	//Mat prev, rigid_mat, dst;
 
 	vector<vector<Point>> contours, flycontour(1);
 	vector<Vec4i> hierarchy;
+
+	Point2f p;
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
@@ -133,31 +135,26 @@ int _tmain(int argc, _TCHAR* argv[])
 		
 		if (!frame.empty())
 		{
-			Point2f p;
-			double angle;
-
 			mog_cpu(frame, fgmask, 0.01);
 			findContours(fgmask, contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 			
 			for (int i = 0; i < contours.size(); i++)
 				flycontour[0].insert(end(flycontour[0]), begin(contours[i]), end(contours[i]));
 
-			if (flycontour[0].size() > 25)
+			if (flycontour[0].size() > 20)
 			{
 				RotatedRect minEllipse = fitEllipse(Mat(flycontour[0]));
-				drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
+				//drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
 
 				ellipse(cframe, minEllipse, Scalar(255, 0, 0), 1, 1);
 				circle(cframe, minEllipse.center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
 				//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
 
-				angle = minEllipse.angle;
-
 				tkf.Predict();
 				p = tkf.Correct(minEllipse.center);
 			}
-			else
-				p = tkf.Predict();
+			//else
+			//	p = tkf.Predict();
 	
 			circle(cframe, p, 1, Scalar(0, 255, 0), CV_FILLED, 1);
 			//printf("[%f %f] ", p.x, p.y);
@@ -181,23 +178,27 @@ int _tmain(int argc, _TCHAR* argv[])
 			//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
 			
 			imshow("raw image", cframe);
-			imshow("FG mask", fgmask);
+			//imshow("FG mask", fgmask);
 
-			if (p.x + 30 < 512 && p.y + 30 < 512 && p.x - 30 >= 0 && p.y - 30 >= 0)
-			{
-				Mat subImage(frame, cv::Rect(p.x - 30, p.y - 30, 60, 60));
+			//if (p.x + 30 < 512 && p.y + 30 < 512 && p.x - 30 >= 0 && p.y - 30 >= 0)
+			//{
+			//	Mat subImage(frame, cv::Rect(p.x - 30, p.y - 30, 60, 60));
 
-				if (prev.empty())
-					prev = subImage.clone();
+			//	if (prev.empty())
+			//		prev = subImage.clone();
 
-				rigid_mat = estimateRigidTransform(prev, subImage, false);
-				warpAffine(subImage, dst, rigid_mat, subImage.size(), INTER_NEAREST | WARP_INVERSE_MAP, BORDER_CONSTANT);
-				//Mat rotImage = rotate(dst, angle);
+			//	rigid_mat = estimateRigidTransform(prev, subImage, false);
+			//
+			//	if (!rigid_mat.empty())
+			//	{
+			//		warpAffine(subImage, dst, rigid_mat, subImage.size(), INTER_NEAREST | WARP_INVERSE_MAP, BORDER_CONSTANT);
+			//		//Mat rotImage = rotate(dst, angle);
+			//		imshow("sub image", dst);
+			//	}
 
-				imshow("sub image", dst);
-				prev = subImage.clone();
+			//	prev = subImage.clone();
 
-			}
+			//}
 
 			flycontour[0].clear();
 
