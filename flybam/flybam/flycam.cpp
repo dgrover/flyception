@@ -18,7 +18,7 @@ Error Flycam::Connect(PGRGuid guid)
 	return error;
 }
 
-Error Flycam::SetCameraParameters()
+Error Flycam::SetCameraParameters(int offsetX, int offsetY, int width, int height)
 {
 	// Get the camera information
 	error = cam.GetCameraInfo(&camInfo);
@@ -32,10 +32,10 @@ Error Flycam::SetCameraParameters()
 		printf("Pixel format is not supported\n");
 
 	fmt7ImageSettings.mode = k_fmt7Mode;
-	fmt7ImageSettings.offsetX = 384; // 0;
-	fmt7ImageSettings.offsetY = 256; // 0;
-	fmt7ImageSettings.width = 512; // fmt7Info.maxWidth;
-	fmt7ImageSettings.height = 512; // fmt7Info.maxHeight;
+	fmt7ImageSettings.offsetX = offsetX;
+	fmt7ImageSettings.offsetY = offsetY;
+	fmt7ImageSettings.width = width;			// fmt7Info.maxWidth;
+	fmt7ImageSettings.height = height;			// fmt7Info.maxHeight;
 	fmt7ImageSettings.pixelFormat = k_fmt7PixFmt;
 
 	// Validate the settings to make sure that they are valid

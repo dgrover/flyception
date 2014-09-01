@@ -7,6 +7,15 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+Mat rotate(Mat src, double angle)
+{
+	Mat dst;
+	Point2f pt(src.cols / 2., src.rows / 2.);
+	Mat r = getRotationMatrix2D(pt, angle, 1.0);
+	warpAffine(src, dst, r, Size(src.cols, src.rows));
+	return dst;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	string filename = "..\\..\\arena\\camera_projection_data.xml";
@@ -22,27 +31,23 @@ int _tmain(int argc, _TCHAR* argv[])
 	BusManager busMgr;
 	unsigned int numCameras;
 	PGRGuid guid;
-
 	Error error;
-
-	int nframes, imageWidth, imageHeight, success;
 
 	FileReader f;
 
 	Tracker tkf;
 	Daq ndq;
 
+	int nframes = -1;
+
 	if (argc == 2)
 	{
-		success = f.Open(argv[1]);
-		success = f.ReadHeader();
-		nframes = f.GetFrameCount();
-		f.GetImageSize(imageWidth, imageHeight);
+		f.Open(argv[1]);
+		f.ReadHeader();
+		nframes = f.GetFrameCount();	
 	}
 	else
 	{
-		nframes = -1;
-
 		error = busMgr.GetNumOfCameras(&numCameras);
 
 		if (error != PGRERROR_OK)
@@ -76,15 +81,13 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
-		error = arena_cam.SetCameraParameters();
+		error = arena_cam.SetCameraParameters(384, 256, 512, 512);
 
 		if (error != PGRERROR_OK)
 		{
 			error.PrintErrorTrace();
 			return -1;
 		}
-
-		arena_cam.GetImageSize(imageWidth, imageHeight);
 
 		// Start arena camera
 		error = arena_cam.Start();
@@ -114,7 +117,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	mog_cpu.set("nmixtures", 3);
 	Mat frame, fgmask, cframe;
 
-	vector<vector<Point> > contours, flycontour(1);
+	vector<vector<Point>> contours, flycontour(1);
 	vector<Vec4i> hierarchy;
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
@@ -129,9 +132,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (!frame.empty())
 		{
 			Point2f p;
+			double angle;
 
 			mog_cpu(frame, fgmask, 0.01);
-			findContours(fgmask, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_SIMPLE);
+			findContours(fgmask, contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 			
 			for (int i = 0; i < contours.size(); i++)
 				flycontour[0].insert(end(flycontour[0]), begin(contours[i]), end(contours[i]));
@@ -144,6 +148,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				ellipse(cframe, minEllipse, Scalar(255, 0, 0), 1, 1);
 				circle(cframe, minEllipse.center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
 				//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
+
+				angle = minEllipse.angle;
 
 				tkf.Predict();
 				p = tkf.Correct(minEllipse.center);
@@ -175,13 +181,21 @@ int _tmain(int argc, _TCHAR* argv[])
 			imshow("raw image", cframe);
 			imshow("FG mask", fgmask);
 
+			if (p.x + 30 < 512 && p.y + 30 < 512 && p.x - 30 >= 0 && p.y - 30 >= 0)
+			{
+				Mat subImage(frame, cv::Rect(p.x - 30, p.y - 30, 60, 60));
+				Mat rotImage = rotate(subImage, angle);
+
+				imshow("sub image", rotImage);
+			}
+
 			flycontour[0].clear();
 
 		}
 		else
 			pt = f.ReadFrame();		//Read coordinates from txt file
 
-		ndq.ConvertPixelToVoltage(pt);
+		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
 		waitKey(1);

@@ -38,7 +38,7 @@ void Daq::write()
 	DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
 }
 
-void Daq::ConvertPixelToVoltage(Mat pt)
+void Daq::ConvertPtToVoltage(Mat pt)
 {
 	float thetax = atan(pt.at<double>(0, 0) / galvoheight) * 180 / PI;
 	float thetay = atan(pt.at<double>(1, 0) / galvoheight) * 180 / PI;
