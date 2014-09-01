@@ -9,7 +9,7 @@ Daq::Daq()
 	taskHandleY = 0;
 
 	voltperdeg = 0.5;
-	galvoheight = 1000.0;
+	galvoheight = 100.0;
 
 	dataX[1] = { 0.0 };
 	dataY[1] = { 0.0 };

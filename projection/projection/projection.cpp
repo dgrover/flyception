@@ -6,7 +6,7 @@
 using namespace std;
 using namespace cv;
 
-#define HEIGHT_FROM_BASE 31.75
+#define HEIGHT_FROM_BASE 3.175
 
 std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squareSize)
 {

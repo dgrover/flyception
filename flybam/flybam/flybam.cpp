@@ -153,8 +153,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				tkf.Predict();
 				p = tkf.Correct(minEllipse.center);
 			}
-			//else
-			//	p = tkf.Predict();
 	
 			circle(cframe, p, 1, Scalar(0, 255, 0), CV_FILLED, 1);
 			//printf("[%f %f] ", p.x, p.y);
@@ -172,7 +170,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			s /= tempMat.at<double>(2, 0);
 
 			pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-			//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+			printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
 			
 			//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
 			//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
@@ -206,8 +204,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		else
 			pt = f.ReadFrame();		//Read coordinates from txt file
 
-		ndq.ConvertPtToVoltage(pt);
-		ndq.write();
+		//ndq.ConvertPtToVoltage(pt);
+		//ndq.write();
 
 		waitKey(1);
 
