@@ -26,7 +26,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat tvec(1, 3, cv::DataType<double>::type);
 	Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
-	Flycam arena_cam;
+	Flycam arena_cam, fly_cam;
 
 	BusManager busMgr;
 	unsigned int numCameras;
@@ -97,6 +97,42 @@ int _tmain(int argc, _TCHAR* argv[])
 			error.PrintErrorTrace();
 			return -1;
 		}
+
+		//Get fly camera information
+		error = busMgr.GetCameraFromIndex(1, &guid);
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		error = fly_cam.Connect(guid);
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		error = fly_cam.SetCameraParameters(0, 0, 1280, 1024);
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+		// Start fly camera
+		error = fly_cam.Start();
+
+		if (error != PGRERROR_OK)
+		{
+			error.PrintErrorTrace();
+			return -1;
+		}
+
+
 	}
 
 	FileStorage fs(filename, FileStorage::READ);
@@ -113,13 +149,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 	
-	BackgroundSubtractorMOG mog_cpu;
-	mog_cpu.set("nmixtures", 3);
-	Mat frame, fgmask, cframe;
+	BackgroundSubtractorMOG arena_mog;
+	arena_mog.set("nmixtures", 3);
+	
+	Mat arena_frame, arena_mask;
+	Mat fly_frame;
 
-	//Mat prev, rigid_mat, dst;
-
-	vector<vector<Point>> contours, flycontour(1);
+	vector<vector<Point>> arena_contours, arena_contour(1);
 	vector<Vec4i> hierarchy;
 
 	Point2f p;
@@ -127,86 +163,61 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		if (argc == 2)
-			frame = f.ReadFrame(imageCount);
+			arena_frame = f.ReadFrame(imageCount);
 		else
-		 	frame = arena_cam.GrabFrame();
+		 	arena_frame = arena_cam.GrabFrame();
 
-		cvtColor(frame, cframe, CV_GRAY2RGB);
-		
-		if (!frame.empty())
+		arena_mog(arena_frame, arena_mask, 0.01);
+		findContours(arena_mask, arena_contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+			
+		for (int i = 0; i < arena_contours.size(); i++)
+			arena_contour[0].insert(end(arena_contour[0]), begin(arena_contours[i]), end(arena_contours[i]));
+
+		if (arena_contour[0].size() > 20)
 		{
-			mog_cpu(frame, fgmask, 0.01);
-			findContours(fgmask, contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+			RotatedRect minEllipse = fitEllipse(Mat(arena_contour[0]));
+			//drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
 			
-			for (int i = 0; i < contours.size(); i++)
-				flycontour[0].insert(end(flycontour[0]), begin(contours[i]), end(contours[i]));
+			ellipse(arena_frame, minEllipse, Scalar(255, 255, 255), 1, 1);
+			//circle(frame, minEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+			//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
 
-			if (flycontour[0].size() > 20)
-			{
-				RotatedRect minEllipse = fitEllipse(Mat(flycontour[0]));
-				//drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
-
-				ellipse(cframe, minEllipse, Scalar(255, 0, 0), 1, 1);
-				circle(cframe, minEllipse.center, 1, Scalar(255, 0, 0), CV_FILLED, 1);
-				//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
-
-				tkf.Predict();
-				p = tkf.Correct(minEllipse.center);
-			}
-	
-			circle(cframe, p, 1, Scalar(0, 255, 0), CV_FILLED, 1);
-			//printf("[%f %f] ", p.x, p.y);
-
-			cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
-			uvPoint.at<double>(0, 0) = p.x;
-			uvPoint.at<double>(1, 0) = p.y;
-
-			cv::Mat tempMat, tempMat2;
-			double s;
-
-			tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
-			tempMat2 = rotationMatrix.inv() * tvec;
-			s = tempMat2.at<double>(2, 0); //height Zconst is zero
-			s /= tempMat.at<double>(2, 0);
-
-			pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-			//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
-			
-			//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
-			//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
-			
-			imshow("raw image", cframe);
-			//imshow("FG mask", fgmask);
-
-			//if (p.x + 30 < 512 && p.y + 30 < 512 && p.x - 30 >= 0 && p.y - 30 >= 0)
-			//{
-			//	Mat subImage(frame, cv::Rect(p.x - 30, p.y - 30, 60, 60));
-
-			//	if (prev.empty())
-			//		prev = subImage.clone();
-
-			//	rigid_mat = estimateRigidTransform(prev, subImage, false);
-			//
-			//	if (!rigid_mat.empty())
-			//	{
-			//		warpAffine(subImage, dst, rigid_mat, subImage.size(), INTER_NEAREST | WARP_INVERSE_MAP, BORDER_CONSTANT);
-			//		//Mat rotImage = rotate(dst, angle);
-			//		imshow("sub image", dst);
-			//	}
-
-			//	prev = subImage.clone();
-
-			//}
-
-			flycontour[0].clear();
-
+			tkf.Predict();
+			p = tkf.Correct(minEllipse.center);
 		}
-		else
-			pt = f.ReadFrame();		//Read coordinates from txt file
+	
+		circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+		//printf("[%f %f] ", p.x, p.y);
 
-		//ndq.ConvertPtToVoltage(pt);
-		//ndq.write();
+		cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
+		uvPoint.at<double>(0, 0) = p.x;
+		uvPoint.at<double>(1, 0) = p.y;
 
+		cv::Mat tempMat, tempMat2;
+		double s;
+
+		tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
+		tempMat2 = rotationMatrix.inv() * tvec;
+		s = -3.175 + tempMat2.at<double>(2, 0); //height Zconst is zero
+		s /= tempMat.at<double>(2, 0);
+
+		pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
+		//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+			
+		//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
+		//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
+			
+		imshow("raw image", arena_frame);
+
+		arena_contour[0].clear();
+
+		ndq.ConvertPtToVoltage(pt);
+		ndq.write();
+
+		fly_frame = fly_cam.GrabFrame();
+
+		imshow("fly image", fly_frame);
+		
 		waitKey(1);
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
@@ -216,7 +227,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (argc == 2)
 		f.Close();
 	else
+	{
 		arena_cam.Stop();
+		fly_cam.Stop();
+	}
 
 	printf("\nPress Enter to exit...\n");
 	getchar();
