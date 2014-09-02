@@ -170,7 +170,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			s /= tempMat.at<double>(2, 0);
 
 			pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-			printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+			//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
 			
 			//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
 			//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
