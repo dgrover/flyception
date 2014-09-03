@@ -135,6 +135,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		p = tkf.Predict();
 
+		pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
+
+		ndq.ConvertPtToVoltage(pt);
+		ndq.write();
+
+		fly_frame = fly_cam.GrabFrame();
+		
+		// fly feature detection and position update
+		imshow("fly image", fly_frame);
+
+		// if no fly detected, switch back to arena view to get coarse fly location and position update
 		if (argc == 2)
 			arena_frame = f.ReadFrame(imageCount);
 		else
@@ -158,19 +169,11 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		arena_contour[0].clear();
 
-		//circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+		circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 		//printf("[%f %f] ", p.x, p.y);
 
-		pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
-
-		ndq.ConvertPtToVoltage(pt);
-		ndq.write();
-
-		//fly_frame = fly_cam.GrabFrame();
-
 		imshow("arena image", arena_frame);
-		//imshow("fly image", fly_frame);
-	
+		
 		waitKey(1);
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
