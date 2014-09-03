@@ -7,6 +7,30 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
+{
+	cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
+	uvPoint.at<double>(0, 0) = p.x;
+	uvPoint.at<double>(1, 0) = p.y;
+
+	cv::Mat tempMat, tempMat2;
+	double s;
+
+	tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
+	tempMat2 = rotationMatrix.inv() * tvec;
+	s = -3.175 + tempMat2.at<double>(2, 0); //height Zconst is zero
+	s /= tempMat.at<double>(2, 0);
+
+	Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
+	//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+
+	//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
+	//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
+
+	return pt;
+
+}
+
 //Mat rotate(Mat src, double angle)
 //{
 //	Mat dst;
@@ -49,13 +73,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	else
 	{
 		error = busMgr.GetNumOfCameras(&numCameras);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
 		printf("Number of cameras detected: %u\n", numCameras);
 
 		if (numCameras < 1)
@@ -64,32 +81,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
-		//Get arena camera information
+		//Initialize arena camera
 		error = busMgr.GetCameraFromIndex(0, &guid);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
 		error = arena_cam.Connect(guid);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
 		error = arena_cam.SetCameraParameters(384, 256, 512, 512);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
-		// Start arena camera
 		error = arena_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -98,32 +93,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			return -1;
 		}
 
-		//Get fly camera information
+		//Initialize fly camera
 		error = busMgr.GetCameraFromIndex(1, &guid);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
 		error = fly_cam.Connect(guid);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
 		error = fly_cam.SetCameraParameters(0, 0, 1280, 1024);
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
-		// Start fly camera
 		error = fly_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -131,8 +104,6 @@ int _tmain(int argc, _TCHAR* argv[])
 			error.PrintErrorTrace();
 			return -1;
 		}
-
-
 	}
 
 	FileStorage fs(filename, FileStorage::READ);
@@ -162,10 +133,12 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
+		p = tkf.Predict();
+
 		if (argc == 2)
 			arena_frame = f.ReadFrame(imageCount);
 		else
-		 	arena_frame = arena_cam.GrabFrame();
+			arena_frame = arena_cam.GrabFrame();
 
 		arena_mog(arena_frame, arena_mask, 0.01);
 		findContours(arena_mask, arena_contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
@@ -177,47 +150,27 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			RotatedRect minEllipse = fitEllipse(Mat(arena_contour[0]));
 			//drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
-			
-			ellipse(arena_frame, minEllipse, Scalar(255, 255, 255), 1, 1);
+			//ellipse(arena_frame, minEllipse, Scalar(255, 255, 255), 1, 1);
 			//circle(frame, minEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 			//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
 
-			tkf.Predict();
 			p = tkf.Correct(minEllipse.center);
 		}
-	
-		circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+		arena_contour[0].clear();
+
+		//circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 		//printf("[%f %f] ", p.x, p.y);
 
-		cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
-		uvPoint.at<double>(0, 0) = p.x;
-		uvPoint.at<double>(1, 0) = p.y;
-
-		cv::Mat tempMat, tempMat2;
-		double s;
-
-		tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
-		tempMat2 = rotationMatrix.inv() * tvec;
-		s = -3.175 + tempMat2.at<double>(2, 0); //height Zconst is zero
-		s /= tempMat.at<double>(2, 0);
-
-		pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
-		//printf("[%f %f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
-			
-		//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
-		//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
-			
-		imshow("raw image", arena_frame);
-
-		arena_contour[0].clear();
+		pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
 
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
-		fly_frame = fly_cam.GrabFrame();
+		//fly_frame = fly_cam.GrabFrame();
 
-		imshow("fly image", fly_frame);
-		
+		imshow("arena image", arena_frame);
+		//imshow("fly image", fly_frame);
+	
 		waitKey(1);
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
