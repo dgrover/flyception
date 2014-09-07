@@ -126,7 +126,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame;
 
-	vector<vector<Point>> arena_contours, arena_contour(1);
+	vector<vector<Point>> arena_contours;
 	vector<Vec4i> hierarchy;
 
 	Point2f p;
@@ -153,21 +153,18 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		arena_mog(arena_frame, arena_mask, 0.01);
 		findContours(arena_mask, arena_contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-			
+		vector<RotatedRect> minEllipse(arena_contours.size());
+
 		for (int i = 0; i < arena_contours.size(); i++)
-			arena_contour[0].insert(end(arena_contour[0]), begin(arena_contours[i]), end(arena_contours[i]));
-
-		if (arena_contour[0].size() > 20)
 		{
-			RotatedRect minEllipse = fitEllipse(Mat(arena_contour[0]));
-			//drawContours(fgmask, flycontour, 0, Scalar(255, 255, 255), CV_FILLED, 8);
-			//ellipse(arena_frame, minEllipse, Scalar(255, 255, 255), 1, 1);
-			//circle(frame, minEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-			//printf("[%f %f] ", minEllipse.center.x, minEllipse.center.y);
-
-			p = tkf.Correct(minEllipse.center);
+			drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+			if (arena_contours[i].size() > 5)
+			{
+				minEllipse[i] = fitEllipse(Mat(arena_contours[i]));
+				ellipse(arena_frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
+				p = tkf.Correct(minEllipse[i].center);
+			}
 		}
-		arena_contour[0].clear();
 
 		circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 		//printf("[%f %f] ", p.x, p.y);
