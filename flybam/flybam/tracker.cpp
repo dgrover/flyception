@@ -12,12 +12,12 @@ Tracker::Tracker()
     KF.statePre.at<float>(1) = -1;
     KF.statePre.at<float>(2) = 0;
     KF.statePre.at<float>(3) = 0;
-    KF.transitionMatrix = *(Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
+    KF.transitionMatrix = (Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
 
     setIdentity(KF.measurementMatrix);
     setIdentity(KF.processNoiseCov, Scalar::all(1e-2));
     setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(KF.errorCovPost, Scalar::all(.1));
+    setIdentity(KF.errorCovPost, Scalar::all(0.1));
 }
 
 Tracker::~Tracker()

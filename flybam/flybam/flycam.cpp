@@ -10,7 +10,7 @@ Flycam::Flycam()
 Flycam::~Flycam()
 {}
 
-Error Flycam::Connect(PGRGuid guid)
+FlyCapture2::Error Flycam::Connect(PGRGuid guid)
 {
 	// Connect to a camera
 	error = cam.Connect(&guid);
@@ -18,7 +18,7 @@ Error Flycam::Connect(PGRGuid guid)
 	return error;
 }
 
-Error Flycam::SetCameraParameters(int offsetX, int offsetY, int width, int height)
+FlyCapture2::Error Flycam::SetCameraParameters(int width, int height)
 {
 	// Get the camera information
 	error = cam.GetCameraInfo(&camInfo);
@@ -32,10 +32,10 @@ Error Flycam::SetCameraParameters(int offsetX, int offsetY, int width, int heigh
 		printf("Pixel format is not supported\n");
 
 	fmt7ImageSettings.mode = k_fmt7Mode;
-	fmt7ImageSettings.offsetX = offsetX;
-	fmt7ImageSettings.offsetY = offsetY;
-	fmt7ImageSettings.width = width;			// fmt7Info.maxWidth;
-	fmt7ImageSettings.height = height;			// fmt7Info.maxHeight;
+	fmt7ImageSettings.offsetX = fmt7Info.maxWidth / 2 - width / 2;
+	fmt7ImageSettings.offsetY = fmt7Info.maxHeight / 2 - height / 2;	
+	fmt7ImageSettings.width = width;			
+	fmt7ImageSettings.height = height;			
 	fmt7ImageSettings.pixelFormat = k_fmt7PixFmt;
 
 	// Validate the settings to make sure that they are valid
@@ -50,7 +50,7 @@ Error Flycam::SetCameraParameters(int offsetX, int offsetY, int width, int heigh
 	return error;
 }
 
-Error Flycam::Start()
+FlyCapture2::Error Flycam::Start()
 {
 	// Start capturing images
 	error = cam.StartCapture();
@@ -58,7 +58,7 @@ Error Flycam::Start()
 	return error;
 }
 
-Error Flycam::Stop()
+FlyCapture2::Error Flycam::Stop()
 {
 	// Stop capturing images
 	error = cam.StopCapture();
@@ -69,7 +69,7 @@ Error Flycam::Stop()
 	return error;
 }
 
-Mat Flycam::GrabFrame()
+FlyCapture2::Image Flycam::GrabFrame()
 {
 	// Retrieve an image
 	error = cam.RetrieveBuffer(&rawImage);
@@ -80,9 +80,14 @@ Mat Flycam::GrabFrame()
 	// Convert the raw image
 	error = rawImage.Convert(PIXEL_FORMAT_MONO8, &convertedImage);
 
+	return convertedImage;
+}
+
+Mat Flycam::convertImagetoMat(Image img)
+{
 	// convert to OpenCV Mat
-	unsigned int rowBytes = (double)convertedImage.GetReceivedDataSize() / (double)convertedImage.GetRows();
-	Mat frame = Mat(convertedImage.GetRows(), convertedImage.GetCols(), CV_8UC1, convertedImage.GetData(), rowBytes);
+	unsigned int rowBytes = (double)img.GetReceivedDataSize() / (double)img.GetRows();
+	Mat frame = Mat(img.GetRows(), img.GetCols(), CV_8UC1, img.GetData(), rowBytes);
 
 	return frame;
 }
@@ -91,4 +96,9 @@ void Flycam::GetImageSize(int &imageWidth, int &imageHeight)
 {
 		imageWidth = fmt7ImageSettings.width;
 		imageHeight = fmt7ImageSettings.height;
+}
+
+FlyCapture2::TimeStamp Flycam::GetTimeStamp()
+{
+	return timestamp;
 }

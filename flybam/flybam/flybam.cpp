@@ -55,7 +55,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	BusManager busMgr;
 	unsigned int numCameras;
 	PGRGuid guid;
-	Error error;
+	FlyCapture2::Error error;
 
 	FileReader f;
 
@@ -84,7 +84,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		//Initialize arena camera
 		error = busMgr.GetCameraFromIndex(0, &guid);
 		error = arena_cam.Connect(guid);
-		error = arena_cam.SetCameraParameters(384, 256, 512, 512);
+		error = arena_cam.SetCameraParameters(512, 512);
 		error = arena_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -96,7 +96,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		//Initialize fly camera
 		error = busMgr.GetCameraFromIndex(1, &guid);
 		error = fly_cam.Connect(guid);
-		error = fly_cam.SetCameraParameters(0, 0, 1280, 1024);
+		error = fly_cam.SetCameraParameters(1280, 1024);
 		error = fly_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -120,8 +120,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 	
-	BackgroundSubtractorMOG arena_mog;
-	arena_mog.set("nmixtures", 3);
+	Ptr<BackgroundSubtractor> arena_mog;
+	arena_mog = createBackgroundSubtractorMOG2();
 	
 	Mat arena_frame, arena_mask;
 	Mat fly_frame;
@@ -130,6 +130,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	vector<Vec4i> hierarchy;
 
 	Point2f p;
+	FlyCapture2::Image fly_img, arena_img;
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
@@ -140,19 +141,23 @@ int _tmain(int argc, _TCHAR* argv[])
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
-		fly_frame = fly_cam.GrabFrame();
+		//fly_img = fly_cam.GrabFrame();
+		//fly_frame = fly_cam.convertImagetoMat(fly_img);
 		
 		// fly feature detection and position update
-		imshow("fly image", fly_frame);
+		//imshow("fly image", fly_frame);
 
 		// if no fly detected, switch back to arena view to get coarse fly location and position update
 		if (argc == 2)
 			arena_frame = f.ReadFrame(imageCount);
 		else
-			arena_frame = arena_cam.GrabFrame();
+		{
+			arena_img = arena_cam.GrabFrame();
+			arena_frame = arena_cam.convertImagetoMat(arena_img);
+		}
 
-		arena_mog(arena_frame, arena_mask, 0.01);
-		findContours(arena_mask, arena_contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+		arena_mog->apply(arena_frame, arena_mask);
+		findContours(arena_mask, arena_contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 		vector<RotatedRect> minEllipse(arena_contours.size());
 
 		for (int i = 0; i < arena_contours.size(); i++)
@@ -166,7 +171,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 		}
 
-		circle(arena_frame, p, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+		circle(arena_frame, p, 1, Scalar(255, 255, 255), FILLED, 1);
 		//printf("[%f %f] ", p.x, p.y);
 
 		imshow("arena image", arena_frame);
