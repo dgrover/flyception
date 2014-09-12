@@ -7,6 +7,8 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+#define N 750
+
 Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 {
 	cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
@@ -63,11 +65,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	Daq ndq;
 
 	int nframes = -1;
+	int imageWidth, imageHeight;
 
 	if (argc == 2)
 	{
 		f.Open(argv[1]);
 		f.ReadHeader();
+		f.GetImageSize(imageWidth, imageHeight);
 		nframes = f.GetFrameCount();	
 	}
 	else
@@ -75,7 +79,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		error = busMgr.GetNumOfCameras(&numCameras);
 		printf("Number of cameras detected: %u\n", numCameras);
 
-		if (numCameras < 1)
+		if (numCameras < 2)
 		{
 			printf("Insufficient number of cameras... exiting\n");
 			return -1;
@@ -85,6 +89,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		error = busMgr.GetCameraFromIndex(0, &guid);
 		error = arena_cam.Connect(guid);
 		error = arena_cam.SetCameraParameters(512, 512);
+		arena_cam.GetImageSize(imageWidth, imageHeight);
 		error = arena_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -96,7 +101,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		//Initialize fly camera
 		error = busMgr.GetCameraFromIndex(1, &guid);
 		error = fly_cam.Connect(guid);
-		error = fly_cam.SetCameraParameters(1280, 1024);
+		error = fly_cam.SetCameraParameters(512, 512);
 		error = fly_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -120,17 +125,36 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 	
-	Ptr<BackgroundSubtractor> arena_mog;
-	arena_mog = createBackgroundSubtractorMOG2();
-	
-	Mat arena_frame, arena_mask;
-	Mat fly_frame;
+	FlyCapture2::Image fly_img, arena_img;
+	Mat arena_frame, arena_bg, arena_mask;
+	Mat fly_frame, fly_mask;
 
 	vector<vector<Point>> arena_contours;
 	vector<Vec4i> hierarchy;
 
 	Point2f p;
-	FlyCapture2::Image fly_img, arena_img;
+
+	//background calculation for arena view
+	printf("\nComputing background model... ");
+	arena_bg = Mat::zeros(Size(imageWidth, imageHeight), CV_32FC1);
+
+	for (int imageCount = 0; imageCount != N; imageCount++)
+	{
+		if (argc == 2)
+			arena_frame = f.ReadFrame(imageCount);
+		else
+		{
+			arena_img = arena_cam.GrabFrame();
+			arena_frame = arena_cam.convertImagetoMat(arena_img);
+		}
+
+		accumulate(arena_frame, arena_bg);
+	}
+
+	arena_bg = arena_bg / N;
+	arena_bg.convertTo(arena_bg, CV_8UC1);
+
+	printf("Done\n");
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
@@ -141,13 +165,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
-		//fly_img = fly_cam.GrabFrame();
-		//fly_frame = fly_cam.convertImagetoMat(fly_img);
+		fly_img = fly_cam.GrabFrame();
+		fly_frame = fly_cam.convertImagetoMat(fly_img);
 		
 		// fly feature detection and position update
-		//imshow("fly image", fly_frame);
+		imshow("fly image", fly_frame);
 
 		// if no fly detected, switch back to arena view to get coarse fly location and position update
+		
 		if (argc == 2)
 			arena_frame = f.ReadFrame(imageCount);
 		else
@@ -156,7 +181,13 @@ int _tmain(int argc, _TCHAR* argv[])
 			arena_frame = arena_cam.convertImagetoMat(arena_img);
 		}
 
-		arena_mog->apply(arena_frame, arena_mask);
+		
+		// detect fly in arena view
+		absdiff(arena_frame, arena_bg, arena_mask);
+		threshold(arena_mask, arena_mask, 50, 255, THRESH_BINARY);
+		
+		imshow("arena mask", arena_mask);
+
 		findContours(arena_mask, arena_contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 		vector<RotatedRect> minEllipse(arena_contours.size());
 
@@ -175,7 +206,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		//printf("[%f %f] ", p.x, p.y);
 
 		imshow("arena image", arena_frame);
-		
+				
 		waitKey(1);
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
