@@ -9,6 +9,70 @@ using namespace cv;
 
 #define N 750
 
+RotatedRect findFlyEllipse(Mat mask)
+{
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+
+	findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+	RotatedRect maxEllipse;
+
+	int max_area = 0;
+	int max_contour_index = -1;
+
+	for (int i = 0; i < contours.size(); i++)
+	{
+		drawContours(mask, contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+		double a = contourArea(contours[i], false);  //  Find the area of contour
+
+		if (a > max_area)
+		{
+			max_area = a;
+			max_contour_index = i;                //Store the index of largest contour
+		}
+	}
+
+	if (max_contour_index != -1 && contours[max_contour_index].size() > 5)
+		maxEllipse = fitEllipse(Mat(contours[max_contour_index]));
+
+	return maxEllipse;
+}
+
+Mat extractFlyROI(Mat img, RotatedRect rect)
+{
+	Mat M, rotated, cropped;
+	
+	// get angle and size from the bounding box
+	float angle = rect.angle;
+	Size rect_size = rect.size;
+	
+	if (rect.angle < -45.) 
+	{
+		angle += 90.0;
+		swap(rect_size.width, rect_size.height);
+	}
+	
+	// get the rotation matrix
+	M = getRotationMatrix2D(rect.center, angle, 1.0);
+	
+	// perform the affine transformation
+	warpAffine(img, rotated, M, img.size(), INTER_CUBIC);
+	
+	// crop the resulting image
+	getRectSubPix(rotated, rect_size, rect.center, cropped);
+
+	return cropped;
+}
+
+//Mat rotateImage(Mat src, double angle)
+//{
+//	Mat dst;
+//	Point2f pt(src.cols / 2., src.rows / 2.);
+//	Mat r = getRotationMatrix2D(pt, angle, 1.0);
+//	warpAffine(src, dst, r, Size(src.cols, src.rows));
+//	return dst;
+//}
+
 Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 {
 	cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
@@ -33,15 +97,6 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 
 }
 
-//Mat rotate(Mat src, double angle)
-//{
-//	Mat dst;
-//	Point2f pt(src.cols / 2., src.rows / 2.);
-//	Mat r = getRotationMatrix2D(pt, angle, 1.0);
-//	warpAffine(src, dst, r, Size(src.cols, src.rows));
-//	return dst;
-//}
-
 int _tmain(int argc, _TCHAR* argv[])
 {
 	string filename = "..\\..\\arena\\camera_projection_data.xml";
@@ -65,13 +120,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	Daq ndq;
 
 	int nframes = -1;
-	int imageWidth, imageHeight;
+	
+	int arena_image_width, arena_image_height;
+	int fly_image_width, fly_image_height;
 
 	if (argc == 2)
 	{
 		f.Open(argv[1]);
 		f.ReadHeader();
-		f.GetImageSize(imageWidth, imageHeight);
+		f.GetImageSize(arena_image_width, arena_image_height);
 		nframes = f.GetFrameCount();	
 	}
 	else
@@ -89,7 +146,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		error = busMgr.GetCameraFromIndex(0, &guid);
 		error = arena_cam.Connect(guid);
 		error = arena_cam.SetCameraParameters(512, 512);
-		arena_cam.GetImageSize(imageWidth, imageHeight);
+		arena_cam.GetImageSize(arena_image_width, arena_image_height);
 		error = arena_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -102,6 +159,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		error = busMgr.GetCameraFromIndex(1, &guid);
 		error = fly_cam.Connect(guid);
 		error = fly_cam.SetCameraParameters(512, 512);
+		fly_cam.GetImageSize(fly_image_width, fly_image_height);
 		error = fly_cam.Start();
 
 		if (error != PGRERROR_OK)
@@ -126,17 +184,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.start();
 	
 	FlyCapture2::Image fly_img, arena_img;
+
 	Mat arena_frame, arena_bg, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	vector<vector<Point>> arena_contours;
-	vector<Vec4i> hierarchy;
+	int arena_thresh = 50;
+	int fly_thresh = 85;
 
 	Point2f p;
 
+	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+
 	//background calculation for arena view
 	printf("\nComputing background model... ");
-	arena_bg = Mat::zeros(Size(imageWidth, imageHeight), CV_32FC1);
+	arena_bg = Mat::zeros(Size(arena_image_width, arena_image_height), CV_32FC1);
 
 	for (int imageCount = 0; imageCount != N; imageCount++)
 	{
@@ -159,54 +221,71 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		p = tkf.Predict();
-
 		pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
 
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
-		fly_img = fly_cam.GrabFrame();
-		fly_frame = fly_cam.convertImagetoMat(fly_img);
+		if (argc == 2)
+			fly_frame = f.ReadFrame(imageCount);
+		else
+		{
+			fly_img = fly_cam.GrabFrame();
+			fly_frame = fly_cam.convertImagetoMat(fly_img);
+		}
+		
+		createTrackbar("Fly thresh", "fly image", &fly_thresh, 255);
+
+		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
+		
+		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
+		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 3);
+
+		RotatedRect flyEllipse = findFlyEllipse(fly_mask);
+
+		if (flyEllipse.size.area() != 0)
+		{
+			ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255), 1, 1);
+			circle(fly_frame, flyEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+			
+			p = tkf.Correct(flyEllipse.center);
+		}
 		
 		// fly feature detection and position update
 		imshow("fly image", fly_frame);
+		imshow("fly mask", fly_mask);
 
 		// if no fly detected, switch back to arena view to get coarse fly location and position update
-		
-		if (argc == 2)
-			arena_frame = f.ReadFrame(imageCount);
-		else
+		if (flyEllipse.size.area() == 0)
 		{
-			arena_img = arena_cam.GrabFrame();
-			arena_frame = arena_cam.convertImagetoMat(arena_img);
-		}
-
-		
-		// detect fly in arena view
-		absdiff(arena_frame, arena_bg, arena_mask);
-		threshold(arena_mask, arena_mask, 50, 255, THRESH_BINARY);
-		
-		imshow("arena mask", arena_mask);
-
-		findContours(arena_mask, arena_contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-		vector<RotatedRect> minEllipse(arena_contours.size());
-
-		for (int i = 0; i < arena_contours.size(); i++)
-		{
-			drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-			if (arena_contours[i].size() > 5)
+			if (argc == 2)
+				arena_frame = f.ReadFrame(imageCount);
+			else
 			{
-				minEllipse[i] = fitEllipse(Mat(arena_contours[i]));
-				ellipse(arena_frame, minEllipse[i], Scalar(255, 255, 255), 1, 1);
-				p = tkf.Correct(minEllipse[i].center);
+				arena_img = arena_cam.GrabFrame();
+				arena_frame = arena_cam.convertImagetoMat(arena_img);
 			}
+
+			createTrackbar("Arena thresh", "arena image", &arena_thresh, 255);
+			
+			absdiff(arena_frame, arena_bg, arena_mask);
+			threshold(arena_mask, arena_mask, arena_thresh, 255, THRESH_BINARY);
+			
+			RotatedRect arenaEllipse = findFlyEllipse(arena_mask);
+
+			if (arenaEllipse.size.area() != 0)
+			{
+				ellipse(arena_frame, arenaEllipse, Scalar(255, 255, 255), 1, 1);
+				circle(arena_frame, arenaEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+
+				p = tkf.Correct(arenaEllipse.center);
+			}
+
+			imshow("arena image", arena_frame);
+			imshow("arena mask", arena_mask);
+
 		}
 
-		circle(arena_frame, p, 1, Scalar(255, 255, 255), FILLED, 1);
-		//printf("[%f %f] ", p.x, p.y);
-
-		imshow("arena image", arena_frame);
-				
 		waitKey(1);
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
