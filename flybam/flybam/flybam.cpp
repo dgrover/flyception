@@ -192,8 +192,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 50;
 	int fly_thresh = 85;
 
-	//Point2f p;
-
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
@@ -221,9 +219,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		//p = tkf.Predict();
-		//pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
-
 		pt = tkf.Predict();
 
 		ndq.ConvertPtToVoltage(pt);
@@ -236,7 +231,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			fly_img = fly_cam.GrabFrame();
 			fly_frame = fly_cam.convertImagetoMat(fly_img);
 		}
-		
+
 		createTrackbar("Fly thresh", "fly image", &fly_thresh, 255);
 
 		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
@@ -267,6 +262,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				arena_frame = arena_cam.convertImagetoMat(arena_img);
 			}
 
+			//undistort(arena_frame, arena_frame, cameraMatrix, distCoeffs);
+			
 			createTrackbar("Arena thresh", "arena image", &arena_thresh, 255);
 			
 			absdiff(arena_frame, arena_bg, arena_mask);
@@ -281,8 +278,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				Mat arena_pt = backProject(arenaEllipse.center, cameraMatrix, rotationMatrix, tvec);
 				tkf.Correct(arena_pt);
-
-				//p = tkf.Correct(arenaEllipse.center);
 			}
 
 			imshow("arena image", arena_frame);

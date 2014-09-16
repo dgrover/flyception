@@ -77,8 +77,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\SDK\opencv-2.4.9\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SDK\opencv-2.4.9\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\SDK\opencv-2.4.9\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\SDK\opencv-2.4.9\build\install\x64\vc12\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
