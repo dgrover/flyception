@@ -249,7 +249,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		
 		// fly feature detection and position update
 		imshow("fly image", fly_frame);
-		imshow("fly mask", fly_mask);
+		//imshow("fly mask", fly_mask);
 
 		// if no fly detected, switch back to arena view to get coarse fly location and position update
 		//if (flyEllipse.size.area() == 0)
@@ -281,7 +281,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 
 			imshow("arena image", arena_frame);
-			imshow("arena mask", arena_mask);
+			//imshow("arena mask", arena_mask);
 
 		//}
 
