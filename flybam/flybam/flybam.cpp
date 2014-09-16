@@ -102,6 +102,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	string filename = "..\\..\\arena\\camera_projection_data.xml";
 
 	Mat pt;
+
 	Mat cameraMatrix, distCoeffs;
 	Mat rvec(1, 3, cv::DataType<double>::type);
 	Mat tvec(1, 3, cv::DataType<double>::type);
@@ -191,7 +192,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 50;
 	int fly_thresh = 85;
 
-	Point2f p;
+	//Point2f p;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -220,8 +221,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		p = tkf.Predict();
-		pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
+		//p = tkf.Predict();
+		//pt = backProject(p, cameraMatrix, rotationMatrix, tvec);
+
+		pt = tkf.Predict();
 
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
@@ -247,8 +250,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255), 1, 1);
 			circle(fly_frame, flyEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-			
-			p = tkf.Correct(flyEllipse.center);
 		}
 		
 		// fly feature detection and position update
@@ -256,8 +257,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		imshow("fly mask", fly_mask);
 
 		// if no fly detected, switch back to arena view to get coarse fly location and position update
-		if (flyEllipse.size.area() == 0)
-		{
+		//if (flyEllipse.size.area() == 0)
+		//{
 			if (argc == 2)
 				arena_frame = f.ReadFrame(imageCount);
 			else
@@ -278,13 +279,16 @@ int _tmain(int argc, _TCHAR* argv[])
 				ellipse(arena_frame, arenaEllipse, Scalar(255, 255, 255), 1, 1);
 				circle(arena_frame, arenaEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 
-				p = tkf.Correct(arenaEllipse.center);
+				Mat arena_pt = backProject(arenaEllipse.center, cameraMatrix, rotationMatrix, tvec);
+				tkf.Correct(arena_pt);
+
+				//p = tkf.Correct(arenaEllipse.center);
 			}
 
 			imshow("arena image", arena_frame);
 			imshow("arena mask", arena_mask);
 
-		}
+		//}
 
 		waitKey(1);
 
