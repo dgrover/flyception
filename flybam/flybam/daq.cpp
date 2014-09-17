@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "daq.h"
 
-#define PI 3.14159265358979323846
-
 Daq::Daq()
 {
 	taskHandleX = 0;

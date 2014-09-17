@@ -7,29 +7,19 @@
 
 #include "targetver.h"
 
-#include <windows.h>
-#include <iostream>
 #include <stdio.h>
 #include <tchar.h>
+#include <iostream>
+#include <iomanip>
+#include <string>
 #include <vector>
-//#include <math.h>
-
-#include "FlyCapture2.h"
+#include <numeric>
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/tracking.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/video/background_segm.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
-#include <NIDAQmx.h>
 
-#include "flycam.h"
-#include "filereader.h"
-#include "tracker.h"
-#include "daq.h"
-
-#define PI 3.14159265358979323846
 
 // TODO: reference additional headers your program requires here

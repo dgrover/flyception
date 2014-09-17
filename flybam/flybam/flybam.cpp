@@ -64,14 +64,31 @@ Mat extractFlyROI(Mat img, RotatedRect rect)
 	return cropped;
 }
 
-//Mat rotateImage(Mat src, double angle)
-//{
-//	Mat dst;
-//	Point2f pt(src.cols / 2., src.rows / 2.);
-//	Mat r = getRotationMatrix2D(pt, angle, 1.0);
-//	warpAffine(src, dst, r, Size(src.cols, src.rows));
-//	return dst;
-//}
+Mat rotateImage(Mat src, double angle)
+{
+	Mat dst;
+	Point2f pt(src.cols / 2., src.rows / 2.);
+	Mat r = getRotationMatrix2D(pt, angle, 1.0);
+	warpAffine(src, dst, r, Size(src.cols, src.rows));
+	return dst;
+}
+
+Mat refineFlyCenter(Mat pt, Point2f p)
+{
+	float scale = 2.5 / 141.667914;
+	float angle = 15 * 180 / PI;
+
+	p.x -= 256;
+	p.y -= 256;
+
+	Point2f rotP = Point2f((p.x*cos(angle) - p.y*sin(angle)), (p.x*sin(angle) - p.y*cos(angle)));
+
+	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
+	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)rotP.x*scale);
+	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)rotP.y*scale);
+
+	return newPt;
+}
 
 Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 {
@@ -189,8 +206,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_bg, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 50;
-	int fly_thresh = 85;
+	int arena_thresh = 35;
+	int fly_thresh = 95;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -245,15 +262,16 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255), 1, 1);
 			circle(fly_frame, flyEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-		}
-		
-		// fly feature detection and position update
-		imshow("fly image", fly_frame);
-		//imshow("fly mask", fly_mask);
 
-		// if no fly detected, switch back to arena view to get coarse fly location and position update
-		//if (flyEllipse.size.area() == 0)
-		//{
+			Mat fly_pt = refineFlyCenter(pt, flyEllipse.center);
+			//tkf.Correct(fly_pt);
+		
+			imshow("fly image", fly_frame);
+			imshow("fly mask", fly_mask);
+		}
+		else
+		{
+			// if no fly detected, switch back to arena view to get coarse fly location and position update
 			if (argc == 2)
 				arena_frame = f.ReadFrame(imageCount);
 			else
@@ -262,13 +280,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				arena_frame = arena_cam.convertImagetoMat(arena_img);
 			}
 
-			//undistort(arena_frame, arena_frame, cameraMatrix, distCoeffs);
-			
 			createTrackbar("Arena thresh", "arena image", &arena_thresh, 255);
-			
+
 			absdiff(arena_frame, arena_bg, arena_mask);
 			threshold(arena_mask, arena_mask, arena_thresh, 255, THRESH_BINARY);
-			
+
 			RotatedRect arenaEllipse = findFlyEllipse(arena_mask);
 
 			if (arenaEllipse.size.area() != 0)
@@ -281,11 +297,9 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 
 			imshow("arena image", arena_frame);
-			//imshow("arena mask", arena_mask);
-
-		//}
-
-		waitKey(1);
+			imshow("arena mask", arena_mask);
+		}
+		cv::waitKey(1);
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
 			break;
