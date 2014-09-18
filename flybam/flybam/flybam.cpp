@@ -76,16 +76,22 @@ Mat rotateImage(Mat src, double angle)
 Mat refineFlyCenter(Mat pt, Point2f p)
 {
 	float scale = 2.5 / 141.667914;
-	float angle = 15 * 180 / PI;
+	//float angle = 15 * 180 / PI;
 
 	p.x -= 256;
 	p.y -= 256;
 
-	Point2f rotP = Point2f((p.x*cos(angle) - p.y*sin(angle)), (p.x*sin(angle) - p.y*cos(angle)));
+	//Point2f rotP = Point2f((p.x*cos(angle) - p.y*sin(angle)), (p.x*sin(angle) - p.y*cos(angle)));
 
 	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
-	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)rotP.x*scale);
-	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)rotP.y*scale);
+	//newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)rotP.x*scale);
+	//newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)rotP.y*scale);
+
+	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)p.x*scale);
+	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)p.y*scale);
+
+	//printf("[%f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0));
+	//printf("[%f %f]\n", newPt.at<double>(0, 0), newPt.at<double>(1, 0));
 
 	return newPt;
 }
@@ -200,46 +206,35 @@ int _tmain(int argc, _TCHAR* argv[])
 	//configure and start NIDAQ
 	ndq.configure();
 	ndq.start();
+
+	pt = cv::Mat::zeros(2, 1, cv::DataType<double>::type);
+
+	ndq.ConvertPtToVoltage(pt);
+	ndq.write();
+
+	printf("moving mirror to arena center\n");
+	getchar();
+
+	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
+	circle(outer_mask, Point(arena_image_width/2, arena_image_height/2), 250, Scalar(255, 255, 255), CV_FILLED);
 	
 	FlyCapture2::Image fly_img, arena_img;
 
-	Mat arena_frame, arena_bg, arena_mask;
+	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 35;
-	int fly_thresh = 95;
+	int arena_thresh = 80;
+	int fly_thresh = 70;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	//background calculation for arena view
-	printf("\nComputing background model... ");
-	arena_bg = Mat::zeros(Size(arena_image_width, arena_image_height), CV_32FC1);
-
-	for (int imageCount = 0; imageCount != N; imageCount++)
-	{
-		if (argc == 2)
-			arena_frame = f.ReadFrame(imageCount);
-		else
-		{
-			arena_img = arena_cam.GrabFrame();
-			arena_frame = arena_cam.convertImagetoMat(arena_img);
-		}
-
-		accumulate(arena_frame, arena_bg);
-	}
-
-	arena_bg = arena_bg / N;
-	arena_bg.convertTo(arena_bg, CV_8UC1);
-
-	printf("Done\n");
-
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		pt = tkf.Predict();
+		//pt = tkf.Predict();
 
-		ndq.ConvertPtToVoltage(pt);
-		ndq.write();
+		//ndq.ConvertPtToVoltage(pt);
+		//ndq.write();
 
 		if (argc == 2)
 			fly_frame = f.ReadFrame(imageCount);
@@ -249,10 +244,13 @@ int _tmain(int argc, _TCHAR* argv[])
 			fly_frame = fly_cam.convertImagetoMat(fly_img);
 		}
 
+		fly_frame = rotateImage(fly_frame, 15);
+
 		createTrackbar("Fly thresh", "fly image", &fly_thresh, 255);
 
-		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
-		
+		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_TOZERO_INV);
+		threshold(fly_mask, fly_mask, 5, 255, THRESH_BINARY);
+
 		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
 		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 3);
 
@@ -260,14 +258,21 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		if (flyEllipse.size.area() != 0)
 		{
+			//printf("ellipse center: %f %f", flyEllipse.center.x, flyEllipse.center.y);
+			
 			ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255), 1, 1);
 			circle(fly_frame, flyEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 
 			Mat fly_pt = refineFlyCenter(pt, flyEllipse.center);
 			//tkf.Correct(fly_pt);
-		
+
 			imshow("fly image", fly_frame);
-			imshow("fly mask", fly_mask);
+			//imshow("fly mask", fly_mask);
+
+			ndq.ConvertPtToVoltage(fly_pt);
+			ndq.write();
+
+			pt = fly_pt;
 		}
 		else
 		{
@@ -282,8 +287,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			createTrackbar("Arena thresh", "arena image", &arena_thresh, 255);
 
-			absdiff(arena_frame, arena_bg, arena_mask);
-			threshold(arena_mask, arena_mask, arena_thresh, 255, THRESH_BINARY);
+			threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
+			arena_mask &= outer_mask;
 
 			RotatedRect arenaEllipse = findFlyEllipse(arena_mask);
 
@@ -293,14 +298,20 @@ int _tmain(int argc, _TCHAR* argv[])
 				circle(arena_frame, arenaEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 
 				Mat arena_pt = backProject(arenaEllipse.center, cameraMatrix, rotationMatrix, tvec);
-				tkf.Correct(arena_pt);
+				
+				ndq.ConvertPtToVoltage(arena_pt);
+				ndq.write();
+				//tkf.Correct(arena_pt);
+			
+				imshow("arena image", arena_frame);
+			//	imshow("arena mask", arena_mask);
+
+				pt = arena_pt;
 			}
-
-			imshow("arena image", arena_frame);
-			imshow("arena mask", arena_mask);
 		}
-		cv::waitKey(1);
 
+		waitKey(1);
+		
 		if ( GetAsyncKeyState(VK_ESCAPE) )
 			break;
 	}
