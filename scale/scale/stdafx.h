@@ -9,14 +9,15 @@
 
 #include <stdio.h>
 #include <tchar.h>
+
 #include <iostream>
-#include <iomanip>
+//#include <iomanip>
 #include <string>
 #include <vector>
 #include <numeric>
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
+//#include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
