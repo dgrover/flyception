@@ -1,21 +1,21 @@
 #include "stdafx.h"
 #include "tracker.h"
 
-Tracker::Tracker()
+Tracker::Tracker(float x, float y)
 {
     KF.init(4, 2, 0);
 	
 	measurement.create(2,1);
 	measurement.setTo(Scalar(0));
 
-    KF.statePre.at<float>(0) = -1;
-    KF.statePre.at<float>(1) = -1;
+    KF.statePre.at<float>(0) = x;
+    KF.statePre.at<float>(1) = y;
     KF.statePre.at<float>(2) = 0;
     KF.statePre.at<float>(3) = 0;
     KF.transitionMatrix = *(Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
 
 	setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(1e-2));
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-2));		//adjust this for faster convergence - but higher noise
     setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
     setIdentity(KF.errorCovPost, Scalar::all(0.1));
 }
@@ -43,12 +43,6 @@ Tracker::~Tracker()
 //	return statePt;
 //}
 
-void Tracker::Init(cv::Mat measPt)
-{
-	measurement(0) = (float)measPt.at<double>(0, 0);
-	measurement(1) = (float)measPt.at<double>(1, 0);
-}
-
 cv::Mat Tracker::Predict()
 {
 	prediction = KF.predict();
@@ -56,6 +50,9 @@ cv::Mat Tracker::Predict()
 	cv::Mat predictPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
 	predictPt.at<double>(0, 0) = (double) prediction.at<float>(0);
 	predictPt.at<double>(1, 0) = (double) prediction.at<float>(1);
+
+	//KF.statePre.copyTo(KF.statePost);
+	//KF.errorCovPre.copyTo(KF.errorCovPost);
 
 	return predictPt;
 }

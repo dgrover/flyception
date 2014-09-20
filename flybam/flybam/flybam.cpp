@@ -85,11 +85,40 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 
 }
 
+vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+{
+	vector<Point3f> p3d;
+	vector<Point2f> p2d;
+
+	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), -3.175));
+	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
+
+	return p2d;
+}
+
+RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+{
+	Point2f center(0, 0);
+	double radius = 25; //in mm
+
+	vector<Point3f> c3d;
+	vector<Point2f> c2d;
+
+	RotatedRect circleMask;
+
+	for (double angle = 0; angle <= 2 * PI; angle += 0.001)//You are using radians so you will have to increase by a very small amount
+		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), -3.175));
+
+	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
+
+	circleMask = fitEllipse(c2d);
+
+	return circleMask;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	string filename = "..\\..\\arena\\camera_projection_data.xml";
-
-	Mat pt;
 
 	Mat cameraMatrix, distCoeffs;
 	Mat rvec(1, 3, cv::DataType<double>::type);
@@ -172,16 +201,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 
-	pt = cv::Mat::zeros(2, 1, cv::DataType<double>::type);
-
-	ndq.ConvertPtToVoltage(pt);
-	ndq.write();
-
-	printf("Moving galvo mirror to arena center\n");
-	getchar();
-
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
-	circle(outer_mask, Point(arena_image_width/2, arena_image_height/2), 250, Scalar(255, 255, 255), CV_FILLED);
+	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
+	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), CV_FILLED);
 	
 	FlyCapture2::Image fly_img, arena_img;
 
@@ -196,7 +218,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		pt = tkf.Predict();
+		Mat pt = tkf.Predict();
 		
 		if (argc == 2)
 			fly_frame = f.ReadFrame(imageCount);
