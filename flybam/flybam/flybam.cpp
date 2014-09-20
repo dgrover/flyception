@@ -216,10 +216,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
+	bool flyview_track = false;
+
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		Mat pt = tkf.Predict();
 		
+		ndq.ConvertPtToVoltage(pt);
+		ndq.write();
+
 		if (argc == 2)
 			fly_frame = f.ReadFrame(imageCount);
 		else
@@ -264,16 +269,14 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 		}
 
-		if (fly_max_contour_index != -1)
+		if (flyview_track == true && fly_max_contour_index != -1)
 		{
 			RotatedRect fly_area = fitEllipse(Mat(fly_contours[fly_max_contour_index]));
 
 			circle(fly_frame, fly_mc[fly_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 			Mat fly_pt = refineFlyCenter(pt, fly_mc[fly_max_contour_index]);
+			
 			pt = tkf.Correct(fly_pt);
-
-			ndq.ConvertPtToVoltage(pt);
-			ndq.write();
 
 			imshow("fly image", fly_frame);
 			//imshow("fly mask", fly_mask);
@@ -327,16 +330,17 @@ int _tmain(int argc, _TCHAR* argv[])
 				Mat arena_pt = backProject(arena_mc[arena_max_contour_index], cameraMatrix, rotationMatrix, tvec);
 
 				pt = tkf.Correct(arena_pt);
-				ndq.ConvertPtToVoltage(pt);
-				ndq.write();
 			}
 
-			//imshow("arena image", arena_frame);
+			imshow("arena image", arena_frame);
 			//imshow("arena mask", arena_mask);
 		}
 
 		waitKey(1);
 		
+		if (GetAsyncKeyState(VK_SPACE))
+			flyview_track = true;
+
 		if ( GetAsyncKeyState(VK_ESCAPE) )
 			break;
 	}
