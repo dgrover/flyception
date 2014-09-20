@@ -15,6 +15,8 @@ class Tracker
       Tracker();
       ~Tracker();
 
+	  void Init(cv::Mat measPt);
+
 	  //Point2f Predict();
 	  //Point2f Correct(Point2f measPt);
 

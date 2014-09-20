@@ -7,62 +7,31 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-#define N 750
-
-RotatedRect findFlyEllipse(Mat mask)
-{
-	vector<vector<Point>> contours;
-	vector<Vec4i> hierarchy;
-
-	findContours(mask, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-	RotatedRect maxEllipse;
-
-	int max_area = 0;
-	int max_contour_index = -1;
-
-	for (int i = 0; i < contours.size(); i++)
-	{
-		drawContours(mask, contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-		double a = contourArea(contours[i], false);  //  Find the area of contour
-
-		if (a > max_area)
-		{
-			max_area = a;
-			max_contour_index = i;                //Store the index of largest contour
-		}
-	}
-
-	if (max_contour_index != -1 && contours[max_contour_index].size() > 5)
-		maxEllipse = fitEllipse(Mat(contours[max_contour_index]));
-
-	return maxEllipse;
-}
-
-Mat extractFlyROI(Mat img, RotatedRect rect)
-{
-	Mat M, rotated, cropped;
-	
-	// get angle and size from the bounding box
-	float angle = rect.angle;
-	Size rect_size = rect.size;
-	
-	if (rect.angle < -45.) 
-	{
-		angle += 90.0;
-		swap(rect_size.width, rect_size.height);
-	}
-	
-	// get the rotation matrix
-	M = getRotationMatrix2D(rect.center, angle, 1.0);
-	
-	// perform the affine transformation
-	warpAffine(img, rotated, M, img.size(), INTER_CUBIC);
-	
-	// crop the resulting image
-	getRectSubPix(rotated, rect_size, rect.center, cropped);
-
-	return cropped;
-}
+//Mat extractFlyROI(Mat img, RotatedRect rect)
+//{
+//	Mat M, rotated, cropped;
+//	
+//	// get angle and size from the bounding box
+//	float angle = rect.angle;
+//	Size rect_size = rect.size;
+//	
+//	if (rect.angle < -45.) 
+//	{
+//		angle += 90.0;
+//		swap(rect_size.width, rect_size.height);
+//	}
+//	
+//	// get the rotation matrix
+//	M = getRotationMatrix2D(rect.center, angle, 1.0);
+//	
+//	// perform the affine transformation
+//	warpAffine(img, rotated, M, img.size(), INTER_CUBIC);
+//	
+//	// crop the resulting image
+//	getRectSubPix(rotated, rect_size, rect.center, cropped);
+//
+//	return cropped;
+//}
 
 Mat rotateImage(Mat src, double angle)
 {
@@ -81,11 +50,7 @@ Mat refineFlyCenter(Mat pt, Point2f p)
 	p.x -= 256;
 	p.y -= 256;
 
-	//Point2f rotP = Point2f((p.x*cos(angle) - p.y*sin(angle)), (p.x*sin(angle) - p.y*cos(angle)));
-
 	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
-	//newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)rotP.x*scale);
-	//newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)rotP.y*scale);
 
 	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)p.x*scale);
 	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)p.y*scale);
@@ -212,7 +177,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.ConvertPtToVoltage(pt);
 	ndq.write();
 
-	printf("moving mirror to arena center\n");
+	printf("Moving galvo mirror to arena center\n");
 	getchar();
 
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
@@ -223,19 +188,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 80;
-	int fly_thresh = 70;
+	int arena_thresh = 70;
+	int fly_thresh = 60;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		//pt = tkf.Predict();
-
-		//ndq.ConvertPtToVoltage(pt);
-		//ndq.write();
-
+		pt = tkf.Predict();
+		
 		if (argc == 2)
 			fly_frame = f.ReadFrame(imageCount);
 		else
@@ -244,35 +206,55 @@ int _tmain(int argc, _TCHAR* argv[])
 			fly_frame = fly_cam.convertImagetoMat(fly_img);
 		}
 
-		fly_frame = rotateImage(fly_frame, 15);
-
 		createTrackbar("Fly thresh", "fly image", &fly_thresh, 255);
 
-		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_TOZERO_INV);
-		threshold(fly_mask, fly_mask, 5, 255, THRESH_BINARY);
+		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
+		fly_frame = rotateImage(fly_frame, 15);
+		fly_mask = rotateImage(fly_mask, 15);
 
 		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
-		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 3);
+		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 1);
 
-		RotatedRect flyEllipse = findFlyEllipse(fly_mask);
+		vector<vector<Point>> fly_contours;
+		vector<Vec4i> fly_hierarchy;
 
-		if (flyEllipse.size.area() != 0)
+		findContours(fly_mask, fly_contours, fly_hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+		/// Get the moments and mass centers
+		vector<Moments> fly_mu(fly_contours.size());
+		vector<Point2f> fly_mc(fly_contours.size());
+		for (int i = 0; i < fly_contours.size(); i++)
 		{
-			//printf("ellipse center: %f %f", flyEllipse.center.x, flyEllipse.center.y);
-			
-			ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255), 1, 1);
-			circle(fly_frame, flyEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+			fly_mu[i] = moments(fly_contours[i], false);
+			fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
+		}
 
-			Mat fly_pt = refineFlyCenter(pt, flyEllipse.center);
-			//tkf.Correct(fly_pt);
+		double fly_max_area = 0;
+		int fly_max_contour_index = -1;
+
+		for (int i = 0; i < fly_contours.size(); i++)
+		{
+			drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+			if (fly_mu[i].m00 > fly_max_area)
+			{
+				fly_max_area = fly_mu[i].m00;
+				fly_max_contour_index = i;                //Store the index of largest contour
+			}
+		}
+
+		if (fly_max_contour_index != -1)
+		{
+			RotatedRect fly_area = fitEllipse(Mat(fly_contours[fly_max_contour_index]));
+
+			circle(fly_frame, fly_mc[fly_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+			Mat fly_pt = refineFlyCenter(pt, fly_mc[fly_max_contour_index]);
+			pt = tkf.Correct(fly_pt);
+
+			ndq.ConvertPtToVoltage(pt);
+			ndq.write();
 
 			imshow("fly image", fly_frame);
 			//imshow("fly mask", fly_mask);
-
-			ndq.ConvertPtToVoltage(fly_pt);
-			ndq.write();
-
-			pt = fly_pt;
 		}
 		else
 		{
@@ -290,24 +272,45 @@ int _tmain(int argc, _TCHAR* argv[])
 			threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 			arena_mask &= outer_mask;
 
-			RotatedRect arenaEllipse = findFlyEllipse(arena_mask);
+			vector<vector<Point>> arena_contours;
+			vector<Vec4i> arena_hierarchy;
 
-			if (arenaEllipse.size.area() != 0)
+			findContours(arena_mask, arena_contours, arena_hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+			/// Get the moments and mass centers
+			vector<Moments> arena_mu(arena_contours.size());
+			vector<Point2f> arena_mc(arena_contours.size());
+			for (int i = 0; i < arena_contours.size(); i++)
 			{
-				ellipse(arena_frame, arenaEllipse, Scalar(255, 255, 255), 1, 1);
-				circle(arena_frame, arenaEllipse.center, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-
-				Mat arena_pt = backProject(arenaEllipse.center, cameraMatrix, rotationMatrix, tvec);
-				
-				ndq.ConvertPtToVoltage(arena_pt);
-				ndq.write();
-				//tkf.Correct(arena_pt);
-			
-				imshow("arena image", arena_frame);
-			//	imshow("arena mask", arena_mask);
-
-				pt = arena_pt;
+				arena_mu[i] = moments(arena_contours[i], false);
+				arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 			}
+
+			double arena_max_area = 0;
+			int arena_max_contour_index = -1;
+
+			for (int i = 0; i < arena_contours.size(); i++)
+			{
+				drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+				if (arena_mu[i].m00 > arena_max_area)
+				{
+					arena_max_area = arena_mu[i].m00;
+					arena_max_contour_index = i;                //Store the index of largest contour
+				}
+			}
+
+			if (arena_max_contour_index != -1)
+			{
+				circle(arena_frame, arena_mc[arena_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+				Mat arena_pt = backProject(arena_mc[arena_max_contour_index], cameraMatrix, rotationMatrix, tvec);
+
+				pt = tkf.Correct(arena_pt);
+				ndq.ConvertPtToVoltage(pt);
+				ndq.write();
+			}
+
+			//imshow("arena image", arena_frame);
+			//imshow("arena mask", arena_mask);
 		}
 
 		waitKey(1);
