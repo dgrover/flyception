@@ -211,7 +211,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_frame, fly_mask;
 
 	int arena_thresh = 70;
-	int fly_thresh = 60;
+	int fly_thresh = 75;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -221,10 +221,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		Mat pt = tkf.Predict();
-		
+
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
+		waitKey(1);
+		
 		if (argc == 2)
 			fly_frame = f.ReadFrame(imageCount);
 		else
@@ -239,8 +241,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		fly_frame = rotateImage(fly_frame, 15);
 		fly_mask = rotateImage(fly_mask, 15);
 
-		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
-		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 1);
+		//erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
+		//dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 1);
 
 		vector<vector<Point>> fly_contours;
 		vector<Vec4i> fly_hierarchy;
@@ -271,8 +273,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		if (flyview_track == true && fly_max_contour_index != -1)
 		{
-			RotatedRect fly_area = fitEllipse(Mat(fly_contours[fly_max_contour_index]));
-
 			circle(fly_frame, fly_mc[fly_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 			Mat fly_pt = refineFlyCenter(pt, fly_mc[fly_max_contour_index]);
 			
@@ -336,7 +336,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			//imshow("arena mask", arena_mask);
 		}
 
-		waitKey(1);
+		//waitKey(1);
 		
 		if (GetAsyncKeyState(VK_SPACE))
 			flyview_track = true;
