@@ -44,7 +44,8 @@ Mat rotateImage(Mat src, double angle)
 
 Mat refineFlyCenter(Mat pt, Point2f p)
 {
-	float scale = 2.5 / 141.667914;
+	//float scale = 2.5 / 141.667914;
+	float scale = 2.5 / 214.754098;
 	//float angle = 15 * 180 / PI;
 
 	p.x -= 256;
@@ -210,8 +211,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 70;
-	int fly_thresh = 75;
+	int arena_thresh = 75;
+	int fly_thresh = 85;
+
+	namedWindow("taskbar window");
+	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
+	createTrackbar("Fly thresh", "taskbar window", &fly_thresh, 255);
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -226,7 +231,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		ndq.write();
 
 		waitKey(1);
-		
+
 		if (argc == 2)
 			fly_frame = f.ReadFrame(imageCount);
 		else
@@ -234,8 +239,6 @@ int _tmain(int argc, _TCHAR* argv[])
 			fly_img = fly_cam.GrabFrame();
 			fly_frame = fly_cam.convertImagetoMat(fly_img);
 		}
-
-		createTrackbar("Fly thresh", "fly image", &fly_thresh, 255);
 
 		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 		fly_frame = rotateImage(fly_frame, 15);
@@ -292,8 +295,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				arena_frame = arena_cam.convertImagetoMat(arena_img);
 			}
 
-			createTrackbar("Arena thresh", "arena image", &arena_thresh, 255);
-
 			threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 			arena_mask &= outer_mask;
 
@@ -336,10 +337,8 @@ int _tmain(int argc, _TCHAR* argv[])
 			//imshow("arena mask", arena_mask);
 		}
 
-		//waitKey(1);
-		
 		if (GetAsyncKeyState(VK_SPACE))
-			flyview_track = true;
+			flyview_track = !flyview_track;
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
 			break;
