@@ -7,8 +7,6 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-#define NFLIES 1
-
 //Mat extractFlyROI(Mat img, RotatedRect rect)
 //{
 //	Mat M, rotated, cropped;
@@ -110,13 +108,44 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	RotatedRect circleMask;
 
 	for (double angle = 0; angle <= 2 * PI; angle += 0.001)//You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), -3.175));
+		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), 0));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 
 	circleMask = fitEllipse(c2d);
 
 	return circleMask;
+}
+
+double dist(Mat p1, Mat p2)
+{
+	double dx = (p2.at<double>(0, 0) - p1.at<double>(0, 0));
+	double dy = (p2.at<double>(1, 0) - p1.at<double>(1, 0));
+	return(sqrt(dx*dx + dy*dy));
+}
+
+
+int findClosestPoint(Mat pt, vector<Mat> nbor)
+{
+	int fly_index = 0;
+	if (nbor.size() == 1)
+		return fly_index;
+	else
+	{
+		double fly_dist = dist(pt, nbor[0]);
+		
+		for (int i = 1; i < nbor.size(); i++)
+		{
+			double res = dist(pt, nbor[i]);
+			if (res < fly_dist)
+			{
+				fly_dist = res;
+				fly_index = i;                //Store the index of nearest point
+			}
+		}
+
+		return fly_index;
+	}
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -137,8 +166,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	FileReader f;
 
-	vector<Tracker> tkf(NFLIES);
-	vector<Mat> pt(NFLIES);
+	Tracker tkf;
+	Mat pt;
 	Daq ndq;
 
 	int nframes = -1;
@@ -152,7 +181,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//nframes = f.GetFrameCount();	
 	
 	error = busMgr.GetNumOfCameras(&numCameras);
-	printf("Number of cameras detected: %u\n", numCameras);
+	//printf("Number of cameras detected: %u\n", numCameras);
 
 	if (numCameras < 2)
 	{
@@ -160,6 +189,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 	}
 
+	printf("Initializing arena view camera ");
 	//Initialize arena camera
 	error = busMgr.GetCameraFromIndex(0, &guid);
 	error = arena_cam.Connect(guid);
@@ -172,7 +202,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		error.PrintErrorTrace();
 		return -1;
 	}
+	printf("[OK]\n");
 
+	printf("Initializing fly view camera ");
 	//Initialize fly camera
 	error = busMgr.GetCameraFromIndex(1, &guid);
 	error = fly_cam.Connect(guid);
@@ -185,7 +217,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		error.PrintErrorTrace();
 		return -1;
 	}
-	
+	printf("[OK]\n");
+
 	FileStorage fs(filename, FileStorage::READ);
 
 	fs["Camera_Matrix"] >> cameraMatrix;
@@ -215,7 +248,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	namedWindow("taskbar window");
 	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
 	createTrackbar("Fly thresh", "taskbar window", &fly_thresh, 255);
-
+	
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
@@ -223,10 +256,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		for (int i = 0; i < NFLIES; i++)
-			pt[i] = tkf[i].Predict();
+		pt = tkf.Predict();
 
-		ndq.ConvertPtToVoltage(pt[0]);
+		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
 
 		waitKey(1);
@@ -239,7 +271,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		fly_frame = rotateImage(fly_frame, 15);
 		fly_mask = rotateImage(fly_mask, 15);
 
-		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
+		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 2);
 		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 2);
 
 		vector<vector<Point>> fly_contours;
@@ -250,31 +282,25 @@ int _tmain(int argc, _TCHAR* argv[])
 		/// Get the moments and mass centers
 		vector<Moments> fly_mu(fly_contours.size());
 		vector<Point2f> fly_mc(fly_contours.size());
-		for (int i = 0; i < fly_contours.size(); i++)
-		{
-			fly_mu[i] = moments(fly_contours[i], false);
-			fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
-		}
 
-		double fly_max_area = 0;
-		int fly_max_contour_index = -1;
+		vector<Mat> fly_pt;
 
 		for (int i = 0; i < fly_contours.size(); i++)
 		{
 			//drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-			if (fly_mu[i].m00 > fly_max_area)
-			{
-				fly_max_area = fly_mu[i].m00;
-				fly_max_contour_index = i;                //Store the index of largest contour
-			}
+
+			fly_mu[i] = moments(fly_contours[i], false);
+			fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
+
+			fly_pt.push_back(refineFlyCenter(pt, fly_mc[i]));
 		}
 
-		if (flyview_track == true && fly_max_contour_index != -1)
+		if (flyview_track && fly_pt.size() > 0)
 		{
-			circle(fly_frame, fly_mc[fly_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
-			Mat fly_pt = refineFlyCenter(pt[0], fly_mc[fly_max_contour_index]);
+			int j = findClosestPoint(pt, fly_pt);
+			circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 			
-			pt[0] = tkf[0].Correct(fly_pt);
+			pt = tkf.Correct(fly_pt[j]);
 
 			imshow("fly image", fly_frame);
 			//imshow("fly mask", fly_mask);
@@ -288,7 +314,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 			arena_mask &= outer_mask;
-
+			
 			erode(arena_mask, arena_mask, erodeElement, Point(-1, -1), 1);
 			dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 2);
 			
@@ -301,24 +327,27 @@ int _tmain(int argc, _TCHAR* argv[])
 			vector<Moments> arena_mu(arena_contours.size());
 			vector<Point2f> arena_mc(arena_contours.size());
 			
-			if (arena_contours.size() == NFLIES)
+			vector<Mat> arena_pt;
+
+			for (int i = 0; i < arena_contours.size(); i++)
 			{
-				for (int i = 0; i < arena_contours.size(); i++)
-				{
-					//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+				drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 
-					arena_mu[i] = moments(arena_contours[i], false);
-					arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+				arena_mu[i] = moments(arena_contours[i], false);
+				arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
-					circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
-					Mat arena_pt = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec);
-
-					pt[i] = tkf[i].Correct(arena_pt);
-				}
+				circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+				arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
 			}
 
+			if (arena_pt.size() > 0)
+			{
+				int j = findClosestPoint(pt, arena_pt);
+				pt = tkf.Correct(arena_pt[j]);
+			}
+			
 			imshow("arena image", arena_frame);
-			//imshow("arena mask", arena_mask);
+			imshow("arena mask", arena_mask);
 		}
 
 		if (GetAsyncKeyState(VK_SPACE))

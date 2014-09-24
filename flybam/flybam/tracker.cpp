@@ -50,6 +50,7 @@ cv::Mat Tracker::Predict()
 	cv::Mat predictPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
 	predictPt.at<double>(0, 0) = (double) prediction.at<float>(0);
 	predictPt.at<double>(1, 0) = (double) prediction.at<float>(1);
+	//predictPt.at<double>(2, 0) = 0;
 
 	//KF.statePre.copyTo(KF.statePost);
 	//KF.errorCovPre.copyTo(KF.errorCovPost);

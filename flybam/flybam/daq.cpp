@@ -38,8 +38,8 @@ void Daq::write()
 
 void Daq::ConvertPtToVoltage(Mat pt)
 {
-	float thetax = atan(pt.at<double>(0, 0) / galvoheight) * 180 / PI;
-	float thetay = atan(pt.at<double>(1, 0) / galvoheight) * 180 / PI;
+	float thetax = atan((float)pt.at<double>(0, 0) / galvoheight) * 180 / PI;
+	float thetay = atan((float)pt.at<double>(1, 0) / galvoheight) * 180 / PI;
 
 	dataX[0] = thetax/2 * voltperdeg;
 	dataY[0] = thetay/2 * voltperdeg;
