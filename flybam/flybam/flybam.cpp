@@ -7,6 +7,8 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+#define NFLIES 1
+
 //Mat extractFlyROI(Mat img, RotatedRect rect)
 //{
 //	Mat M, rotated, cropped;
@@ -135,7 +137,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	FileReader f;
 
-	Tracker tkf;
+	vector<Tracker> tkf(NFLIES);
+	vector<Mat> pt(NFLIES);
 	Daq ndq;
 
 	int nframes = -1;
@@ -143,51 +146,46 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_width, arena_image_height;
 	int fly_image_width, fly_image_height;
 
-	if (argc == 2)
+	//f.Open(argv[1]);
+	//f.ReadHeader();
+	//f.GetImageSize(arena_image_width, arena_image_height);
+	//nframes = f.GetFrameCount();	
+	
+	error = busMgr.GetNumOfCameras(&numCameras);
+	printf("Number of cameras detected: %u\n", numCameras);
+
+	if (numCameras < 2)
 	{
-		f.Open(argv[1]);
-		f.ReadHeader();
-		f.GetImageSize(arena_image_width, arena_image_height);
-		nframes = f.GetFrameCount();	
-	}
-	else
-	{
-		error = busMgr.GetNumOfCameras(&numCameras);
-		printf("Number of cameras detected: %u\n", numCameras);
-
-		if (numCameras < 2)
-		{
-			printf("Insufficient number of cameras... exiting\n");
-			return -1;
-		}
-
-		//Initialize arena camera
-		error = busMgr.GetCameraFromIndex(0, &guid);
-		error = arena_cam.Connect(guid);
-		error = arena_cam.SetCameraParameters(512, 512);
-		arena_cam.GetImageSize(arena_image_width, arena_image_height);
-		error = arena_cam.Start();
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
-
-		//Initialize fly camera
-		error = busMgr.GetCameraFromIndex(1, &guid);
-		error = fly_cam.Connect(guid);
-		error = fly_cam.SetCameraParameters(512, 512);
-		fly_cam.GetImageSize(fly_image_width, fly_image_height);
-		error = fly_cam.Start();
-
-		if (error != PGRERROR_OK)
-		{
-			error.PrintErrorTrace();
-			return -1;
-		}
+		printf("Insufficient number of cameras... exiting\n");
+		return -1;
 	}
 
+	//Initialize arena camera
+	error = busMgr.GetCameraFromIndex(0, &guid);
+	error = arena_cam.Connect(guid);
+	error = arena_cam.SetCameraParameters(512, 512);
+	arena_cam.GetImageSize(arena_image_width, arena_image_height);
+	error = arena_cam.Start();
+
+	if (error != PGRERROR_OK)
+	{
+		error.PrintErrorTrace();
+		return -1;
+	}
+
+	//Initialize fly camera
+	error = busMgr.GetCameraFromIndex(1, &guid);
+	error = fly_cam.Connect(guid);
+	error = fly_cam.SetCameraParameters(512, 512);
+	fly_cam.GetImageSize(fly_image_width, fly_image_height);
+	error = fly_cam.Start();
+	
+	if (error != PGRERROR_OK)
+	{
+		error.PrintErrorTrace();
+		return -1;
+	}
+	
 	FileStorage fs(filename, FileStorage::READ);
 
 	fs["Camera_Matrix"] >> cameraMatrix;
@@ -211,8 +209,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 75;
-	int fly_thresh = 85;
+	int arena_thresh = 95;
+	int fly_thresh = 50;
 
 	namedWindow("taskbar window");
 	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
@@ -225,27 +223,24 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
-		Mat pt = tkf.Predict();
+		for (int i = 0; i < NFLIES; i++)
+			pt[i] = tkf[i].Predict();
 
-		ndq.ConvertPtToVoltage(pt);
+		ndq.ConvertPtToVoltage(pt[0]);
 		ndq.write();
 
 		waitKey(1);
 
-		if (argc == 2)
-			fly_frame = f.ReadFrame(imageCount);
-		else
-		{
-			fly_img = fly_cam.GrabFrame();
-			fly_frame = fly_cam.convertImagetoMat(fly_img);
-		}
-
+		//fly_frame = f.ReadFrame(imageCount);
+		fly_img = fly_cam.GrabFrame();
+		fly_frame = fly_cam.convertImagetoMat(fly_img);
+		
 		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 		fly_frame = rotateImage(fly_frame, 15);
 		fly_mask = rotateImage(fly_mask, 15);
 
-		//erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
-		//dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 1);
+		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 1);
+		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 2);
 
 		vector<vector<Point>> fly_contours;
 		vector<Vec4i> fly_hierarchy;
@@ -266,7 +261,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		for (int i = 0; i < fly_contours.size(); i++)
 		{
-			drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+			//drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 			if (fly_mu[i].m00 > fly_max_area)
 			{
 				fly_max_area = fly_mu[i].m00;
@@ -277,9 +272,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (flyview_track == true && fly_max_contour_index != -1)
 		{
 			circle(fly_frame, fly_mc[fly_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
-			Mat fly_pt = refineFlyCenter(pt, fly_mc[fly_max_contour_index]);
+			Mat fly_pt = refineFlyCenter(pt[0], fly_mc[fly_max_contour_index]);
 			
-			pt = tkf.Correct(fly_pt);
+			pt[0] = tkf[0].Correct(fly_pt);
 
 			imshow("fly image", fly_frame);
 			//imshow("fly mask", fly_mask);
@@ -287,17 +282,16 @@ int _tmain(int argc, _TCHAR* argv[])
 		else
 		{
 			// if no fly detected, switch back to arena view to get coarse fly location and position update
-			if (argc == 2)
-				arena_frame = f.ReadFrame(imageCount);
-			else
-			{
-				arena_img = arena_cam.GrabFrame();
-				arena_frame = arena_cam.convertImagetoMat(arena_img);
-			}
+			//arena_frame = f.ReadFrame(imageCount);
+			arena_img = arena_cam.GrabFrame();
+			arena_frame = arena_cam.convertImagetoMat(arena_img);
 
 			threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 			arena_mask &= outer_mask;
 
+			erode(arena_mask, arena_mask, erodeElement, Point(-1, -1), 1);
+			dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 2);
+			
 			vector<vector<Point>> arena_contours;
 			vector<Vec4i> arena_hierarchy;
 
@@ -306,31 +300,21 @@ int _tmain(int argc, _TCHAR* argv[])
 			/// Get the moments and mass centers
 			vector<Moments> arena_mu(arena_contours.size());
 			vector<Point2f> arena_mc(arena_contours.size());
-			for (int i = 0; i < arena_contours.size(); i++)
+			
+			if (arena_contours.size() == NFLIES)
 			{
-				arena_mu[i] = moments(arena_contours[i], false);
-				arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
-			}
-
-			double arena_max_area = 0;
-			int arena_max_contour_index = -1;
-
-			for (int i = 0; i < arena_contours.size(); i++)
-			{
-				drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-				if (arena_mu[i].m00 > arena_max_area)
+				for (int i = 0; i < arena_contours.size(); i++)
 				{
-					arena_max_area = arena_mu[i].m00;
-					arena_max_contour_index = i;                //Store the index of largest contour
+					//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+
+					arena_mu[i] = moments(arena_contours[i], false);
+					arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+
+					circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+					Mat arena_pt = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec);
+
+					pt[i] = tkf[i].Correct(arena_pt);
 				}
-			}
-
-			if (arena_max_contour_index != -1)
-			{
-				circle(arena_frame, arena_mc[arena_max_contour_index], 1, Scalar(255, 255, 255), CV_FILLED, 1);
-				Mat arena_pt = backProject(arena_mc[arena_max_contour_index], cameraMatrix, rotationMatrix, tvec);
-
-				pt = tkf.Correct(arena_pt);
 			}
 
 			imshow("arena image", arena_frame);
@@ -338,20 +322,16 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 
 		if (GetAsyncKeyState(VK_SPACE))
-			flyview_track = !flyview_track;
+			flyview_track = true;
 
 		if ( GetAsyncKeyState(VK_ESCAPE) )
 			break;
 	}
 
-	if (argc == 2)
-		f.Close();
-	else
-	{
-		arena_cam.Stop();
-		fly_cam.Stop();
-	}
-
+	//f.Close();
+	arena_cam.Stop();
+	fly_cam.Stop();
+	
 	printf("\nPress Enter to exit...\n");
 	getchar();
 
