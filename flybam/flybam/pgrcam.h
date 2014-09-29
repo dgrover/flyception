@@ -1,11 +1,11 @@
-#ifndef FLYCAM_H
-#define FLYCAM_H
+#ifndef PGRCAM_H
+#define PGRCAM_H
 
 using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-class Flycam
+class PGRcam
 {
 private:
 	Camera cam;
@@ -30,8 +30,8 @@ private:
 
 public:
 
-	Flycam();
-	~Flycam();
+	PGRcam();
+	~PGRcam();
 
 	FlyCapture2::Error Connect(PGRGuid guid);
 	FlyCapture2::Error SetCameraParameters(int width, int height);

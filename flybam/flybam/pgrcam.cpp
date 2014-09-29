@@ -1,16 +1,16 @@
 #include "stdafx.h"
-#include "flycam.h"
+#include "pgrcam.h"
 
-Flycam::Flycam()
+PGRcam::PGRcam()
 {
 	k_fmt7Mode = MODE_0;
 	k_fmt7PixFmt = PIXEL_FORMAT_RAW8;
 }
 
-Flycam::~Flycam()
+PGRcam::~PGRcam()
 {}
 
-FlyCapture2::Error Flycam::Connect(PGRGuid guid)
+FlyCapture2::Error PGRcam::Connect(PGRGuid guid)
 {
 	// Connect to a camera
 	error = cam.Connect(&guid);
@@ -18,7 +18,7 @@ FlyCapture2::Error Flycam::Connect(PGRGuid guid)
 	return error;
 }
 
-FlyCapture2::Error Flycam::SetCameraParameters(int width, int height)
+FlyCapture2::Error PGRcam::SetCameraParameters(int width, int height)
 {
 	// Get the camera information
 	error = cam.GetCameraInfo(&camInfo);
@@ -50,7 +50,7 @@ FlyCapture2::Error Flycam::SetCameraParameters(int width, int height)
 	return error;
 }
 
-FlyCapture2::Error Flycam::Start()
+FlyCapture2::Error PGRcam::Start()
 {
 	// Start capturing images
 	error = cam.StartCapture();
@@ -58,7 +58,7 @@ FlyCapture2::Error Flycam::Start()
 	return error;
 }
 
-FlyCapture2::Error Flycam::Stop()
+FlyCapture2::Error PGRcam::Stop()
 {
 	// Stop capturing images
 	error = cam.StopCapture();
@@ -69,7 +69,7 @@ FlyCapture2::Error Flycam::Stop()
 	return error;
 }
 
-FlyCapture2::Image Flycam::GrabFrame()
+FlyCapture2::Image PGRcam::GrabFrame()
 {
 	// Retrieve an image
 	error = cam.RetrieveBuffer(&rawImage);
@@ -83,7 +83,7 @@ FlyCapture2::Image Flycam::GrabFrame()
 	return convertedImage;
 }
 
-Mat Flycam::convertImagetoMat(Image img)
+Mat PGRcam::convertImagetoMat(Image img)
 {
 	// convert to OpenCV Mat
 	unsigned int rowBytes = (double)img.GetReceivedDataSize() / (double)img.GetRows();
@@ -92,13 +92,13 @@ Mat Flycam::convertImagetoMat(Image img)
 	return frame;
 }
 
-void Flycam::GetImageSize(int &imageWidth, int &imageHeight)
+void PGRcam::GetImageSize(int &imageWidth, int &imageHeight)
 {
 		imageWidth = fmt7ImageSettings.width;
 		imageHeight = fmt7ImageSettings.height;
 }
 
-FlyCapture2::TimeStamp Flycam::GetTimeStamp()
+FlyCapture2::TimeStamp PGRcam::GetTimeStamp()
 {
 	return timestamp;
 }

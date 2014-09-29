@@ -174,7 +174,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat tvec(1, 3, cv::DataType<double>::type);
 	Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
-	Flycam arena_cam, fly_cam;
+	PGRcam arena_cam, fly_cam;
 
 	BusManager busMgr;
 	unsigned int numCameras;

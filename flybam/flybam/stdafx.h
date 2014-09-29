@@ -25,7 +25,7 @@
 
 #include <NIDAQmx.h>
 
-#include "flycam.h"
+#include "pgrcam.h"
 #include "filereader.h"
 #include "tracker.h"
 #include "daq.h"
