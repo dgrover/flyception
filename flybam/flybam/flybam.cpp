@@ -278,6 +278,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	bool flyview_track = false;
 	bool haveTemplate = false;
 
+	double turn;
+	Mat fly_templ_pos, fly_templ_neg;
+
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
 		pt = tkf.Predict();
@@ -352,7 +355,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			pt = tkf.Correct(fly_pt[j]);
 
 			imshow("fly image", fly_frame);
-			//imshow("fly mask", fly_mask);
+			imshow("fly mask", fly_mask);
 		}
 		else
 		{
