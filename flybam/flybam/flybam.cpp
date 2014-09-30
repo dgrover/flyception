@@ -13,14 +13,14 @@ Mat extractFlyROI(Mat img, RotatedRect rect)
 	
 	// get angle and size from the bounding box
 	float angle = rect.angle;
-	Size rect_size(100, 200);
-	//Size rect_size = rect.size;
+	//Size rect_size(300, 300);
+	Size rect_size = rect.size;
 	
-	if (rect.angle < -45.) 
-	{
-		angle += 90.0;
-		swap(rect_size.width, rect_size.height);
-	}
+	//if (rect.angle < -45.) 
+	//{
+	//	angle += 90.0;
+	//	swap(rect_size.width, rect_size.height);
+	//}
 	
 	// get the rotation matrix
 	M = getRotationMatrix2D(rect.center, angle, 1.0);
@@ -262,24 +262,24 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 95;
 	int fly_thresh = 50;
 
-	int fly_head = 0;
-	int fly_dir = 0;
+	//int fly_head = 0;
+	//int fly_dir = 0;
 
 	namedWindow("taskbar window");
 	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
 	createTrackbar("Fly thresh", "taskbar window", &fly_thresh, 255);
 
-	createTrackbar("Fly head", "taskbar window", &fly_head, 100);
-	createTrackbar("Direction", "taskbar window", &fly_dir, 1);
+	//createTrackbar("Fly head", "taskbar window", &fly_head, 100);
+	//createTrackbar("Direction", "taskbar window", &fly_dir, 1);
 	
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
 	bool flyview_track = false;
-	bool haveTemplate = false;
+	//bool haveTemplate = false;
 
-	double turn;
-	Mat fly_templ_pos, fly_templ_neg;
+	//double turn;
+	//Mat fly_templ_pos, fly_templ_neg;
 
 	for (int imageCount = 0; imageCount != nframes; imageCount++)
 	{
@@ -314,7 +314,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		for (int i = 0; i < fly_contours.size(); i++)
 		{
-			//drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+			drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 
 			fly_mu[i] = moments(fly_contours[i], false);
 			fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
@@ -326,32 +326,32 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			int j = findClosestPoint(pt, fly_pt);
 
-			RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
+			//RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
 
-			Mat cropped = extractFlyROI(fly_frame, flyEllipse);
+			//Mat cropped = extractFlyROI(fly_frame, flyEllipse);
 
-			if (!haveTemplate)
-			{
-				fly_templ_pos = cropped.clone();
-				fly_templ_neg = rotateImage(cropped, 180);
-				haveTemplate = true;
-			}
+			//if (!haveTemplate)
+			//{
+			//	fly_templ_pos = cropped.clone();
+			//	fly_templ_neg = rotateImage(cropped, 180);
+			//	haveTemplate = true;
+			//}
 
-			double posmatch = flyOrientation(cropped, fly_templ_pos);
-			double negmatch = flyOrientation(cropped, fly_templ_neg);
+			//double posmatch = flyOrientation(cropped, fly_templ_pos);
+			//double negmatch = flyOrientation(cropped, fly_templ_neg);
 
-			if (posmatch > negmatch)
-				turn = flyEllipse.angle - 90;
-			else
-				turn = flyEllipse.angle + 90;
+			//if (posmatch > negmatch)
+			//	turn = flyEllipse.angle - 90;
+			//else
+			//	turn = flyEllipse.angle + 90;
 
-			fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
-			fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
+			//fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
+			//fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
 
+			//fly_pt[j] = refineFlyCenter(pt, fly_mc[j]);
 			//ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
 			circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 			
-			fly_pt[j] = refineFlyCenter(pt, fly_mc[j]);
 			pt = tkf.Correct(fly_pt[j]);
 
 			imshow("fly image", fly_frame);
