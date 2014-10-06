@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-string imgfile = "test.jpg";
+string imgfile = "..\\..\\arena\\flyview.jpg";
 vector <Point> mouse;
 vector <double> sqlength;
 

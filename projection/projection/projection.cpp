@@ -66,7 +66,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Size cbSize = Size(boardWidth, boardHeight);
 
-	bool found = findChessboardCorners(img, cbSize, imagePoints, CALIB_CB_FAST_CHECK);
+	bool found = findChessboardCorners(img, cbSize, imagePoints);
 
 	if (found)
 	{

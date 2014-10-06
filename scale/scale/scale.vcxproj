@@ -77,8 +77,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\SDK\opencv-2.4.9\build\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SDK\opencv-2.4.9\build\install\x64\vc12\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\SDK\opencv-2.4.10\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\SDK\opencv-2.4.10\build\install\x64\vc12\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -138,7 +138,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opencv_core249.lib;opencv_highgui249.lib;opencv_calib3d249.lib;opencv_imgproc249.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_core2410.lib;opencv_highgui2410.lib;opencv_calib3d2410.lib;opencv_imgproc2410.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

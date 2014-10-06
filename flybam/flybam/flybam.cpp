@@ -45,8 +45,7 @@ Mat rotateImage(Mat src, double angle)
 
 Mat refineFlyCenter(Mat pt, Point2f p)
 {
-	//float scale = 2.5 / 141.667914;
-	float scale = 2.5 / 214.754098;
+	float scale = 2.5 / 119.502083;
 	//float angle = 15 * 180 / PI;
 
 	p.x -= 256;
@@ -101,7 +100,7 @@ vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, 
 RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
 	Point2f center(0, 0);
-	double radius = 25; //in mm
+	double radius = 20; //in mm
 
 	vector<Point3f> c3d;
 	vector<Point2f> c2d;
@@ -109,7 +108,7 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	RotatedRect circleMask;
 
 	for (double angle = 0; angle <= 2 * PI; angle += 0.001)//You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), 0));
+		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), -3.175));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 
@@ -259,8 +258,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 95;
-	int fly_thresh = 50;
+	int arena_thresh = 75;
+	int fly_thresh = 75;
 
 	//int fly_head = 0;
 	//int fly_dir = 0;
@@ -287,8 +286,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		ndq.ConvertPtToVoltage(pt);
 		ndq.write();
-
-		waitKey(1);
 
 		//fly_frame = f.ReadFrame(imageCount);
 		fly_img = fly_cam.GrabFrame();
@@ -349,13 +346,11 @@ int _tmain(int argc, _TCHAR* argv[])
 			//fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
 
 			//fly_pt[j] = refineFlyCenter(pt, fly_mc[j]);
-			//ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
+			////ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
+			
 			circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 			
 			pt = tkf.Correct(fly_pt[j]);
-
-			imshow("fly image", fly_frame);
-			imshow("fly mask", fly_mask);
 		}
 		else
 		{
@@ -401,6 +396,11 @@ int _tmain(int argc, _TCHAR* argv[])
 			imshow("arena image", arena_frame);
 			imshow("arena mask", arena_mask);
 		}
+
+		imshow("fly image", fly_frame);
+		imshow("fly mask", fly_mask);
+
+		waitKey(1);
 
 		if (GetAsyncKeyState(VK_SPACE))
 			flyview_track = true;
