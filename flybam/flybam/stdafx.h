@@ -14,6 +14,9 @@
 #include <vector>
 //#include <math.h>
 
+#include <omp.h>
+#include <queue>
+
 #include "FlyCapture2.h"
 
 #include <opencv2/core/core.hpp>
@@ -26,7 +29,10 @@
 #include <NIDAQmx.h>
 
 #include "pgrcam.h"
-#include "filereader.h"
+
+#include "fmfreader.h"
+#include "fmfwriter.h"
+
 #include "tracker.h"
 #include "daq.h"
 

@@ -24,13 +24,16 @@
     <ClCompile Include="tracker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="filereader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="daq.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pgrcam.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fmfreader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fmfwriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,13 +47,16 @@
     <ClInclude Include="tracker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="filereader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="daq.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pgrcam.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fmfreader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fmfwriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

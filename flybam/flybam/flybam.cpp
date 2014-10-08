@@ -7,6 +7,15 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+bool stream = true;
+bool flyview_track = false;
+bool flyview_record = false;
+
+queue <Image> flyImageStream;
+queue <Mat> flyDispStream;
+queue <Mat> flyMaskStream;
+queue <TimeStamp> flyTimeStamps;
+
 Mat extractFlyROI(Mat img, RotatedRect rect)
 {
 	Mat M, rotated, cropped;
@@ -180,7 +189,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	PGRGuid guid;
 	FlyCapture2::Error error;
 
-	FileReader f;
+	FmfReader fin;
+	FmfWriter fout;
 
 	Tracker tkf;
 	Mat pt;
@@ -191,10 +201,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_width, arena_image_height;
 	int fly_image_width, fly_image_height;
 
-	//f.Open(argv[1]);
-	//f.ReadHeader();
-	//f.GetImageSize(arena_image_width, arena_image_height);
-	//nframes = f.GetFrameCount();	
+	//fin.Open(argv[1]);
+	//fin.ReadHeader();
+	//fin.GetImageSize(arena_image_width, arena_image_height);
+	//nframes = fin.GetFrameCount();	
 	
 	error = busMgr.GetNumOfCameras(&numCameras);
 	//printf("Number of cameras detected: %u\n", numCameras);
@@ -235,14 +245,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	printf("[OK]\n");
 
-	FileStorage fs(filename, FileStorage::READ);
+	fout.Open();
+	fout.InitHeader(fly_image_width, fly_image_height);
+	fout.WriteHeader();
 
+	FileStorage fs(filename, FileStorage::READ);
 	fs["Camera_Matrix"] >> cameraMatrix;
 	fs["Distortion_Coefficients"] >> distCoeffs;
 	fs["rvec"] >> rvec;
 	fs["tvec"] >> tvec;
 	fs["Rotation_Matrix"] >> rotationMatrix;
-
 	fs.release();
 
 	//configure and start NIDAQ
@@ -254,6 +266,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), CV_FILLED);
 	
 	FlyCapture2::Image fly_img, arena_img;
+	FlyCapture2::TimeStamp fly_stamp;
 
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
@@ -274,144 +287,227 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	bool flyview_track = false;
+
 	//bool haveTemplate = false;
 
 	//double turn;
 	//Mat fly_templ_pos, fly_templ_neg;
 
-	for (int imageCount = 0; imageCount != nframes; imageCount++)
+	#pragma omp parallel sections num_threads(3)
 	{
-		pt = tkf.Predict();
-
-		ndq.ConvertPtToVoltage(pt);
-		ndq.write();
-
-		//fly_frame = f.ReadFrame(imageCount);
-		fly_img = fly_cam.GrabFrame();
-		fly_frame = fly_cam.convertImagetoMat(fly_img);
-		
-		threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
-		fly_frame = rotateImage(fly_frame, 15);
-		fly_mask = rotateImage(fly_mask, 15);
-
-		erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 2);
-		dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 2);
-
-		vector<vector<Point>> fly_contours;
-		vector<Vec4i> fly_hierarchy;
-
-		findContours(fly_mask, fly_contours, fly_hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-		/// Get the moments and mass centers
-		vector<Moments> fly_mu(fly_contours.size());
-		vector<Point2f> fly_mc(fly_contours.size());
-
-		vector<Mat> fly_pt;
-
-		for (int i = 0; i < fly_contours.size(); i++)
+		#pragma omp section
 		{
-			drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-
-			fly_mu[i] = moments(fly_contours[i], false);
-			fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
-
-			fly_pt.push_back(refineFlyCenter(pt, fly_mc[i]));
-		}
-
-		if (flyview_track && fly_pt.size() > 0)
-		{
-			int j = findClosestPoint(pt, fly_pt);
-
-			//RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
-
-			//Mat cropped = extractFlyROI(fly_frame, flyEllipse);
-
-			//if (!haveTemplate)
-			//{
-			//	fly_templ_pos = cropped.clone();
-			//	fly_templ_neg = rotateImage(cropped, 180);
-			//	haveTemplate = true;
-			//}
-
-			//double posmatch = flyOrientation(cropped, fly_templ_pos);
-			//double negmatch = flyOrientation(cropped, fly_templ_neg);
-
-			//if (posmatch > negmatch)
-			//	turn = flyEllipse.angle - 90;
-			//else
-			//	turn = flyEllipse.angle + 90;
-
-			//fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
-			//fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
-
-			//fly_pt[j] = refineFlyCenter(pt, fly_mc[j]);
-			////ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
-			
-			circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
-			
-			pt = tkf.Correct(fly_pt[j]);
-		}
-		else
-		{
-			// if no fly detected, switch back to arena view to get coarse fly location and position update
-			//arena_frame = f.ReadFrame(imageCount);
-			arena_img = arena_cam.GrabFrame();
-			arena_frame = arena_cam.convertImagetoMat(arena_img);
-
-			threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
-			arena_mask &= outer_mask;
-			
-			erode(arena_mask, arena_mask, erodeElement, Point(-1, -1), 1);
-			dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 2);
-			
-			vector<vector<Point>> arena_contours;
-			vector<Vec4i> arena_hierarchy;
-
-			findContours(arena_mask, arena_contours, arena_hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-			/// Get the moments and mass centers
-			vector<Moments> arena_mu(arena_contours.size());
-			vector<Point2f> arena_mc(arena_contours.size());
-			
-			vector<Mat> arena_pt;
-
-			for (int i = 0; i < arena_contours.size(); i++)
+			//for (int imageCount = 0; imageCount != nframes; imageCount++)
+			while (true)
 			{
-				drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+				pt = tkf.Predict();
 
-				arena_mu[i] = moments(arena_contours[i], false);
-				arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+				ndq.ConvertPtToVoltage(pt);
+				ndq.write();
 
-				circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
-				arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
+				//fly_frame = fin.ReadFrame(imageCount);
+				fly_img = fly_cam.GrabFrame();
+				fly_stamp = fly_cam.GetTimeStamp();
+				fly_frame = fly_cam.convertImagetoMat(fly_img);
+
+				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
+				fly_frame = rotateImage(fly_frame, 15);
+				fly_mask = rotateImage(fly_mask, 15);
+
+				erode(fly_mask, fly_mask, erodeElement, Point(-1, -1), 2);
+				dilate(fly_mask, fly_mask, dilateElement, Point(-1, -1), 2);
+
+				vector<vector<Point>> fly_contours;
+				vector<Vec4i> fly_hierarchy;
+
+				findContours(fly_mask, fly_contours, fly_hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+				/// Get the moments and mass centers
+				vector<Moments> fly_mu(fly_contours.size());
+				vector<Point2f> fly_mc(fly_contours.size());
+
+				vector<Mat> fly_pt;
+
+				for (int i = 0; i < fly_contours.size(); i++)
+				{
+					drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+
+					fly_mu[i] = moments(fly_contours[i], false);
+					fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
+
+					fly_pt.push_back(refineFlyCenter(pt, fly_mc[i]));
+				}
+
+				if (flyview_track && fly_pt.size() > 0)
+				{
+					int j = findClosestPoint(pt, fly_pt);
+
+					//RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
+
+					//Mat cropped = extractFlyROI(fly_frame, flyEllipse);
+
+					//if (!haveTemplate)
+					//{
+					//	fly_templ_pos = cropped.clone();
+					//	fly_templ_neg = rotateImage(cropped, 180);
+					//	haveTemplate = true;
+					//}
+
+					//double posmatch = flyOrientation(cropped, fly_templ_pos);
+					//double negmatch = flyOrientation(cropped, fly_templ_neg);
+
+					//if (posmatch > negmatch)
+					//	turn = flyEllipse.angle - 90;
+					//else
+					//	turn = flyEllipse.angle + 90;
+
+					//fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
+					//fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
+
+					//fly_pt[j] = refineFlyCenter(pt, fly_mc[j]);
+					////ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
+
+					circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+
+					pt = tkf.Correct(fly_pt[j]);
+				}
+				else
+				{
+					// if no fly detected, switch back to arena view to get coarse fly location and position update
+					//arena_frame = fin.ReadFrame(imageCount);
+					arena_img = arena_cam.GrabFrame();
+					arena_frame = arena_cam.convertImagetoMat(arena_img);
+
+					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
+					arena_mask &= outer_mask;
+
+					erode(arena_mask, arena_mask, erodeElement, Point(-1, -1), 1);
+					dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 2);
+
+					vector<vector<Point>> arena_contours;
+					vector<Vec4i> arena_hierarchy;
+
+					findContours(arena_mask, arena_contours, arena_hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+					/// Get the moments and mass centers
+					vector<Moments> arena_mu(arena_contours.size());
+					vector<Point2f> arena_mc(arena_contours.size());
+
+					vector<Mat> arena_pt;
+
+					for (int i = 0; i < arena_contours.size(); i++)
+					{
+						drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+
+						arena_mu[i] = moments(arena_contours[i], false);
+						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+
+						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
+					}
+
+					if (arena_pt.size() > 0)
+					{
+						int j = findClosestPoint(pt, arena_pt);
+						pt = tkf.Correct(arena_pt[j]);
+					}
+
+					imshow("arena image", arena_frame);
+					imshow("arena mask", arena_mask);
+
+					waitKey(1);
+
+				}
+								
+				#pragma omp critical
+				{
+					flyImageStream.push(fly_img);
+					flyTimeStamps.push(fly_stamp);
+					flyDispStream.push(fly_frame);
+					flyMaskStream.push(fly_mask);
+				}
+
+				//imshow("fly image", fly_frame);
+				//imshow("fly mask", fly_mask);
+
+				if (GetAsyncKeyState(VK_SPACE))
+					flyview_record = true;
+
+				if (GetAsyncKeyState(VK_RETURN))
+					flyview_track = true;
+
+				if (GetAsyncKeyState(VK_ESCAPE))
+				{
+					stream = false;
+					break;
+				}
 			}
-
-			if (arena_pt.size() > 0)
-			{
-				int j = findClosestPoint(pt, arena_pt);
-				pt = tkf.Correct(arena_pt[j]);
-			}
-			
-			imshow("arena image", arena_frame);
-			imshow("arena mask", arena_mask);
 		}
 
-		imshow("fly image", fly_frame);
-		imshow("fly mask", fly_mask);
 
-		waitKey(1);
+		#pragma omp section
+		{
+			while (true)
+			{
+				if (!flyImageStream.empty())
+				{
+					if (flyview_record)
+					{
+						Image wImage = flyImageStream.front();
+						TimeStamp wStamp = flyTimeStamps.front();
 
-		if (GetAsyncKeyState(VK_SPACE))
-			flyview_track = true;
+						fout.WriteFrame(wStamp, wImage);
+						fout.WriteLog(wStamp);
+						fout.nframes++;
+					}
 
-		if ( GetAsyncKeyState(VK_ESCAPE) )
-			break;
+					#pragma omp critical
+					{
+						flyImageStream.pop();
+						flyTimeStamps.pop();
+					}
+				}
+
+				printf("Recording buffer size %d, Frames written %d\r", flyImageStream.size(), fout.nframes);
+
+				if (flyImageStream.size() == 0 && !stream)
+					break;
+			}
+		}
+
+		#pragma omp section
+		{
+			while (true)
+			{
+				if (!flyDispStream.empty())
+				{
+					imshow("fly image", flyDispStream.back());
+					imshow("fly mask", flyMaskStream.back());
+					waitKey(1);
+
+					#pragma omp critical
+					{
+						flyDispStream = queue<Mat>();
+						flyMaskStream = queue<Mat>();
+					}
+				}
+
+				if (!stream)
+				{
+					destroyWindow("fly image");
+					destroyWindow("fly mask");
+					break;
+				}
+			}
+		}
+
 	}
 
-	//f.Close();
+	//fin.Close();
 	arena_cam.Stop();
 	fly_cam.Stop();
+
+	fout.Close();
 	
 	printf("\nPress Enter to exit...\n");
 	getchar();

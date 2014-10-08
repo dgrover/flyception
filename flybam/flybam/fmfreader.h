@@ -1,9 +1,9 @@
-#ifndef FILEREADER_H
-#define FILEREADER_H
+#ifndef FMFREADER_H
+#define FMFREADER_H
 
 using namespace cv;
 
-class FileReader
+class FmfReader
 {
 	private:
 		FILE *fp;
@@ -13,21 +13,15 @@ class FileReader
 		long maxFramesInFile;
 		char *buf;
 
-		string fext;
-
 	public:
 
-		FileReader();
-		~FileReader();
-
-		void GetFileExtension(const string &fname);
+		FmfReader();
+		~FmfReader();
 
 		int Open(_TCHAR *fname);
 		int Close();
 
 		int ReadHeader();
-		
-		Mat ReadFrame();
 		Mat ReadFrame(unsigned long frameIndex);
 		
 		int GetFrameCount();
