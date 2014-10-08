@@ -10,6 +10,7 @@ using namespace cv;
 bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
+//bool haveTemplate = false;
 
 queue <Image> flyImageStream;
 queue <Mat> flyDispStream;
@@ -82,7 +83,7 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 
 	tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
 	tempMat2 = rotationMatrix.inv() * tvec;
-	s = -3.175 + tempMat2.at<double>(2, 0); //height Zconst is zero
+	s = 3.175 + tempMat2.at<double>(2, 0); //height Zconst is zero
 	s /= tempMat.at<double>(2, 0);
 
 	Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
@@ -95,16 +96,16 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 
 }
 
-vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
-{
-	vector<Point3f> p3d;
-	vector<Point2f> p2d;
-
-	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), -3.175));
-	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
-
-	return p2d;
-}
+//vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+//{
+//	vector<Point3f> p3d;
+//	vector<Point2f> p2d;
+//
+//	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), 3.175));
+//	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
+//
+//	return p2d;
+//}
 
 RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
@@ -117,7 +118,7 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	RotatedRect circleMask;
 
 	for (double angle = 0; angle <= 2 * PI; angle += 0.001)//You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), -3.175));
+		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), 3.175));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 
@@ -243,7 +244,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		error.PrintErrorTrace();
 		return -1;
 	}
-	printf("[OK]\n");
+	printf("[OK]\n\n");
 
 	fout.Open();
 	fout.InitHeader(fly_image_width, fly_image_height);
@@ -287,8 +288,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-
-	//bool haveTemplate = false;
 
 	//double turn;
 	//Mat fly_templ_pos, fly_templ_neg;
@@ -412,6 +411,8 @@ int _tmain(int argc, _TCHAR* argv[])
 						pt = tkf.Correct(arena_pt[j]);
 					}
 
+					ellipse(arena_frame, arenaMask, Scalar(255, 255, 255));
+
 					imshow("arena image", arena_frame);
 					imshow("arena mask", arena_mask);
 
@@ -509,7 +510,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	fout.Close();
 	
-	printf("\nPress Enter to exit...\n");
+	printf("\n\nPress Enter to exit...\n");
 	getchar();
 
 	return 0;
