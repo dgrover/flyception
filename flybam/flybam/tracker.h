@@ -13,9 +13,10 @@ class Tracker
     
 	public:
 
-		Tracker(float x = 0, float y = 0);
+		Tracker();
 		~Tracker();
 
+		void Init(float x = 0, float y = 0);
 		cv::Mat Predict();
 		cv::Mat Correct(cv::Mat measPt);
 };

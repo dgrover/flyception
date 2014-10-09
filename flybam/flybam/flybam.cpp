@@ -15,9 +15,11 @@ bool flyview_record = false;
 //bool haveTemplate = false;
 
 queue <Image> flyImageStream;
-queue <Mat> flyDispStream;
-queue <Mat> flyMaskStream;
 queue <TimeStamp> flyTimeStamps;
+
+//queue <Mat> flyDispStream;
+//queue <Mat> flyMaskStream;
+
 
 Mat extractFlyROI(Mat img, RotatedRect rect)
 {
@@ -417,7 +419,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					imshow("arena image", arena_frame);
 					imshow("arena mask", arena_mask);
 
-					waitKey(1);
+					//waitKey(1);
 
 				}
 								
@@ -425,12 +427,14 @@ int _tmain(int argc, _TCHAR* argv[])
 				{
 					flyImageStream.push(fly_img);
 					flyTimeStamps.push(fly_stamp);
-					flyDispStream.push(fly_frame);
-					flyMaskStream.push(fly_mask);
+					//flyDispStream.push(fly_frame);
+					//flyMaskStream.push(fly_mask);
 				}
 
-				//imshow("fly image", fly_frame);
-				//imshow("fly mask", fly_mask);
+				imshow("fly image", fly_frame);
+				imshow("fly mask", fly_mask);
+
+				waitKey(1);
 
 				if (GetAsyncKeyState(VK_SPACE))
 					flyview_record = true;
@@ -477,31 +481,31 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 		}
 
-		#pragma omp section
-		{
-			while (true)
-			{
-				if (!flyDispStream.empty())
-				{
-					imshow("fly image", flyDispStream.back());
-					imshow("fly mask", flyMaskStream.back());
-					waitKey(1);
+		//#pragma omp section
+		//{
+		//	while (true)
+		//	{
+		//		if (!flyDispStream.empty())
+		//		{
+		//			imshow("fly image", flyDispStream.back());
+		//			imshow("fly mask", flyMaskStream.back());
+		//			waitKey(1);
 
-					#pragma omp critical
-					{
-						flyDispStream = queue<Mat>();
-						flyMaskStream = queue<Mat>();
-					}
-				}
+		//			#pragma omp critical
+		//			{
+		//				flyDispStream = queue<Mat>();
+		//				flyMaskStream = queue<Mat>();
+		//			}
+		//		}
 
-				if (!stream)
-				{
-					destroyWindow("fly image");
-					destroyWindow("fly mask");
-					break;
-				}
-			}
-		}
+		//		if (!stream)
+		//		{
+		//			destroyWindow("fly image");
+		//			destroyWindow("fly mask");
+		//			break;
+		//		}
+		//	}
+		//}
 
 	}
 

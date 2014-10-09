@@ -1,27 +1,32 @@
 #include "stdafx.h"
 #include "tracker.h"
 
-Tracker::Tracker(float x, float y)
+Tracker::Tracker()
 {
-    KF.init(4, 2, 0);
-	
-	measurement.create(2,1);
-	measurement.setTo(Scalar(0));
-
-    KF.statePre.at<float>(0) = x;
-    KF.statePre.at<float>(1) = y;
-    KF.statePre.at<float>(2) = 0;
-    KF.statePre.at<float>(3) = 0;
-    KF.transitionMatrix = *(Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
-
-	setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(1e-3));		//adjust this for faster convergence - but higher noise (default: 1e-2)
-    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
-    setIdentity(KF.errorCovPost, Scalar::all(0.1));
+	Init();
 }
 
 Tracker::~Tracker()
 {}
+
+void Tracker::Init(float x, float y)
+{
+	KF.init(4, 2, 0);
+
+	measurement.create(2, 1);
+	measurement.setTo(Scalar(0));
+
+	KF.statePre.at<float>(0) = x;
+	KF.statePre.at<float>(1) = y;
+	KF.statePre.at<float>(2) = 0;
+	KF.statePre.at<float>(3) = 0;
+	KF.transitionMatrix = *(Mat_<float>(4, 4) << 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
+
+	setIdentity(KF.measurementMatrix);
+	setIdentity(KF.processNoiseCov, Scalar::all(1e-3));		//adjust this for faster convergence - but higher noise (default: 1e-2)
+	setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
+	setIdentity(KF.errorCovPost, Scalar::all(0.1));
+}
 
 //Point2f Tracker::Predict()
 //{
