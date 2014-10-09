@@ -7,6 +7,8 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
+#define BASE_HEIGHT 3.175-3.9
+
 bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
@@ -55,9 +57,8 @@ Mat rotateImage(Mat src, double angle)
 
 Mat refineFlyCenter(Mat pt, Point2f p)
 {
-	float scale = 2.5 / 119.502083;
-	//float angle = 15 * 180 / PI;
-
+	float scale = 2.0 / 122.753057;
+	
 	p.x -= 256;
 	p.y -= 256;
 
@@ -83,7 +84,7 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 
 	tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
 	tempMat2 = rotationMatrix.inv() * tvec;
-	s = 3.175 + tempMat2.at<double>(2, 0); //height Zconst is zero
+	s = BASE_HEIGHT + tempMat2.at<double>(2, 0); //height Zconst is zero
 	s /= tempMat.at<double>(2, 0);
 
 	Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
@@ -101,7 +102,7 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 //	vector<Point3f> p3d;
 //	vector<Point2f> p2d;
 //
-//	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), 3.175));
+//	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), BASE_HEIGHT));
 //	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
 //
 //	return p2d;
@@ -118,7 +119,7 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	RotatedRect circleMask;
 
 	for (double angle = 0; angle <= 2 * PI; angle += 0.001)//You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), 3.175));
+		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), BASE_HEIGHT));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 

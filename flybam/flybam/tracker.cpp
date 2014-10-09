@@ -15,7 +15,7 @@ Tracker::Tracker(float x, float y)
     KF.transitionMatrix = *(Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
 
 	setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(1e-4));		//adjust this for faster convergence - but higher noise (default: 1e-2)
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-3));		//adjust this for faster convergence - but higher noise (default: 1e-2)
     setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
     setIdentity(KF.errorCovPost, Scalar::all(0.1));
 }
