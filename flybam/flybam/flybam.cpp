@@ -8,6 +8,7 @@ using namespace FlyCapture2;
 using namespace cv;
 
 #define BASE_HEIGHT 3.175-3.9
+#define NFLIES 2
 
 bool stream = true;
 bool flyview_track = false;
@@ -16,10 +17,6 @@ bool flyview_record = false;
 
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
-
-//queue <Mat> flyDispStream;
-//queue <Mat> flyMaskStream;
-
 
 Mat extractFlyROI(Mat img, RotatedRect rect)
 {
@@ -196,8 +193,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	FmfReader fin;
 	FmfWriter fout;
 
-	Tracker tkf;
-	Mat pt;
+	vector<Tracker> tkf(NFLIES);
+	vector<Mat> pt(NFLIES);
+
 	Daq ndq;
 
 	int nframes = -1;
@@ -278,10 +276,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 75;
 	int fly_thresh = 75;
 
+	int fly = 0;
+
 	//int fly_head = 0;
 	//int fly_dir = 0;
 
 	namedWindow("taskbar window");
+	createTrackbar("Fly", "taskbar window", &fly, NFLIES-1);
 	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
 	createTrackbar("Fly thresh", "taskbar window", &fly_thresh, 255);
 
@@ -302,9 +303,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			//for (int imageCount = 0; imageCount != nframes; imageCount++)
 			while (true)
 			{
-				pt = tkf.Predict();
+				for (int i = 0; i < NFLIES; i++)
+					pt[i] = tkf[i].Predict();
 
-				ndq.ConvertPtToVoltage(pt);
+				ndq.ConvertPtToVoltage(pt[fly]);
 				ndq.write();
 
 				//fly_frame = fin.ReadFrame(imageCount);
@@ -337,12 +339,12 @@ int _tmain(int argc, _TCHAR* argv[])
 					fly_mu[i] = moments(fly_contours[i], false);
 					fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
 
-					fly_pt.push_back(refineFlyCenter(pt, fly_mc[i]));
+					fly_pt.push_back(refineFlyCenter(pt[fly], fly_mc[i]));
 				}
 
 				if (flyview_track && fly_pt.size() > 0)
 				{
-					int j = findClosestPoint(pt, fly_pt);
+					int j = findClosestPoint(pt[fly], fly_pt);
 
 					//RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
 
@@ -371,7 +373,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 
-					pt = tkf.Correct(fly_pt[j]);
+					pt[fly] = tkf[fly].Correct(fly_pt[j]);
 				}
 				else
 				{
@@ -396,6 +398,12 @@ int _tmain(int argc, _TCHAR* argv[])
 					vector<Point2f> arena_mc(arena_contours.size());
 
 					vector<Mat> arena_pt;
+					
+					vector<Mat> predPt = pt;
+					vector<int> index;
+
+					for (int i = 0; i < NFLIES; i++)
+						index.push_back(i);
 
 					for (int i = 0; i < arena_contours.size(); i++)
 					{
@@ -406,29 +414,25 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 						arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
-					}
 
-					if (arena_pt.size() > 0)
-					{
-						int j = findClosestPoint(pt, arena_pt);
-						pt = tkf.Correct(arena_pt[j]);
+						int j = findClosestPoint(arena_pt[i], predPt);
+						pt[index[j]] = tkf[ index[j] ].Correct(arena_pt[i]);
+
+						predPt.erase(predPt.begin() + j);
+						index.erase(index.begin() + j);
+
 					}
 
 					ellipse(arena_frame, arenaMask, Scalar(255, 255, 255));
 
 					imshow("arena image", arena_frame);
 					imshow("arena mask", arena_mask);
-
-					//waitKey(1);
-
 				}
 								
 				#pragma omp critical
 				{
 					flyImageStream.push(fly_img);
 					flyTimeStamps.push(fly_stamp);
-					//flyDispStream.push(fly_frame);
-					//flyMaskStream.push(fly_mask);
 				}
 
 				imshow("fly image", fly_frame);
@@ -480,33 +484,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					break;
 			}
 		}
-
-		//#pragma omp section
-		//{
-		//	while (true)
-		//	{
-		//		if (!flyDispStream.empty())
-		//		{
-		//			imshow("fly image", flyDispStream.back());
-		//			imshow("fly mask", flyMaskStream.back());
-		//			waitKey(1);
-
-		//			#pragma omp critical
-		//			{
-		//				flyDispStream = queue<Mat>();
-		//				flyMaskStream = queue<Mat>();
-		//			}
-		//		}
-
-		//		if (!stream)
-		//		{
-		//			destroyWindow("fly image");
-		//			destroyWindow("fly mask");
-		//			break;
-		//		}
-		//	}
-		//}
-
 	}
 
 	//fin.Close();
