@@ -8,7 +8,9 @@ using namespace FlyCapture2;
 using namespace cv;
 
 #define BASE_HEIGHT 3.175-3.9
-#define NFLIES 2
+#define SCALE 2.5/122.753057
+
+#define NFLIES 1
 
 bool stream = true;
 bool flyview_track = false;
@@ -54,17 +56,15 @@ Mat rotateImage(Mat src, double angle)
 	return dst;
 }
 
-Mat refineFlyCenter(Mat pt, Point2f p)
+Mat refineFlyCenter(Mat pt, Point2f p, int image_width, int image_height)
 {
-	float scale = 2.0 / 122.753057;
-	
-	p.x -= 256;
-	p.y -= 256;
+	p.x -= image_width / 2;
+	p.y -= image_height / 2;
 
 	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
 
-	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)p.x*scale);
-	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)p.y*scale);
+	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)p.x * SCALE);
+	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)p.y * SCALE);
 
 	//printf("[%f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0));
 	//printf("[%f %f]\n", newPt.at<double>(0, 0), newPt.at<double>(1, 0));
@@ -198,10 +198,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Daq ndq;
 
-	int nframes = -1;
+	//int nframes = -1;
 	
-	int arena_image_width, arena_image_height;
-	int fly_image_width, fly_image_height;
+	int arena_image_width = 512, arena_image_height = 512;
+	int fly_image_width = 512, fly_image_height = 512;
 
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
@@ -221,8 +221,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	//Initialize arena camera
 	error = busMgr.GetCameraFromIndex(0, &guid);
 	error = arena_cam.Connect(guid);
-	error = arena_cam.SetCameraParameters(512, 512);
-	arena_cam.GetImageSize(arena_image_width, arena_image_height);
+	error = arena_cam.SetCameraParameters(arena_image_width, arena_image_height);
+	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
 	error = arena_cam.Start();
 
 	if (error != PGRERROR_OK)
@@ -236,8 +236,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	//Initialize fly camera
 	error = busMgr.GetCameraFromIndex(1, &guid);
 	error = fly_cam.Connect(guid);
-	error = fly_cam.SetCameraParameters(512, 512);
-	fly_cam.GetImageSize(fly_image_width, fly_image_height);
+	error = fly_cam.SetCameraParameters(fly_image_width, fly_image_height);
+	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.Start();
 	
 	if (error != PGRERROR_OK)
@@ -292,7 +292,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//double turn;
 	//Mat fly_templ_pos, fly_templ_neg;
 
-	#pragma omp parallel sections num_threads(3)
+	#pragma omp parallel sections num_threads(2)
 	{
 		#pragma omp section
 		{
@@ -337,7 +337,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						fly_mu[i] = moments(fly_contours[i], false);
 						fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
 
-						fly_pt.push_back(refineFlyCenter(pt[0], fly_mc[i]));
+						fly_pt.push_back(refineFlyCenter(pt[0], fly_mc[i], fly_image_width, fly_image_height));
 					}
 
 					if (fly_pt.size() > 0)
