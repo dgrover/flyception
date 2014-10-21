@@ -10,42 +10,42 @@ using namespace cv;
 #define BASE_HEIGHT 3.175
 #define SCALE 2.5/123.006073
 
-#define NFLIES 2
+#define NFLIES 1
 
 bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
-//bool haveTemplate = false;
+bool haveTemplate = false;
 
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
 
-//Mat extractFlyROI(Mat img, RotatedRect rect)
-//{
-//	Mat M, rotated, cropped;
-//	
-//	// get angle and size from the bounding box
-//	float angle = rect.angle;
-//	Size rect_size(300, 300);
-//	//Size rect_size = rect.size;
-//	
-//	//if (rect.angle < -45.) 
-//	//{
-//	//	angle += 90.0;
-//	//	swap(rect_size.width, rect_size.height);
-//	//}
-//	
-//	// get the rotation matrix
-//	M = getRotationMatrix2D(rect.center, angle, 1.0);
-//	
-//	// perform the affine transformation
-//	warpAffine(img, rotated, M, img.size(), INTER_CUBIC);
-//	
-//	// crop the resulting image
-//	getRectSubPix(rotated, rect_size, rect.center, cropped);
-//
-//	return cropped;
-//}
+Mat extractFlyROI(Mat img, RotatedRect rect)
+{
+	Mat M, rotated, cropped;
+	
+	// get angle and size from the bounding box
+	float angle = rect.angle;
+	Size rect_size(150, 200);
+	//Size rect_size = rect.size;
+	
+	//if (rect.angle < -45.) 
+	//{
+	//	angle += 90.0;
+	//	swap(rect_size.width, rect_size.height);
+	//}
+	
+	// get the rotation matrix
+	M = getRotationMatrix2D(rect.center, angle, 1.0);
+	
+	// perform the affine transformation
+	warpAffine(img, rotated, M, img.size(), INTER_CUBIC);
+	
+	// crop the resulting image
+	getRectSubPix(rotated, rect_size, rect.center, cropped);
+
+	return cropped;
+}
 
 Mat rotateImage(Mat src, double angle)
 {
@@ -158,21 +158,21 @@ int findClosestPoint(Mat pt, vector<Mat> nbor)
 	}
 }
 
-//double flyOrientation(Mat img, Mat templ)
-//{
-//	Mat result;
-//	double minVal; double maxVal;
-//
-//	matchTemplate(img, templ, result, CV_TM_CCOEFF);
-//	minMaxLoc(result, &minVal, &maxVal);
-//
-//	return maxVal;
-//}
-//
-//int sign(int v)
-//{
-//	return v > 0 ? 1 : -1;
-//}
+double flyOrientation(Mat img, Mat templ)
+{
+	Mat result;
+	double minVal; double maxVal;
+
+	matchTemplate(img, templ, result, CV_TM_CCOEFF);
+	minMaxLoc(result, &minVal, &maxVal);
+
+	return maxVal;
+}
+
+int sign(int v)
+{
+	return v > 0 ? 1 : -1;
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -276,21 +276,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 75;
 	int fly_thresh = 75;
 
-	//int fly_head = 0;
-	//int fly_dir = 0;
+	int fly_head = 0;
+	int fly_dir = 0;
 
 	namedWindow("taskbar window");
 	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
 	createTrackbar("Fly thresh", "taskbar window", &fly_thresh, 255);
 	
-	//createTrackbar("Fly head", "taskbar window", &fly_head, 100);
-	//createTrackbar("Direction", "taskbar window", &fly_dir, 1);
+	createTrackbar("Fly head", "taskbar window", &fly_head, 100);
+	createTrackbar("Direction", "taskbar window", &fly_dir, 1);
 	
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	//double turn;
-	//Mat fly_templ_pos, fly_templ_neg;
+	double turn;
+	Mat fly_templ_pos, fly_templ_neg;
 
 	#pragma omp parallel sections num_threads(2)
 	{
@@ -344,30 +344,34 @@ int _tmain(int argc, _TCHAR* argv[])
 					{
 						int j = findClosestPoint(pt[0], fly_pt);
 
-						//RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
+						RotatedRect flyEllipse = fitEllipse(Mat(fly_contours[j]));
 
-						//Mat cropped = extractFlyROI(fly_mask, flyEllipse);
+						Mat cropped = extractFlyROI(fly_frame, flyEllipse);
 
-						//if (!haveTemplate)
-						//{
-						//	fly_templ_pos = cropped.clone();
-						//	fly_templ_neg = rotateImage(cropped, 180);
-						//	haveTemplate = true;
-						//}
+						if (!haveTemplate)
+						{
+							fly_templ_pos = cropped.clone();
+							fly_templ_neg = rotateImage(cropped, 180);
+							
+							imshow("fly roi up", fly_templ_pos);
+							imshow("fly roi down", fly_templ_neg);
 
-						//double posmatch = flyOrientation(cropped, fly_templ_pos);
-						//double negmatch = flyOrientation(cropped, fly_templ_neg);
+							haveTemplate = true;
+						}
 
-						//if (posmatch > negmatch)
-						//	turn = flyEllipse.angle - 90;
-						//else
-						//	turn = flyEllipse.angle + 90;
+						double posmatch = flyOrientation(cropped, fly_templ_pos);
+						double negmatch = flyOrientation(cropped, fly_templ_neg);
 
-						//fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
-						//fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
+						if (posmatch > negmatch)
+							turn = flyEllipse.angle - 90;
+						else
+							turn = flyEllipse.angle + 90;
 
-						//fly_pt[j] = refineFlyCenter(pt[flyn], fly_mc[j], fly_image_width, fly_image_height);
-						//ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
+						fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
+						fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
+
+						fly_pt[j] = refineFlyCenter(pt[0], fly_mc[j], fly_image_width, fly_image_height);
+						ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
 
 						circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 
