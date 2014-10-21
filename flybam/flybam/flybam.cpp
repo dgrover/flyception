@@ -7,10 +7,10 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-#define BASE_HEIGHT 3.175-3.9
-#define SCALE 2.5/122.753057
+#define BASE_HEIGHT 3.175
+#define SCALE 2.5/123.006073
 
-#define NFLIES 1
+#define NFLIES 2
 
 bool stream = true;
 bool flyview_track = false;
@@ -282,7 +282,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	namedWindow("taskbar window");
 	createTrackbar("Arena thresh", "taskbar window", &arena_thresh, 255);
 	createTrackbar("Fly thresh", "taskbar window", &fly_thresh, 255);
-
+	
 	//createTrackbar("Fly head", "taskbar window", &fly_head, 100);
 	//createTrackbar("Direction", "taskbar window", &fly_dir, 1);
 	
@@ -366,7 +366,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						//fly_mc[j].x = fly_mc[j].x + cos(turn * PI / 180) * fly_head * sign(fly_dir);
 						//fly_mc[j].y = fly_mc[j].y + sin(turn * PI / 180) * fly_head * sign(fly_dir);
 
-						//fly_pt[j] = refineFlyCenter(pt[0], fly_mc[j]);
+						//fly_pt[j] = refineFlyCenter(pt[flyn], fly_mc[j], fly_image_width, fly_image_height);
 						//ellipse(fly_frame, flyEllipse, Scalar(255, 255, 255));
 
 						circle(fly_frame, fly_mc[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
