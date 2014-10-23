@@ -16,6 +16,7 @@ bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
 
+queue <Mat> flyDispStream;
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
 
@@ -154,7 +155,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Daq ndq;
 
 	int arena_image_width = 512, arena_image_height = 512;
-	int fly_image_width = 512, fly_image_height = 512;
+	int fly_image_width = 256, fly_image_height = 256;
 
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
@@ -229,19 +230,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 75;
 	int fly_min = 75;
 	int fly_max = 120;
-	
 	int laser_pos = 0;
 
-	namedWindow("controls");
-	createTrackbar("arena thresh", "controls", &arena_thresh, 255);
-	createTrackbar("fly min", "controls", &fly_min, 255);
-	createTrackbar("fly max", "controls", &fly_max, 255);
-	createTrackbar("laser pos", "controls", &laser_pos, 100);
-	
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	#pragma omp parallel sections num_threads(2)
+	#pragma omp parallel sections num_threads(3)
 	{
 		#pragma omp section
 		{
@@ -261,11 +255,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				threshold(fly_frame, fly_mask_min, fly_min, 255, THRESH_BINARY_INV);
 				threshold(fly_frame, fly_mask_max, fly_max, 255, THRESH_BINARY_INV);
 				
-				erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 2);
-				dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 2);
+				erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
+				dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
 
-				erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 2);
-				dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 2);
+				erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
+				dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
 
 				if (flyview_track)
 				{
@@ -310,6 +304,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					if ((fly_pt_min.size() > 0) && (fly_pt_max.size() > 0))
 					{
 						int j = findClosestPoint(pt[0], fly_pt_min);
+						circle(fly_frame, fly_mc_min[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						
 						int k = findClosestPoint(fly_pt_min[j], fly_pt_max);
 
 						RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
@@ -353,7 +349,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					arena_mask &= outer_mask;
 
 					erode(arena_mask, arena_mask, erodeElement, Point(-1, -1), 1);
-					dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 2);
+					dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 1);
 
 					vector<vector<Point>> arena_contours;
 					vector<Vec4i> arena_hierarchy;
@@ -390,21 +386,21 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					ellipse(arena_frame, arenaMask, Scalar(255, 255, 255));
 
-					imshow("arena image", arena_frame);
-					imshow("arena mask", arena_mask);
+					//imshow("arena image", arena_frame);
+					//imshow("arena mask", arena_mask);
 				}
 								
-				//#pragma omp critical
-				//{
+				#pragma omp critical
+				{
+					flyDispStream.push(fly_frame);
 					flyImageStream.push(fly_img);
 					flyTimeStamps.push(fly_stamp);
-				//}
+				}
 
-				imshow("fly image", fly_frame);
-				imshow("fly mask min", fly_mask_min);
-				imshow("fly mask max", fly_mask_max);
-
-				waitKey(1);
+				//imshow("fly image", fly_frame);
+				//imshow("fly mask min", fly_mask_min);
+				//imshow("fly mask max", fly_mask_max);
+				//waitKey(1);
 
 				if (GetAsyncKeyState(VK_SPACE))
 					flyview_record = true;
@@ -437,11 +433,11 @@ int _tmain(int argc, _TCHAR* argv[])
 						fout.nframes++;
 					}
 
-					//#pragma omp critical
-					//{
+					#pragma omp critical
+					{
 						flyImageStream.pop();
 						flyTimeStamps.pop();
-					//}
+					}
 				}
 
 				printf("Recording buffer size %d, Frames written %d\r", flyImageStream.size(), fout.nframes);
@@ -450,6 +446,38 @@ int _tmain(int argc, _TCHAR* argv[])
 					break;
 			}
 		}
+
+		#pragma omp section
+		{
+			namedWindow("controls");
+			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
+			createTrackbar("fly min", "controls", &fly_min, 255);
+			createTrackbar("fly max", "controls", &fly_max, 255);
+			createTrackbar("laser pos", "controls", &laser_pos, 100);
+
+			while (true)
+			{
+				if (!flyDispStream.empty())
+				{
+					imshow("fly image", flyDispStream.back());
+					waitKey(1);
+					
+					#pragma omp critical
+					{
+						flyDispStream = queue<Mat>();
+					}
+				}
+
+				if (!stream)
+				{
+					destroyWindow("fly image");
+					break;
+				}
+			}
+		}
+
+
+
 	}
 
 	//fin.Close();
