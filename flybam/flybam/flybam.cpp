@@ -158,7 +158,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Daq ndq;
 
 	int arena_image_width = 512, arena_image_height = 512;
-	int fly_image_width = 256, fly_image_height = 256;
+	int fly_image_width = 400, fly_image_height = 400;
 
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
@@ -335,6 +335,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							circle(fly_frame, p2, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 						}
 
+						//pt[0] = tkf[0].Correct(fly_pt_min[j]);
 						//pt[0] = tkf[0].Correct(fly_pt);
 						tkf[0].Correct(fly_pt);
 					}

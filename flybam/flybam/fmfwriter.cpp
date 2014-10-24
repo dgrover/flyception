@@ -20,8 +20,8 @@ FmfWriter::FmfWriter()
 	sprintf_s(flogname, "D:\\flyception-log-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(flogname);
 
-	sprintf_s(flogname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-	remove(flogname);
+	sprintf_s(ftrajname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	remove(ftrajname);
 }
 
 int FmfWriter::Open()
