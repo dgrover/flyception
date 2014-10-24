@@ -12,8 +12,8 @@ class Daq
 		float voltperdeg;
 		float galvoheight;
 
-		float64     dataX[1];
-		float64     dataY[1];
+		float64     dataX[2];
+		float64     dataY[2];
 
 	public:
 		Daq();

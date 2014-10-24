@@ -6,9 +6,11 @@ class FmfWriter
 	private:
 		FILE *fp;
 		FILE *flog;
+		FILE *ftraj;
 
 		char fname[100];
 		char flogname[100];
+		char ftrajname[100];
 
 		unsigned __int32 fmfVersion, SizeY, SizeX;
 		unsigned __int64 bytesPerChunk;
@@ -27,6 +29,7 @@ class FmfWriter
 		void WriteHeader();
 		void WriteFrame(FlyCapture2::TimeStamp st, FlyCapture2::Image img);
 		void WriteLog(FlyCapture2::TimeStamp st);
+		void WriteTraj(cv::Mat pt);
 		
 };
 

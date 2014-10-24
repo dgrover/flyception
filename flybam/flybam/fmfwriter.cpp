@@ -3,11 +3,13 @@
 
 using namespace std;
 using namespace FlyCapture2;
+using namespace cv;
 
 FmfWriter::FmfWriter()
 {
 	fp = new FILE;
 	flog = new FILE;
+	ftraj = new FILE;
 
 	SYSTEMTIME st;
 	GetLocalTime(&st);
@@ -15,7 +17,10 @@ FmfWriter::FmfWriter()
 	sprintf_s(fname, "D:\\flyception-%d%02d%02dT%02d%02d%02d.fmf", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(fname);
 
-	sprintf_s(flogname, "D:\\flyception-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	sprintf_s(flogname, "D:\\flyception-log-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	remove(flogname);
+
+	sprintf_s(flogname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(flogname);
 }
 
@@ -37,6 +42,14 @@ int FmfWriter::Open()
 		return -1;
 	}
 
+	ftraj = fopen(ftrajname, "w");
+
+	if (ftraj == NULL)
+	{
+		printf("\nError creating trajectory file. Recording terminated.");
+		return -1;
+	}
+
 	return 1;
 
 }
@@ -49,11 +62,13 @@ int FmfWriter::Close()
 
 	fclose(fp);
 	fclose(flog);
+	fclose(ftraj);
 
 	if (nframes == 0)
 	{
 		remove(fname);
 		remove(flogname);
+		remove(ftrajname);
 	}
 
 	return 1;
@@ -91,5 +106,10 @@ void FmfWriter::WriteFrame(TimeStamp st, Image img)
 void FmfWriter::WriteLog(TimeStamp st)
 {
 	fprintf(flog, "Frame %d - TimeStamp [%d %d]\n", nframes, st.seconds, st.microSeconds);
+}
+
+void FmfWriter::WriteTraj(Mat pt)
+{
+	fprintf(ftraj, "%d %f %f %f\n", nframes, pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
 }
 

@@ -16,9 +16,12 @@ bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
 
+queue <Mat> arenaDispStream;
 queue <Mat> flyDispStream;
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
+
+queue <Mat> laser_pt;
 
 Mat refineFlyCenter(Mat pt, Point2f p, int image_width, int image_height)
 {
@@ -304,7 +307,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					if ((fly_pt_min.size() > 0) && (fly_pt_max.size() > 0))
 					{
 						int j = findClosestPoint(pt[0], fly_pt_min);
-						circle(fly_frame, fly_mc_min[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						//circle(fly_frame, fly_mc_min[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
 						
 						int k = findClosestPoint(fly_pt_min[j], fly_pt_max);
 
@@ -332,7 +335,8 @@ int _tmain(int argc, _TCHAR* argv[])
 							circle(fly_frame, p2, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 						}
 
-						pt[0] = tkf[0].Correct(fly_pt);
+						//pt[0] = tkf[0].Correct(fly_pt);
+						tkf[0].Correct(fly_pt);
 					}
 					else
 						flyview_track = false;
@@ -378,13 +382,19 @@ int _tmain(int argc, _TCHAR* argv[])
 						if (arena_pt.size() > 0)
 						{
 							int j = findClosestPoint(pt[i], arena_pt);
-							pt[i] = tkf[i].Correct(arena_pt[j]);
+							//pt[i] = tkf[i].Correct(arena_pt[j]);
+							tkf[i].Correct(arena_pt[j]);
 
 							arena_pt.erase(arena_pt.begin() + j);
 						}
 					}
 
 					ellipse(arena_frame, arenaMask, Scalar(255, 255, 255));
+
+					#pragma omp critical
+					{
+						arenaDispStream.push(arena_frame);
+					}
 
 					//imshow("arena image", arena_frame);
 					//imshow("arena mask", arena_mask);
@@ -395,6 +405,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					flyDispStream.push(fly_frame);
 					flyImageStream.push(fly_img);
 					flyTimeStamps.push(fly_stamp);
+					laser_pt.push(pt[0]);
 				}
 
 				//imshow("fly image", fly_frame);
@@ -430,6 +441,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						fout.WriteFrame(wStamp, wImage);
 						fout.WriteLog(wStamp);
+						fout.WriteTraj(laser_pt.front());
 						fout.nframes++;
 					}
 
@@ -437,6 +449,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					{
 						flyImageStream.pop();
 						flyTimeStamps.pop();
+						laser_pt.pop();
 					}
 				}
 
@@ -457,10 +470,19 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
+				if (!arenaDispStream.empty())
+				{
+					imshow("arena image", arenaDispStream.back());
+
+					#pragma omp critical
+					{
+						arenaDispStream = queue<Mat>();
+					}
+				}
+				
 				if (!flyDispStream.empty())
 				{
 					imshow("fly image", flyDispStream.back());
-					waitKey(1);
 					
 					#pragma omp critical
 					{
@@ -468,16 +490,17 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
+				waitKey(1);
+
 				if (!stream)
 				{
+					destroyWindow("arena image");
 					destroyWindow("fly image");
+
 					break;
 				}
 			}
 		}
-
-
-
 	}
 
 	//fin.Close();
