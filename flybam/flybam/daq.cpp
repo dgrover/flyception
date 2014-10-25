@@ -9,7 +9,7 @@ Daq::Daq()
 	voltperdeg = 0.5;
 	galvoheight = 65.0;
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < SIZE; i++)
 	{
 		dataX[i] = 0.0;
 		dataY[i] = 0.0;
@@ -47,12 +47,19 @@ void Daq::ConvertPtToVoltage(Mat pt)
 	//dataX[0] = thetax/2 * voltperdeg;
 	//dataY[0] = thetay/2 * voltperdeg;
 
-	float x = thetax/2 * voltperdeg;
-	float y = thetay/2 * voltperdeg;
+	float finx = thetax / 2 * voltperdeg;
+	float finy = thetay / 2 * voltperdeg;
 
-	dataX[0] = (x + dataX[1]) / 2;
-	dataY[0] = (y + dataY[1]) / 2;
+	float lastx = dataX[SIZE - 1];
+	float lasty = dataY[SIZE - 1];
 
-	dataX[1] = x;
-	dataY[1] = y;
+	float incx = (finx + lastx) / SIZE;
+	float incy = (finy + lasty) / SIZE;
+
+	for (int i = 0; i < SIZE; i++)
+	{
+		dataX[i] = lastx + (i + 1)*incx;
+		dataY[i] = lasty + (i + 1)*incy;
+	}
+
 }

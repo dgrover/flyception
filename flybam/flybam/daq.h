@@ -3,6 +3,8 @@
 
 using namespace cv;
 
+#define SIZE 2
+
 class Daq
 {
 	private:
@@ -12,8 +14,8 @@ class Daq
 		float voltperdeg;
 		float galvoheight;
 
-		float64     dataX[2];
-		float64     dataY[2];
+		float64     dataX[SIZE];
+		float64     dataY[SIZE];
 
 	public:
 		Daq();
