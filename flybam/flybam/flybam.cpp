@@ -9,6 +9,7 @@ using namespace cv;
 
 #define BASE_HEIGHT 3.175
 #define SCALE 2.5/123.006073
+#define GALVO_X_MIRROR_ANGLE 15
 
 #define NFLIES 1
 
@@ -17,7 +18,12 @@ bool flyview_track = false;
 bool flyview_record = false;
 
 queue <Mat> arenaDispStream;
+queue <Mat> arenaMaskStream;
+
 queue <Mat> flyDispStream;
+queue <Mat> flyMinMaskStream;
+queue <Mat> flyMaxMaskStream;
+
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
 
@@ -28,8 +34,8 @@ Mat refineFlyCenter(Mat pt, Point2f p, int image_width, int image_height)
 	Point2f temp;
 
 	//rotate fly center point by 15 degrees due to the tilt of the galvo x-mirror
-	temp.x = (cos(-15 * PI / 180)*(p.x - image_width / 2) - sin(-15 * PI / 180)*(p.y - image_height / 2));
-	temp.y = (sin(-15 * PI / 180)*(p.x - image_width / 2) + cos(-15 * PI / 180)*(p.y - image_height / 2));
+	temp.x = (cos(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.x - image_width / 2) - sin(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.y - image_height / 2));
+	temp.y = (sin(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.x - image_width / 2) + cos(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.y - image_height / 2));
 
 	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
 
@@ -395,24 +401,21 @@ int _tmain(int argc, _TCHAR* argv[])
 					#pragma omp critical
 					{
 						arenaDispStream.push(arena_frame);
+						arenaMaskStream.push(arena_mask);
 					}
-
-					//imshow("arena image", arena_frame);
-					//imshow("arena mask", arena_mask);
 				}
 								
 				#pragma omp critical
 				{
 					flyDispStream.push(fly_frame);
+					flyMinMaskStream.push(fly_mask_min);
+					flyMaxMaskStream.push(fly_mask_max);
+					
 					flyImageStream.push(fly_img);
 					flyTimeStamps.push(fly_stamp);
+					
 					laser_pt.push(pt[0]);
 				}
-
-				//imshow("fly image", fly_frame);
-				//imshow("fly mask min", fly_mask_min);
-				//imshow("fly mask max", fly_mask_max);
-				//waitKey(1);
 
 				if (GetAsyncKeyState(VK_SPACE))
 					flyview_record = true;
@@ -474,20 +477,26 @@ int _tmain(int argc, _TCHAR* argv[])
 				if (!arenaDispStream.empty())
 				{
 					imshow("arena image", arenaDispStream.back());
+					imshow("arena mask", arenaMaskStream.back());
 
 					#pragma omp critical
 					{
 						arenaDispStream = queue<Mat>();
+						arenaMaskStream = queue<Mat>();
 					}
 				}
 				
 				if (!flyDispStream.empty())
 				{
 					imshow("fly image", flyDispStream.back());
+					imshow("fly min mask", flyMinMaskStream.back());
+					imshow("fly max mask", flyMaxMaskStream.back());
 					
 					#pragma omp critical
 					{
 						flyDispStream = queue<Mat>();
+						flyMinMaskStream = queue<Mat>();
+						flyMaxMaskStream = queue<Mat>();
 					}
 				}
 
@@ -496,7 +505,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				if (!stream)
 				{
 					destroyWindow("arena image");
+					destroyWindow("arena mask");
+					
 					destroyWindow("fly image");
+					destroyWindow("fly min mask");
+					destroyWindow("fly max mask");
 
 					break;
 				}

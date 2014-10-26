@@ -9,6 +9,9 @@ Daq::Daq()
 	voltperdeg = 0.5;
 	galvoheight = 65.0;
 
+	lastx = 0.0;
+	lasty = 0.0;
+
 	for (int i = 0; i < SIZE; i++)
 	{
 		dataX[i] = 0.0;
@@ -35,8 +38,11 @@ void Daq::start()
 void Daq::write()
 {
 	// DAQmx Write Code
-	DAQmxWriteAnalogF64(taskHandleX,1,1,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
-	DAQmxWriteAnalogF64(taskHandleY,1,1,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
+	DAQmxWriteAnalogF64(taskHandleX,SIZE,0,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
+	DAQmxWriteAnalogF64(taskHandleY,SIZE,0,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
+
+	//function for scalar value
+	//DAQmxWriteAnalogScalarF64(taskHandleX, 0, 10.0, dataX, NULL);
 }
 
 void Daq::ConvertPtToVoltage(Mat pt)
@@ -50,16 +56,15 @@ void Daq::ConvertPtToVoltage(Mat pt)
 	float finx = thetax / 2 * voltperdeg;
 	float finy = thetay / 2 * voltperdeg;
 
-	float lastx = dataX[SIZE - 1];
-	float lasty = dataY[SIZE - 1];
-
-	float incx = (finx + lastx) / SIZE;
-	float incy = (finy + lasty) / SIZE;
+	float incx = (finx - lastx) / SIZE;
+	float incy = (finy - lasty) / SIZE;
 
 	for (int i = 0; i < SIZE; i++)
 	{
-		dataX[i] = lastx + (i + 1)*incx;
-		dataY[i] = lasty + (i + 1)*incy;
+		dataX[i] = lastx + ((i + 1)*incx);
+		dataY[i] = lasty + ((i + 1)*incy);
 	}
 
+	lastx = finx;
+	lasty = finy;
 }
