@@ -3,7 +3,7 @@
 
 using namespace cv;
 
-#define SIZE 5
+#define SIZE 1
 
 class Daq
 {
