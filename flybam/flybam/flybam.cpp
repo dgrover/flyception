@@ -264,6 +264,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Timer tmr;
 	int imageCount = 0;
 
+	omp_set_nested(1);
+
 	#pragma omp parallel sections num_threads(3)
 	{
 		#pragma omp section
@@ -293,11 +295,20 @@ int _tmain(int argc, _TCHAR* argv[])
 				threshold(fly_frame, fly_mask_min, fly_min, 255, THRESH_BINARY_INV);
 				threshold(fly_frame, fly_mask_max, fly_max, 255, THRESH_BINARY_INV);
 
-				erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
-				dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
+				#pragma omp parallel sections num_threads(2)
+				{
+					#pragma omp section
+					{
+						erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
+						dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
+					}
 
-				erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
-				dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
+					#pragma omp section
+					{
+						erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
+						dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
+					}
+				}
 
 				if (flyview_track)
 				{
@@ -405,7 +416,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					for (int i = 0; i < arena_contours.size(); i++)
 					{
-						drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+						//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 
 						arena_mu[i] = moments(arena_contours[i], false);
 						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
@@ -427,12 +438,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 
 					ellipse(arena_frame, arenaMask, Scalar(255, 255, 255));
-
-					//#pragma omp critical
-					//{
-					//	arenaDispStream.push(arena_frame);
-					//	arenaMaskStream.push(arena_mask);
-					//}
 				}
 
 				#pragma omp critical

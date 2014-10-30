@@ -13,11 +13,10 @@
 #include <tchar.h>
 #include <vector>
 //#include <math.h>
-
 #include <omp.h>
 #include <queue>
 #include <chrono>
-#include <thread>
+//#include <thread>
 
 #include "FlyCapture2.h"
 
