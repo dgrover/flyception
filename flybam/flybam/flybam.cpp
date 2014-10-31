@@ -264,8 +264,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	Timer tmr;
 	int imageCount = 0;
 
-	omp_set_nested(1);
-
 	#pragma omp parallel sections num_threads(3)
 	{
 		#pragma omp section
@@ -295,20 +293,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				threshold(fly_frame, fly_mask_min, fly_min, 255, THRESH_BINARY_INV);
 				threshold(fly_frame, fly_mask_max, fly_max, 255, THRESH_BINARY_INV);
 
-				#pragma omp parallel sections num_threads(2)
-				{
-					#pragma omp section
-					{
-						erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
-						dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
-					}
+				erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
+				dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
 
-					#pragma omp section
-					{
-						erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
-						dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
-					}
-				}
+				erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
+				dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
 
 				if (flyview_track)
 				{
