@@ -364,6 +364,9 @@ int _tmain(int argc, _TCHAR* argv[])
 						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
 						Point2f fly_pt = fly_mc_min[j];
 
+						//double Angle = atan2(P2.y - P1.y, P2.x - P1.x) * 180.0 / CV_PI;
+						//if (Angle<0) Angle = Angle + 360;
+
 						if (fly_contours_min[j].size() >= 5)
 						{
 							int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
