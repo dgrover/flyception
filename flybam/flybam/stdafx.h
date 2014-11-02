@@ -37,6 +37,4 @@
 #include "tracker.h"
 #include "daq.h"
 
-#define PI 3.14159265358979323846
-
 // TODO: reference additional headers your program requires here

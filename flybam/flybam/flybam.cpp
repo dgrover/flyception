@@ -51,8 +51,8 @@ Mat refineFlyCenter(Mat pt, Point2f p, int image_width, int image_height)
 	Point2f temp;
 
 	//rotate fly center point by 15 degrees due to the tilt of the galvo x-mirror
-	temp.x = (cos(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.x - image_width / 2) - sin(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.y - image_height / 2));
-	temp.y = (sin(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.x - image_width / 2) + cos(-GALVO_X_MIRROR_ANGLE * PI / 180)*(p.y - image_height / 2));
+	temp.x = (cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) - sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
+	temp.y = (sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) + cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 
 	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
 
@@ -110,7 +110,7 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 
 	RotatedRect circleMask;
 
-	for (double angle = 0; angle <= 2 * PI; angle += 0.001) //You are using radians so you will have to increase by a very small amount
+	for (double angle = 0; angle <= 2 * CV_PI; angle += 0.001) //You are using radians so you will have to increase by a very small amount
 		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), BASE_HEIGHT));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
@@ -322,19 +322,15 @@ int _tmain(int argc, _TCHAR* argv[])
 				threshold(fly_frame, fly_mask_min, fly_min, 255, THRESH_BINARY_INV);
 				threshold(fly_frame, fly_mask_max, fly_max, 255, THRESH_BINARY_INV);
 
-				erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
-				dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
-
-				erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
-				dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
-
 				if (flyview_track)
 				{
-					vector<vector<Point>> fly_contours_min, fly_contours_max;
+					erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 1);
+					dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 1);
+
+					vector<vector<Point>> fly_contours_min;
 
 					findContours(fly_mask_min, fly_contours_min, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-					findContours(fly_mask_max, fly_contours_max, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
+					
 					// Get the moments and mass centers
 					vector<Moments> fly_mu_min(fly_contours_min.size());
 					vector<Point2f> fly_mc_min(fly_contours_min.size());
@@ -347,52 +343,70 @@ int _tmain(int argc, _TCHAR* argv[])
 						fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
 					}
 
-					// Get the moments and mass centers
-					vector<Moments> fly_mu_max(fly_contours_max.size());
-					vector<Point2f> fly_mc_max(fly_contours_max.size());
-
-					for (int i = 0; i < fly_contours_max.size(); i++)
-					{
-						//drawContours(fly_mask_max, fly_contours_max, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-
-						fly_mu_max[i] = moments(fly_contours_max[i], false);
-						fly_mc_max[i] = Point2f(fly_mu_max[i].m10 / fly_mu_max[i].m00, fly_mu_max[i].m01 / fly_mu_max[i].m00);
-					}
-
-					if ((fly_mc_min.size() > 0) && (fly_mc_max.size() > 0))
+					if (fly_mc_min.size() > 0)
 					{
 						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
 						Point2f fly_pt = fly_mc_min[j];
 
-						//double Angle = atan2(P2.y - P1.y, P2.x - P1.x) * 180.0 / CV_PI;
-						//if (Angle<0) Angle = Angle + 360;
-
-						if (fly_contours_min[j].size() >= 5)
+						if (laser_pos > 0)
 						{
-							int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
+							erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
+							dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
 
-							RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
+							vector<vector<Point>> fly_contours_max;
+							findContours(fly_mask_max, fly_contours_max, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-							double turn = flyEllipse.angle - 90;
-							Point2f p1((fly_mc_min[j].x + cos(turn * PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * PI / 180) * laser_pos));
+							// Get the moments and mass centers
+							vector<Moments> fly_mu_max(fly_contours_max.size());
+							vector<Point2f> fly_mc_max(fly_contours_max.size());
 
-							turn = flyEllipse.angle + 90;
-							Point2f p2((fly_mc_min[j].x + cos(turn * PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * PI / 180) * laser_pos));
+							for (int i = 0; i < fly_contours_max.size(); i++)
+							{
+								//drawContours(fly_mask_max, fly_contours_max, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 
-							double res1 = cv::norm(p1 - fly_mc_max[k]);
-							double res2 = cv::norm(p2 - fly_mc_max[k]);
+								fly_mu_max[i] = moments(fly_contours_max[i], false);
+								fly_mc_max[i] = Point2f(fly_mu_max[i].m10 / fly_mu_max[i].m00, fly_mu_max[i].m01 / fly_mu_max[i].m00);
+							}
 
-							if (res1 > res2)
-								fly_pt = p1;
-							else
-								fly_pt = p2;
+							//if (laser_pos > 0)
+							//{
+							//	int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
+
+							//	double turn = atan2(fly_mc_min[j].y - fly_mc_max[k].y, fly_mc_min[j].x - fly_mc_max[k].x) * 180.0 / CV_PI;
+							//	if (turn < 0) turn += 360;
+							//	
+							//	fly_pt = Point2f((fly_mc_min[j].x + cos(turn * PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * PI / 180) * laser_pos));
+							//}
+
+							if (fly_contours_min[j].size() >= 5 && fly_mc_max.size() > 0)
+							{
+								int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
+
+								RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
+
+								double turn = flyEllipse.angle - 90;
+								Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
+								Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
+
+								double res1 = cv::norm(p1 - fly_mc_max[k]);
+								double res2 = cv::norm(p2 - fly_mc_max[k]);
+
+								if (res1 > res2)
+									fly_pt = p1;
+								else
+									fly_pt = p2;
+							}
 						}
 						
 						circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), CV_FILLED, 1);
 						tkf[0].Correct(refineFlyCenter(pt[0], fly_pt, fly_image_width, fly_image_height));
 					}
 					else
+					{
 						flyview_track = false;
+						for (int i = 0; i < NFLIES; i++)
+							tkf[i].Init();
+					}
 				}
 						
 				// if no fly detected, switch back to arena view to get coarse fly location and position update
@@ -436,9 +450,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						if (arena_pt.size() > 0)
 						{
 							int j = findClosestPoint(pt[i], arena_pt);
-							//pt[i] = tkf[i].Correct(arena_pt[j]);
 							tkf[i].Correct(arena_pt[j]);
-
 							arena_pt.erase(arena_pt.begin() + j);
 						}
 					}
@@ -498,6 +510,16 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
+				if (!fps.empty())
+				{
+					tc = 1000 / (fps.front() / 100);
+
+					#pragma omp critical
+					{
+						fps.pop();
+					}
+				}
+
 				printf("Frame rate %d, Recording buffer size %d, Frames written %d\r", tc, flyImageStream.size(), fout.nframes);
 
 				if (flyImageStream.size() == 0 && !stream)
@@ -539,16 +561,6 @@ int _tmain(int argc, _TCHAR* argv[])
 						flyDispStream = queue<Mat>();
 						flyMinMaskStream = queue<Mat>();
 						flyMaxMaskStream = queue<Mat>();
-					}
-				}
-
-				if (!fps.empty())
-				{
-					tc = 1000 / (fps.back() / 100);
-					
-					#pragma omp critical
-					{
-						fps = queue<long int>();
 					}
 				}
 
