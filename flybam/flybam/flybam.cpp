@@ -127,6 +127,12 @@ double dist(Mat p1, Mat p2)
 	return(sqrt(dx*dx + dy*dy));
 }
 
+float dist(Point2f p1, Point2f p2)
+{
+	float dx = p2.x - p1.x;
+	float dy = p2.y - p1.y;
+	return(sqrt(dx*dx + dy*dy));
+}
 
 int findClosestPoint(Mat pt, vector<Mat> nbor)
 {
@@ -140,6 +146,29 @@ int findClosestPoint(Mat pt, vector<Mat> nbor)
 		for (int i = 1; i < nbor.size(); i++)
 		{
 			double res = dist(pt, nbor[i]);
+			if (res < fly_dist)
+			{
+				fly_dist = res;
+				fly_index = i;                //Store the index of nearest point
+			}
+		}
+
+		return fly_index;
+	}
+}
+
+int findClosestPoint(Point2f pt, vector<Point2f> nbor)
+{
+	int fly_index = 0;
+	if (nbor.size() == 1)
+		return fly_index;
+	else
+	{
+		float fly_dist = dist(pt, nbor[0]);
+
+		for (int i = 1; i < nbor.size(); i++)
+		{
+			float res = dist(pt, nbor[i]);
 			if (res < fly_dist)
 			{
 				fly_dist = res;
@@ -310,23 +339,17 @@ int _tmain(int argc, _TCHAR* argv[])
 					vector<Moments> fly_mu_min(fly_contours_min.size());
 					vector<Point2f> fly_mc_min(fly_contours_min.size());
 
-					vector<Mat> fly_pt_min;
-
 					for (int i = 0; i < fly_contours_min.size(); i++)
 					{
 						//drawContours(fly_mask_min, fly_contours_min, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 
 						fly_mu_min[i] = moments(fly_contours_min[i], false);
 						fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
-
-						fly_pt_min.push_back(refineFlyCenter(pt[0], fly_mc_min[i], fly_image_width, fly_image_height));
 					}
 
 					// Get the moments and mass centers
 					vector<Moments> fly_mu_max(fly_contours_max.size());
 					vector<Point2f> fly_mc_max(fly_contours_max.size());
-
-					vector<Mat> fly_pt_max;
 
 					for (int i = 0; i < fly_contours_max.size(); i++)
 					{
@@ -334,19 +357,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						fly_mu_max[i] = moments(fly_contours_max[i], false);
 						fly_mc_max[i] = Point2f(fly_mu_max[i].m10 / fly_mu_max[i].m00, fly_mu_max[i].m01 / fly_mu_max[i].m00);
-
-						fly_pt_max.push_back(refineFlyCenter(pt[0], fly_mc_max[i], fly_image_width, fly_image_height));
 					}
 
-					if ((fly_pt_min.size() > 0) && (fly_pt_max.size() > 0))
+					if ((fly_mc_min.size() > 0) && (fly_mc_max.size() > 0))
 					{
-						int j = findClosestPoint(pt[0], fly_pt_min);
-						Mat fly_pt = fly_pt_min[j];
-						//circle(fly_frame, fly_mc_min[j], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
+						Point2f fly_pt = fly_mc_min[j];
 
-						if (fly_contours_min[j].size() > 5)
+						if (fly_contours_min[j].size() >= 5)
 						{
-							int k = findClosestPoint(fly_pt_min[j], fly_pt_max);
+							int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
 
 							RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
 
@@ -360,28 +380,21 @@ int _tmain(int argc, _TCHAR* argv[])
 							double res2 = cv::norm(p2 - fly_mc_max[k]);
 
 							if (res1 > res2)
-							{
-								fly_pt = refineFlyCenter(pt[0], p1, fly_image_width, fly_image_height);
-								//circle(fly_frame, p1, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-							}
+								fly_pt = p1;
 							else
-							{
-								fly_pt = refineFlyCenter(pt[0], p2, fly_image_width, fly_image_height);
-								//circle(fly_frame, p2, 1, Scalar(255, 255, 255), CV_FILLED, 1);
-							}
+								fly_pt = p2;
 						}
-
-						//tkf[0].Correct(fly_pt_min[j]);
-						//pt[0] = tkf[0].Correct(fly_pt);
-						tkf[0].Correct(fly_pt);
+						
+						circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						tkf[0].Correct(refineFlyCenter(pt[0], fly_pt, fly_image_width, fly_image_height));
 					}
 					else
 						flyview_track = false;
 				}
 						
+				// if no fly detected, switch back to arena view to get coarse fly location and position update
 				if (!flyview_track)
 				{
-					// if no fly detected, switch back to arena view to get coarse fly location and position update
 					//arena_frame = fin.ReadFrame(imageCount);
 					arena_img = arena_cam.GrabFrame();
 					arena_frame = arena_cam.convertImagetoMat(arena_img);
