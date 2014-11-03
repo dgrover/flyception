@@ -1,6 +1,8 @@
 #ifndef DAQ_H
 #define DAQ_H
 
+using namespace std;
+using namespace FlyCapture2;
 using namespace cv;
 
 #define SIZE 1
@@ -24,7 +26,7 @@ class Daq
 		void configure();
 		void start();
 		void write();
-		void ConvertPtToVoltage(Mat pt);
+		void ConvertPtToVoltage(Point2f pt);
 
 
 };

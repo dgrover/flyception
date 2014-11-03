@@ -45,10 +45,10 @@ void Daq::write()
 	//DAQmxWriteAnalogScalarF64(taskHandleX, 0, 10.0, dataX, NULL);
 }
 
-void Daq::ConvertPtToVoltage(Mat pt)
+void Daq::ConvertPtToVoltage(Point2f pt)
 {
-	float thetax = atan((float)pt.at<double>(0, 0) / galvoheight) * 180 / CV_PI;
-	float thetay = atan((float)pt.at<double>(1, 0) / galvoheight) * 180 / CV_PI;
+	float thetax = atan(pt.x / galvoheight) * 180 / CV_PI;
+	float thetay = atan(pt.y / galvoheight) * 180 / CV_PI;
 
 	//dataX[0] = thetax/2 * voltperdeg;
 	//dataY[0] = thetay/2 * voltperdeg;

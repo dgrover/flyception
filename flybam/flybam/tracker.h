@@ -1,8 +1,9 @@
 #ifndef TRACKER_H
 #define TRACKER_H
 
-using namespace cv;
 using namespace std;
+using namespace FlyCapture2;
+using namespace cv;
 
 class Tracker
 {
@@ -17,8 +18,8 @@ class Tracker
 		~Tracker();
 
 		void Init(float x = 0, float y = 0);
-		cv::Mat Predict();
-		cv::Mat Correct(cv::Mat measPt);
+		Point2f Predict();
+		Point2f Correct(Point2f measPt);
 };
 
 #endif

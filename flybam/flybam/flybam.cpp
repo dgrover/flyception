@@ -27,45 +27,42 @@ queue <Mat> flyMaxMaskStream;
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
 
-queue <Mat> laser_pt;
+queue <Point2f> laser_pt;
 queue <long int> fps;
 long int tc;
 
 class Timer
 {
-public:
-	Timer() : beg_(clock_::now()) {}
-	void reset() { beg_ = clock_::now(); }
-	double elapsed() const {
-		return std::chrono::duration_cast<std::chrono::milliseconds>
-			(clock_::now() - beg_).count();
-	}
+	public:
+		Timer() : beg_(clock_::now()) {}
+		void reset() { beg_ = clock_::now(); }
+		double elapsed() const {
+			return std::chrono::duration_cast<std::chrono::milliseconds>
+				(clock_::now() - beg_).count();	}
 
-private:
-	typedef std::chrono::high_resolution_clock clock_;
-	std::chrono::time_point<clock_> beg_;
+	private:
+		typedef std::chrono::high_resolution_clock clock_;
+		std::chrono::time_point<clock_> beg_;
 };
 
-Mat refineFlyCenter(Mat pt, Point2f p, int image_width, int image_height)
+Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height)
 {
-	Point2f temp;
+	Point2f temp, refPt;
 
 	//rotate fly center point by 15 degrees due to the tilt of the galvo x-mirror
 	temp.x = (cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) - sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 	temp.y = (sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) + cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 
-	cv::Mat newPt = cv::Mat::ones(2, 1, cv::DataType<double>::type);
-
-	newPt.at<double>(0, 0) = pt.at<double>(0, 0) + ((double)temp.x * SCALE);
-	newPt.at<double>(1, 0) = pt.at<double>(1, 0) + ((double)temp.y * SCALE);
+	refPt.x = pt.x + temp.x * SCALE;
+	refPt.y = pt.y + temp.y * SCALE;
 
 	//printf("[%f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0));
-	//printf("[%f %f]\n", newPt.at<double>(0, 0), newPt.at<double>(1, 0));
+	//printf("[%f %f]\n", refPt.at<double>(0, 0), refPt.at<double>(1, 0));
 
-	return newPt;
+	return refPt;
 }
 
-Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
+Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 {
 	cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
 	uvPoint.at<double>(0, 0) = p.x;
@@ -85,8 +82,7 @@ Mat backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 	//cv::Mat backPt = 1 / s * cameraMatrix * (rotationMatrix * pt + tvec);
 	//printf("[%f %f]\n", backPt.at<double>(0, 0), backPt.at<double>(1, 0));
 
-	return pt;
-
+	return Point2f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0));
 }
 
 //vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
@@ -120,41 +116,11 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	return circleMask;
 }
 
-double dist(Mat p1, Mat p2)
-{
-	double dx = (p2.at<double>(0, 0) - p1.at<double>(0, 0));
-	double dy = (p2.at<double>(1, 0) - p1.at<double>(1, 0));
-	return(sqrt(dx*dx + dy*dy));
-}
-
 float dist(Point2f p1, Point2f p2)
 {
 	float dx = p2.x - p1.x;
 	float dy = p2.y - p1.y;
 	return(sqrt(dx*dx + dy*dy));
-}
-
-int findClosestPoint(Mat pt, vector<Mat> nbor)
-{
-	int fly_index = 0;
-	if (nbor.size() == 1)
-		return fly_index;
-	else
-	{
-		double fly_dist = dist(pt, nbor[0]);
-		
-		for (int i = 1; i < nbor.size(); i++)
-		{
-			double res = dist(pt, nbor[i]);
-			if (res < fly_dist)
-			{
-				fly_dist = res;
-				fly_index = i;                //Store the index of nearest point
-			}
-		}
-
-		return fly_index;
-	}
 }
 
 int findClosestPoint(Point2f pt, vector<Point2f> nbor)
@@ -187,6 +153,12 @@ int findClosestPoint(Point2f pt, vector<Point2f> nbor)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	PGRcam arena_cam, fly_cam;
+	BusManager busMgr;
+	unsigned int numCameras;
+	PGRGuid guid;
+	FlyCapture2::Error error;
+
 	string filename = "..\\..\\arena\\camera_projection_data.xml";
 
 	Mat cameraMatrix, distCoeffs;
@@ -194,18 +166,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat tvec(1, 3, cv::DataType<double>::type);
 	Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
-	PGRcam arena_cam, fly_cam;
-
-	BusManager busMgr;
-	unsigned int numCameras;
-	PGRGuid guid;
-	FlyCapture2::Error error;
-
 	FmfReader fin;
 	FmfWriter fout;
 
 	vector<Tracker> tkf(NFLIES);
-	vector<Mat> pt(NFLIES);
+	vector<Point2f> pt(NFLIES);
 
 	Daq ndq;
 
@@ -272,12 +237,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 
+	//create arena mask
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
 	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), CV_FILLED);
 	
-	FlyCapture2::Image fly_img, arena_img;
-	FlyCapture2::TimeStamp fly_stamp;
+	Image fly_img, arena_img;
+	TimeStamp fly_stamp;
 
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask_min, fly_mask_max;
@@ -305,9 +271,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				ndq.ConvertPtToVoltage(pt[0]);
 				ndq.write();
 
-				imageCount++;
-
-				if (imageCount == 100)
+				if (++imageCount == 100)
 				{
 					imageCount = 0;
 					fps.push(tmr.elapsed());
@@ -432,7 +396,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					vector<Moments> arena_mu(arena_contours.size());
 					vector<Point2f> arena_mc(arena_contours.size());
 
-					vector<Mat> arena_pt;
+					vector<Point2f> arena_pt;
 
 					for (int i = 0; i < arena_contours.size(); i++)
 					{

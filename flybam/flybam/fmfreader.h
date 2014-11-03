@@ -1,6 +1,8 @@
 #ifndef FMFREADER_H
 #define FMFREADER_H
 
+using namespace std;
+using namespace FlyCapture2;
 using namespace cv;
 
 class FmfReader

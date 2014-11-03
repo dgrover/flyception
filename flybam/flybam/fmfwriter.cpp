@@ -1,10 +1,6 @@
 #include "stdafx.h"
 #include "fmfwriter.h"
 
-using namespace std;
-using namespace FlyCapture2;
-using namespace cv;
-
 FmfWriter::FmfWriter()
 {
 	fp = new FILE;
@@ -108,8 +104,8 @@ void FmfWriter::WriteLog(TimeStamp st)
 	fprintf(flog, "Frame %d - TimeStamp [%d %d]\n", nframes, st.seconds, st.microSeconds);
 }
 
-void FmfWriter::WriteTraj(Mat pt)
+void FmfWriter::WriteTraj(Point2f pt)
 {
-	fprintf(ftraj, "%d %f %f %f\n", nframes, pt.at<double>(0, 0), pt.at<double>(1, 0), pt.at<double>(2, 0));
+	fprintf(ftraj, "%d %f %f\n", nframes, pt.x, pt.y);
 }
 
