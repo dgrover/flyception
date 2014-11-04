@@ -253,8 +253,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	int fly_max = 120;
 	int laser_pos = 0;
 
-	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
-	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
 	Timer tmr;
 	int imageCount = 0;
@@ -312,7 +312,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
 						Point2f fly_pt = fly_mc_min[j];
 
-						if (laser_pos > 0)
+						if (laser_pos > 0 && laser_pos < 40)
 						{
 							erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
 							dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
@@ -348,18 +348,35 @@ int _tmain(int argc, _TCHAR* argv[])
 
 								RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
 
-								double turn = flyEllipse.angle - 90;
+								float turn = flyEllipse.angle - 90;
 								Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
 								Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
 
-								double res1 = cv::norm(p1 - fly_mc_max[k]);
-								double res2 = cv::norm(p2 - fly_mc_max[k]);
+								float res1 = dist(p1, fly_mc_max[k]);
+								float res2 = dist(p2, fly_mc_max[k]);
 
 								if (res1 > res2)
 									fly_pt = p1;
 								else
 									fly_pt = p2;
 							}
+						}
+
+						if (laser_pos >= 40 && fly_contours_min[j].size() >= 5)
+						{
+							RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
+
+							float turn = flyEllipse.angle - 90;
+							Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
+							Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
+
+							float res1 = dist(p1, Point2f(fly_image_width / 2, fly_image_height / 2));
+							float res2 = dist(p2, Point2f(fly_image_width / 2, fly_image_height / 2));
+
+							if (res1 < res2)
+								fly_pt = p1;
+							else
+								fly_pt = p2;
 						}
 						
 						circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), CV_FILLED, 1);
