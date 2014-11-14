@@ -175,7 +175,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Daq ndq;
 
 	int arena_image_width = 512, arena_image_height = 512;
-	int fly_image_width = 288, fly_image_height = 300;
+	int fly_image_width = 256, fly_image_height = 256;
 
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
@@ -533,6 +533,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				
 				if (!flyDispStream.empty())
 				{
+					//circle(flyDispStream.back(), Point2f(fly_image_width/2, fly_image_height/2), 30, Scalar(255, 255, 255));
 					imshow("fly image", flyDispStream.back());
 					imshow("fly min mask", flyMinMaskStream.back());
 					imshow("fly max mask", flyMaxMaskStream.back());
@@ -568,8 +569,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	fly_cam.Stop();
 
 	fout.Close();
-	
-	printf("\n\nPress Enter to exit...\n");
+
+	printf("\n\nCentering galvo...\n");
+	ndq.ConvertPtToVoltage(Point2f(0, 0));
+	ndq.write();
+
+	printf("Press Enter to exit...\n");
 	getchar();
 
 	return 0;
