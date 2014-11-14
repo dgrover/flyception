@@ -101,7 +101,10 @@ void FmfWriter::WriteFrame(TimeStamp st, Image img)
 
 void FmfWriter::WriteLog(TimeStamp st)
 {
-	fprintf(flog, "Frame %d - TimeStamp [%d %d]\n", nframes, st.seconds, st.microSeconds);
+	SYSTEMTIME wt;
+	GetLocalTime(&wt);
+
+	fprintf(flog, "Frame %d - System Time [%02d:%02d:%02d] - TimeStamp [%d %d]\n", nframes, wt.wHour, wt.wMinute, wt.wSecond, st.seconds, st.microSeconds);
 }
 
 void FmfWriter::WriteTraj(Point2f pt)

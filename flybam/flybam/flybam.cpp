@@ -250,7 +250,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int arena_thresh = 75;
 	int fly_min = 75;
-	int fly_max = 120;
+	int fly_max = 130;
 	int laser_pos = 0;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -331,16 +331,6 @@ int _tmain(int argc, _TCHAR* argv[])
 								fly_mu_max[i] = moments(fly_contours_max[i], false);
 								fly_mc_max[i] = Point2f(fly_mu_max[i].m10 / fly_mu_max[i].m00, fly_mu_max[i].m01 / fly_mu_max[i].m00);
 							}
-
-							//if (laser_pos > 0)
-							//{
-							//	int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
-
-							//	double turn = atan2(fly_mc_min[j].y - fly_mc_max[k].y, fly_mc_min[j].x - fly_mc_max[k].x) * 180.0 / CV_PI;
-							//	if (turn < 0) turn += 360;
-							//	
-							//	fly_pt = Point2f((fly_mc_min[j].x + cos(turn * PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * PI / 180) * laser_pos));
-							//}
 
 							if (fly_contours_min[j].size() >= 5 && fly_mc_max.size() > 0)
 							{
