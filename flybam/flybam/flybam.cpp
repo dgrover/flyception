@@ -153,6 +153,9 @@ int findClosestPoint(Point2f pt, vector<Point2f> nbor)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	int arena_image_width = 512, arena_image_height = 512;
+	int fly_image_width = 256, fly_image_height = 256;
+
 	PGRcam arena_cam, fly_cam;
 	BusManager busMgr;
 	unsigned int numCameras;
@@ -166,16 +169,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat tvec(1, 3, cv::DataType<double>::type);
 	Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
-	FmfReader fin;
+	//FmfReader fin;
 	FmfWriter fout;
+	fout.InitHeader(fly_image_width, fly_image_height);
 
 	vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
 
 	Daq ndq;
-
-	int arena_image_width = 512, arena_image_height = 512;
-	int fly_image_width = 256, fly_image_height = 256;
 
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
@@ -220,10 +221,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 	}
 	printf("[OK]\n\n");
-
-	fout.Open();
-	fout.InitHeader(fly_image_width, fly_image_height);
-	fout.WriteHeader();
 
 	FileStorage fs(filename, FileStorage::READ);
 	fs["Camera_Matrix"] >> cameraMatrix;
@@ -446,12 +443,23 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 
 				if (GetAsyncKeyState(VK_SPACE))
-					flyview_record = true;
+				{
+					if (!flyview_record)
+					{
+						fout.Open();
+						fout.WriteHeader();
 
+						flyview_record = true;
+					}
+				}
+
+				if (GetAsyncKeyState(VK_ESCAPE))
+					flyview_record = false;
+				
 				if (GetAsyncKeyState(VK_RETURN))
 					flyview_track = true;
 
-				if (GetAsyncKeyState(VK_ESCAPE))
+				if (GetAsyncKeyState(0x51))
 				{
 					stream = false;
 					break;
@@ -472,6 +480,11 @@ int _tmain(int argc, _TCHAR* argv[])
 						fout.WriteTraj(laser_pt.front());
 						fout.nframes++;
 					}
+					else if (fout.nframes > 0)
+					{
+						fout.Close();
+						fout.InitHeader(fly_image_width, fly_image_height);
+					}
 
 					#pragma omp critical
 					{
@@ -491,7 +504,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
-				printf("Frame rate %d, Recording buffer size %d, Frames written %d\r", tc, flyImageStream.size(), fout.nframes);
+				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
 
 				if (flyImageStream.size() == 0 && !stream)
 					break;
@@ -558,7 +571,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	arena_cam.Stop();
 	fly_cam.Stop();
 
-	fout.Close();
+	if (flyview_record)
+		fout.Close();
 
 	printf("\n\nCentering galvo...\n");
 	ndq.ConvertPtToVoltage(Point2f(0, 0));

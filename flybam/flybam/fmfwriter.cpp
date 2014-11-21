@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "fmfwriter.h"
 
-FmfWriter::FmfWriter()
+int FmfWriter::Open()
 {
 	fp = new FILE;
 	flog = new FILE;
@@ -18,10 +18,7 @@ FmfWriter::FmfWriter()
 
 	sprintf_s(ftrajname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(ftrajname);
-}
-
-int FmfWriter::Open()
-{
+	
 	fp = fopen(fname, "wb");
 
 	if(fp == NULL) // Cannot open File
@@ -60,12 +57,12 @@ int FmfWriter::Close()
 	fclose(flog);
 	fclose(ftraj);
 
-	if (nframes == 0)
-	{
-		remove(fname);
-		remove(flogname);
-		remove(ftrajname);
-	}
+	//if (nframes == 0)
+	//{
+	//	remove(fname);
+	//	remove(flogname);
+	//	remove(ftrajname);
+	//}
 
 	return 1;
 }
