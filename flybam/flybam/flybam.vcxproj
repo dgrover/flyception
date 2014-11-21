@@ -84,8 +84,8 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Program Files\Point Grey Research\FlyCapture2\include;C:\SDK\opencv-2.4.10\build\install\include;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files\Point Grey Research\FlyCapture2\lib64;C:\SDK\opencv-2.4.10\build\install\x64\vc12\lib;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\lib64\msvc;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Program Files\Point Grey Research\FlyCapture2\include;C:\SDK\opencv-3.0.0\build\install\include;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\Point Grey Research\FlyCapture2\lib64;C:\SDK\opencv-3.0.0\build\install\x64\vc12\lib;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\lib64\msvc;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -161,7 +161,7 @@
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>nidaqmx.lib;FlyCapture2.lib;FlyCapture2GUI.lib;opencv_core2410.lib;opencv_highgui2410.lib;opencv_video2410.lib;opencv_imgproc2410.lib;opencv_calib3d2410.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>nidaqmx.lib;FlyCapture2.lib;FlyCapture2GUI.lib;opencv_core300.lib;opencv_highgui300.lib;opencv_video300.lib;opencv_imgproc300.lib;opencv_calib3d300.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>

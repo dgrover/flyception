@@ -20,7 +20,7 @@ void Tracker::Init(float x, float y)
 	KF.statePre.at<float>(1) = y;
 	KF.statePre.at<float>(2) = 0;
 	KF.statePre.at<float>(3) = 0;
-	KF.transitionMatrix = *(Mat_<float>(4, 4) << 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
+	KF.transitionMatrix = (Mat_<float>(4, 4) << 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
 
 	setIdentity(KF.measurementMatrix);
 	setIdentity(KF.processNoiseCov, Scalar::all(1e-4));		//adjust this for faster convergence - but higher noise (default: 1e-2)

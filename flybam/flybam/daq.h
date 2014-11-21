@@ -5,7 +5,7 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-#define SIZE 1
+#define SIZE 5
 
 class Daq
 {

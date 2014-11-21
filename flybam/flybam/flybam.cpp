@@ -240,7 +240,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//create arena mask
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
 	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
-	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), CV_FILLED);
+	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 	
 	Image fly_img, arena_img;
 	TimeStamp fly_stamp;
@@ -250,7 +250,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int arena_thresh = 75;
 	int fly_min = 75;
-	int fly_max = 130;
+	int fly_max = 120;
 	int laser_pos = 0;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -369,7 +369,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								fly_pt = p2;
 						}
 						
-						circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), FILLED, 1);
 						tkf[0].Correct(refineFlyCenter(pt[0], fly_pt, fly_image_width, fly_image_height));
 					}
 					else
@@ -412,7 +412,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						arena_mu[i] = moments(arena_contours[i], false);
 						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
-						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), CV_FILLED, 1);
+						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
 						arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
 					}
 
@@ -500,7 +500,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
-			namedWindow("controls");
+			namedWindow("controls", WINDOW_AUTOSIZE);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
 			createTrackbar("fly min", "controls", &fly_min, 255);
 			createTrackbar("fly max", "controls", &fly_max, 255);
@@ -508,6 +508,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
+
 				if (!arenaDispStream.empty())
 				{
 					ellipse(arenaDispStream.back(), arenaMask, Scalar(255, 255, 255));
@@ -523,7 +524,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				
 				if (!flyDispStream.empty())
 				{
-					//circle(flyDispStream.back(), Point2f(fly_image_width/2, fly_image_height/2), 30, Scalar(255, 255, 255));
 					imshow("fly image", flyDispStream.back());
 					imshow("fly min mask", flyMinMaskStream.back());
 					imshow("fly max mask", flyMaxMaskStream.back());
