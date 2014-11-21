@@ -184,7 +184,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//nframes = fin.GetFrameCount();	
 	
 	error = busMgr.GetNumOfCameras(&numCameras);
-	//printf("Number of cameras detected: %u\n", numCameras);
+	printf("Number of cameras detected: %u\n", numCameras);
 
 	if (numCameras < 2)
 	{
@@ -574,12 +574,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (flyview_record)
 		fout.Close();
 
-	printf("\n\nCentering galvo...\n");
+	printf("\n\nCentering galvo ");
 	ndq.ConvertPtToVoltage(Point2f(0, 0));
 	ndq.write();
+	printf("[OK]\n");
 
-	printf("Press Enter to exit...\n");
-	getchar();
+	//printf("Press Enter to exit...\n");
+	//getchar();
 
 	return 0;
 }
