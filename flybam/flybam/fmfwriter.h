@@ -32,6 +32,7 @@ class FmfWriter
 		void WriteFrame(TimeStamp st, Image img);
 		void WriteLog(TimeStamp st);
 		void WriteTraj(Point2f pt);
+		int IsOpen();
 		
 };
 

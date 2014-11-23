@@ -57,6 +57,10 @@ int FmfWriter::Close()
 	fclose(flog);
 	fclose(ftraj);
 
+	fp = NULL;
+	flog = NULL;
+	ftraj = NULL;
+
 	//if (nframes == 0)
 	//{
 	//	remove(fname);
@@ -107,5 +111,13 @@ void FmfWriter::WriteLog(TimeStamp st)
 void FmfWriter::WriteTraj(Point2f pt)
 {
 	fprintf(ftraj, "%d %f %f\n", nframes, pt.x, pt.y);
+}
+
+int FmfWriter::IsOpen()
+{
+	if (fp == NULL) // Cannot open File
+		return 0;
+	else
+		return 1;
 }
 

@@ -171,7 +171,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	//FmfReader fin;
 	FmfWriter fout;
-	fout.InitHeader(fly_image_width, fly_image_height);
 
 	vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
@@ -255,6 +254,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Timer tmr;
 	int imageCount = 0;
+
+	int key_state = 0;
+
+	printf("Press [SPACE] to start/stop recording. Press [ESC] to exit.\n\n");
 
 	#pragma omp parallel sections num_threads(3)
 	{
@@ -444,22 +447,18 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (GetAsyncKeyState(VK_SPACE))
 				{
-					if (!flyview_record)
-					{
-						fout.Open();
-						fout.WriteHeader();
+					if (!key_state)
+						flyview_record = !flyview_record;
 
-						flyview_record = true;
-					}
+					key_state = 1;
 				}
+				else
+					key_state = 0;
 
-				if (GetAsyncKeyState(VK_ESCAPE))
-					flyview_record = false;
-				
 				if (GetAsyncKeyState(VK_RETURN))
 					flyview_track = true;
 
-				if (GetAsyncKeyState(0x51))
+				if (GetAsyncKeyState(VK_ESCAPE))
 				{
 					stream = false;
 					break;
@@ -475,15 +474,22 @@ int _tmain(int argc, _TCHAR* argv[])
 				{
 					if (flyview_record)
 					{
+						if (!fout.IsOpen())
+						{
+							fout.Open();
+							fout.InitHeader(fly_image_width, fly_image_height);
+							fout.WriteHeader();
+						}
+
 						fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
 						fout.WriteLog(flyTimeStamps.front());
 						fout.WriteTraj(laser_pt.front());
 						fout.nframes++;
 					}
-					else if (fout.nframes > 0)
+					else
 					{
-						fout.Close();
-						fout.InitHeader(fly_image_width, fly_image_height);
+						if(fout.IsOpen())
+							fout.Close();
 					}
 
 					#pragma omp critical
