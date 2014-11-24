@@ -1,6 +1,14 @@
 #include "stdafx.h"
 #include "fmfwriter.h"
 
+FmfWriter::FmfWriter()
+{
+	fp = NULL;
+	flog = NULL;
+	ftraj = NULL;
+	nframes = 0;
+}
+
 int FmfWriter::Open()
 {
 	fp = new FILE;
