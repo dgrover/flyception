@@ -257,7 +257,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int key_state = 0;
 
-	printf("Press [SPACE] to start/stop recording. Press [ESC] to exit.\n\n");
+	printf("Press [F1] to start/stop recording. Press [ESC] to exit.\n\n");
 
 	#pragma omp parallel sections num_threads(3)
 	{
@@ -445,7 +445,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					laser_pt.push(pt[0]);
 				}
 
-				if (GetAsyncKeyState(VK_SPACE))
+				if (GetAsyncKeyState(VK_F1))
 				{
 					if (!key_state)
 						flyview_record = !flyview_record;
