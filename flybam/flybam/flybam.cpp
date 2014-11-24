@@ -445,7 +445,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					laser_pt.push(pt[0]);
 				}
 
-				if (GetAsyncKeyState(VK_SPACE))
+				if (GetAsyncKeyState(VK_F1))
 				{
 					if (!key_state)
 						flyview_record = !flyview_record;
