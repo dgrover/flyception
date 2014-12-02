@@ -28,6 +28,9 @@ queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
 
 queue <Point2f> laser_pt;
+queue <Point2f> fly_pt;
+queue <Point2f> disp_pt;
+
 queue <long int> fps;
 long int tc;
 
@@ -268,6 +271,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				for (int i = 0; i < NFLIES; i++)
 					pt[i] = tkf[i].Predict();
 
+				Point2f pt2d(-1, -1);
+
 				ndq.ConvertPtToVoltage(pt[0]);
 				ndq.write();
 
@@ -310,7 +315,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					if (fly_mc_min.size() > 0)
 					{
 						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
-						Point2f fly_pt = fly_mc_min[j];
+						pt2d = fly_mc_min[j];
 
 						if (laser_pos > 0 && laser_pos < 40)
 						{
@@ -346,9 +351,9 @@ int _tmain(int argc, _TCHAR* argv[])
 								float res2 = dist(p2, fly_mc_max[k]);
 
 								if (res1 > res2)
-									fly_pt = p1;
+									pt2d = p1;
 								else
-									fly_pt = p2;
+									pt2d = p2;
 							}
 						}
 
@@ -364,13 +369,13 @@ int _tmain(int argc, _TCHAR* argv[])
 							float res2 = dist(p2, Point2f(fly_image_width / 2, fly_image_height / 2));
 
 							if (res1 < res2)
-								fly_pt = p1;
+								pt2d = p1;
 							else
-								fly_pt = p2;
+								pt2d = p2;
 						}
 						
-						circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), FILLED, 1);
-						tkf[0].Correct(refineFlyCenter(pt[0], fly_pt, fly_image_width, fly_image_height));
+						//circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), FILLED, 1);
+						tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
 					}
 					else
 					{
@@ -443,6 +448,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					flyTimeStamps.push(fly_stamp);
 
 					laser_pt.push(pt[0]);
+					fly_pt.push(pt2d);
+					disp_pt.push(pt2d);
 				}
 
 				if (GetAsyncKeyState(VK_F1))
@@ -483,7 +490,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
 						fout.WriteLog(flyTimeStamps.front());
-						fout.WriteTraj(laser_pt.front());
+						fout.WriteTraj(laser_pt.front(), fly_pt.front());
 						fout.nframes++;
 					}
 					else
@@ -497,6 +504,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						flyImageStream.pop();
 						flyTimeStamps.pop();
 						laser_pt.pop();
+						fly_pt.pop();
 					}
 				}
 
@@ -543,12 +551,15 @@ int _tmain(int argc, _TCHAR* argv[])
 				
 				if (!flyDispStream.empty())
 				{
+					circle(flyDispStream.back(), disp_pt.back(), 1, Scalar(255, 255, 255), FILLED, 1);
+
 					imshow("fly image", flyDispStream.back());
 					imshow("fly min mask", flyMinMaskStream.back());
 					imshow("fly max mask", flyMaxMaskStream.back());
 					
 					#pragma omp critical
 					{
+						disp_pt = queue<Point2f>();
 						flyDispStream = queue<Mat>();
 						flyMinMaskStream = queue<Mat>();
 						flyMaxMaskStream = queue<Mat>();

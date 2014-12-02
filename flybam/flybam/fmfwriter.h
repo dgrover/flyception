@@ -33,7 +33,7 @@ class FmfWriter
 		void WriteHeader();
 		void WriteFrame(TimeStamp st, Image img);
 		void WriteLog(TimeStamp st);
-		void WriteTraj(Point2f pt);
+		void WriteTraj(Point2f pt1, Point2f pt2);
 		int IsOpen();
 		
 };

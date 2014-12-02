@@ -113,12 +113,12 @@ void FmfWriter::WriteLog(TimeStamp st)
 	SYSTEMTIME wt;
 	GetLocalTime(&wt);
 
-	fprintf(flog, "Frame %d - System Time [%02d:%02d:%02d] - TimeStamp [%d %d]\n", nframes, wt.wHour, wt.wMinute, wt.wSecond, st.seconds, st.microSeconds);
+	fprintf(flog, "Frame %d - System Time [%02d:%02d:%02d:%d] - TimeStamp [%d %d]\n", nframes, wt.wHour, wt.wMinute, wt.wSecond, wt.wMilliseconds, st.seconds, st.microSeconds);
 }
 
-void FmfWriter::WriteTraj(Point2f pt)
+void FmfWriter::WriteTraj(Point2f pt1, Point2f pt2)
 {
-	fprintf(ftraj, "%d %f %f\n", nframes, pt.x, pt.y);
+	fprintf(ftraj, "%d %f %f %f %f\n", nframes, pt1.x, pt1.y, pt2.x, pt2.y);
 }
 
 int FmfWriter::IsOpen()
