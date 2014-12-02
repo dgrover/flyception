@@ -374,7 +374,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								pt2d = p2;
 						}
 						
-						//circle(fly_frame, fly_pt, 1, Scalar(255, 255, 255), FILLED, 1);
+						//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
 						tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
 					}
 					else

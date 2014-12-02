@@ -87,7 +87,9 @@ Mat PGRcam::convertImagetoMat(Image img)
 {
 	// convert to OpenCV Mat
 	unsigned int rowBytes = (double)img.GetReceivedDataSize() / (double)img.GetRows();
-	Mat frame = Mat(img.GetRows(), img.GetCols(), CV_8UC1, img.GetData(), rowBytes);
+	Mat tframe = Mat(img.GetRows(), img.GetCols(), CV_8UC1, img.GetData(), rowBytes);
+
+	Mat frame = tframe.clone();
 
 	return frame;
 }
