@@ -1,4 +1,4 @@
-// projection.cpp : Defines the entry point for the console application.
+// project.cpp : Defines the entry point for the console application.
 //
 
 #include "stdafx.h"
@@ -36,9 +36,9 @@ std::vector<cv::Point3f> create3DChessboardCorners(cv::Size boardSize, float squ
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	string infilename = "..\\..\\..\\arena\\out_camera_data.xml";
-	string outfilename = "..\\..\\..\\arena\\camera_projection_data.xml";
-	string imgfile = "..\\..\\..\\arena\\cbview.jpg";
+	string infilename = "..\\..\\arena\\out_camera_data.xml";
+	string outfilename = "..\\..\\arena\\camera_projection_data.xml";
+	string imgfile = "..\\..\\arena\\cbview.jpg";
 
 	int boardHeight, boardWidth;
 	float squareSize;

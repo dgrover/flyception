@@ -3,11 +3,9 @@
 
 #include "stdafx.h"
 
-
 using namespace std;
 using namespace cv;
 
-string imgfile = "..\\..\\..\\arena\\flyview.jpg";
 vector <Point> mouse;
 vector <double> sqlength;
 
@@ -33,6 +31,8 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	string imgfile = "..\\..\\arena\\flyview.jpg";
+
 	// Read image from file 
 	Mat img = imread(imgfile);
 
