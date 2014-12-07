@@ -165,21 +165,19 @@ int _tmain(int argc, _TCHAR* argv[])
 	PGRGuid guid;
 	FlyCapture2::Error error;
 
-	string filename = "..\\..\\arena\\camera_projection_data.xml";
+	string filename = "..\\calibration\\arena\\camera_projection_data.xml";
 
 	Mat cameraMatrix, distCoeffs;
 	Mat rvec(1, 3, cv::DataType<double>::type);
 	Mat tvec(1, 3, cv::DataType<double>::type);
 	Mat rotationMatrix(3, 3, cv::DataType<double>::type);
 
-	//FmfReader fin;
 	FmfWriter fout;
 
 	vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
 
-	Daq ndq;
-
+	//FmfReader fin;
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
 	//fin.GetImageSize(arena_image_width, arena_image_height);
@@ -195,7 +193,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	printf("Initializing arena view camera ");
-	//Initialize arena camera
 	error = busMgr.GetCameraFromIndex(0, &guid);
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_width, arena_image_height);
@@ -210,7 +207,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("[OK]\n");
 
 	printf("Initializing fly view camera ");
-	//Initialize fly camera
 	error = busMgr.GetCameraFromIndex(1, &guid);
 	error = fly_cam.Connect(guid);
 	error = fly_cam.SetCameraParameters(fly_image_width, fly_image_height);
@@ -225,14 +221,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("[OK]\n\n");
 
 	FileStorage fs(filename, FileStorage::READ);
-	fs["Camera_Matrix"] >> cameraMatrix;
-	fs["Distortion_Coefficients"] >> distCoeffs;
+	fs["camera_matrix"] >> cameraMatrix;
+	fs["distortion_coefficients"] >> distCoeffs;
 	fs["rvec"] >> rvec;
 	fs["tvec"] >> tvec;
-	fs["Rotation_Matrix"] >> rotationMatrix;
+	fs["rotation_matrix"] >> rotationMatrix;
 	fs.release();
 
 	//configure and start NIDAQ
+	Daq ndq;
 	ndq.configure();
 	ndq.start();
 
@@ -307,7 +304,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					for (int i = 0; i < fly_contours_min.size(); i++)
 					{
 						//drawContours(fly_mask_min, fly_contours_min, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-
 						fly_mu_min[i] = moments(fly_contours_min[i], false);
 						fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
 					}
@@ -332,7 +328,6 @@ int _tmain(int argc, _TCHAR* argv[])
 							for (int i = 0; i < fly_contours_max.size(); i++)
 							{
 								//drawContours(fly_mask_max, fly_contours_max, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-
 								fly_mu_max[i] = moments(fly_contours_max[i], false);
 								fly_mc_max[i] = Point2f(fly_mu_max[i].m10 / fly_mu_max[i].m00, fly_mu_max[i].m01 / fly_mu_max[i].m00);
 							}
@@ -413,7 +408,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					for (int i = 0; i < arena_contours.size(); i++)
 					{
 						//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-
 						arena_mu[i] = moments(arena_contours[i], false);
 						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 

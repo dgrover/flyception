@@ -9,7 +9,7 @@ FmfReader::~FmfReader()
 
 int FmfReader::Open(_TCHAR* fname)
 {
-	fp = fopen(fname, "rb");
+	fopen_s(&fp, fname, "rb");
 
 	if(fp == NULL) // Cannot open file
 	{

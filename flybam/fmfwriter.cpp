@@ -27,7 +27,7 @@ int FmfWriter::Open()
 	sprintf_s(ftrajname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(ftrajname);
 	
-	fp = fopen(fname, "wb");
+	fopen_s(&fp, fname, "wb");
 
 	if(fp == NULL) // Cannot open File
 	{
@@ -35,7 +35,7 @@ int FmfWriter::Open()
 		return -1;	
 	}
 
-	flog = fopen(flogname, "w");
+	fopen_s(&flog, flogname, "w");
 		
 	if(flog == NULL)
 	{
@@ -43,7 +43,7 @@ int FmfWriter::Open()
 		return -1;
 	}
 
-	ftraj = fopen(ftrajname, "w");
+	fopen_s(&ftraj, ftrajname, "w");
 
 	if (ftraj == NULL)
 	{

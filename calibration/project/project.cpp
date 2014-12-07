@@ -56,11 +56,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	FileStorage fs(infilename, FileStorage::READ);
 
-	fs["Camera_Matrix"] >> cameraMatrix;
-	fs["Distortion_Coefficients"] >> distCoeffs;
-	fs["board_Height"] >> boardHeight;
-	fs["board_Width"] >> boardWidth;
-	fs["square_Size"] >> squareSize;
+	fs["camera_matrix"] >> cameraMatrix;
+	fs["distortion_coefficients"] >> distCoeffs;
+	fs["board_height"] >> boardHeight;
+	fs["board_width"] >> boardWidth;
+	fs["square_size"] >> squareSize;
 
 	fs.release();
 
@@ -90,11 +90,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		FileStorage fs(outfilename, FileStorage::WRITE);
 
-		fs << "Camera_Matrix" << cameraMatrix;
-		fs << "Distortion_Coefficients" << distCoeffs;
+		fs << "camera_matrix" << cameraMatrix;
+		fs << "distortion_coefficients" << distCoeffs;
 		fs << "rvec" << rvec;
 		fs << "tvec" << tvec;
-		fs << "Rotation_Matrix" << rotationMatrix;
+		fs << "rotation_matrix" << rotationMatrix;
 
 		fs.release();
 	}
