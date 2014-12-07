@@ -7,8 +7,11 @@
 
 #include "targetver.h"
 
-#include <stdio.h>
 #include <tchar.h>
+#include <iostream>
+#include <sstream>
+#include <time.h>
+#include <stdio.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utility.hpp>
@@ -18,13 +21,5 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/features2d/features2d.hpp>
-
-#include <cctype>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-
-
-
 
 // TODO: reference additional headers your program requires here
