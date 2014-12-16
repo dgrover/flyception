@@ -543,7 +543,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 				
-				if (!flyDispStream.empty())
+				if (!flyDispStream.empty() && !disp_pt.empty())
 				{
 					circle(flyDispStream.back(), disp_pt.back(), 1, Scalar(255, 255, 255), FILLED, 1);
 
