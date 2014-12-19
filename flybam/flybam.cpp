@@ -8,7 +8,7 @@ using namespace FlyCapture2;
 using namespace cv;
 
 #define BASE_HEIGHT 3.175
-#define SCALE 2.5/123.006073
+#define SCALE 2.5/(123.006073)
 #define GALVO_X_MIRROR_ANGLE 15
 
 #define NFLIES 1
@@ -197,6 +197,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
+	error = arena_cam.SetProperty(SHUTTER, 0.006);
+	error = arena_cam.SetProperty(GAIN, 0.0);
 	error = arena_cam.Start();
 
 	if (error != PGRERROR_OK)
@@ -211,6 +213,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.Connect(guid);
 	error = fly_cam.SetCameraParameters(fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
+	error = fly_cam.SetTrigger();
+	error = fly_cam.SetProperty(SHUTTER, 0.006);
+	error = fly_cam.SetProperty(GAIN, 18.062);
 	error = fly_cam.Start();
 	
 	if (error != PGRERROR_OK)
@@ -245,8 +250,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_frame, fly_mask_min, fly_mask_max;
 
 	int arena_thresh = 75;
-	int fly_min = 75;
-	int fly_max = 120;
+	int fly_min = 85; 
+	int fly_max = 140;
 	int laser_pos = 0;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -471,7 +476,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			while (true)
 			{
-				if (!flyImageStream.empty())
+				if (!flyImageStream.empty() && !flyTimeStamps.empty() && !laser_pt.empty() && !fly_pt.empty())
 				{
 					if (flyview_record)
 					{
@@ -504,7 +509,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (!fps.empty())
 				{
-					tc = 1000 / (fps.front() / 100);
+					if (fps.front() != 0)
+						tc = 1000 / (fps.front() / 100);
 
 					#pragma omp critical
 					{
@@ -530,7 +536,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			while (true)
 			{
 
-				if (!arenaDispStream.empty())
+				if (!arenaDispStream.empty() && !arenaMaskStream.empty())
 				{
 					ellipse(arenaDispStream.back(), arenaMask, Scalar(255, 255, 255));
 					imshow("arena image", arenaDispStream.back());
@@ -543,7 +549,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 				
-				if (!flyDispStream.empty() && !disp_pt.empty())
+				if (!flyDispStream.empty() && !flyMinMaskStream.empty() && !flyMaxMaskStream.empty() && !disp_pt.empty())
 				{
 					circle(flyDispStream.back(), disp_pt.back(), 1, Scalar(255, 255, 255), FILLED, 1);
 

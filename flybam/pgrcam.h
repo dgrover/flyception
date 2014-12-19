@@ -25,6 +25,9 @@ private:
 	Format7ImageSettings fmt7ImageSettings;
 	Format7PacketInfo fmt7PacketInfo;
 
+	TriggerModeInfo triggerModeInfo;
+	TriggerMode triggerMode;
+
 	bool valid;
 
 
@@ -35,6 +38,8 @@ public:
 
 	FlyCapture2::Error Connect(PGRGuid guid);
 	FlyCapture2::Error SetCameraParameters(int width, int height);
+	FlyCapture2::Error SetTrigger();
+	FlyCapture2::Error SetProperty(PropertyType type, float absValue);
 	FlyCapture2::Error Start();
 	FlyCapture2::Error Stop();
 	FlyCapture2::Image GrabFrame();

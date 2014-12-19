@@ -50,6 +50,46 @@ FlyCapture2::Error PGRcam::SetCameraParameters(int width, int height)
 	return error;
 }
 
+FlyCapture2::Error PGRcam::SetTrigger()
+{
+	// Check for external trigger support
+	error = cam.GetTriggerModeInfo(&triggerModeInfo);
+
+	if (triggerModeInfo.present != true)
+		printf("Camera does not support external trigger! Exiting...\n");
+
+	// Get current trigger settings
+	error = cam.GetTriggerMode(&triggerMode);
+
+	// Set camera to trigger mode 0
+	triggerMode.onOff = true;
+	triggerMode.mode = 0;
+	triggerMode.parameter = 0;
+
+	// Triggering the camera externally using source 0.
+	triggerMode.source = 0;
+
+	error = cam.SetTriggerMode(&triggerMode);
+
+	return error;
+}
+
+FlyCapture2::Error PGRcam::SetProperty(FlyCapture2::PropertyType type, float absValue)
+{
+	FlyCapture2::Property pProp;
+
+	pProp.type = type;
+	pProp.absControl = true;
+	pProp.onePush = false;
+	pProp.onOff = true;
+	pProp.autoManualMode = false;
+	pProp.absValue = absValue;
+
+	error = cam.SetProperty(&pProp);
+
+	return error;
+}
+
 FlyCapture2::Error PGRcam::Start()
 {
 	// Start capturing images
