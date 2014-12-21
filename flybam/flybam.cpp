@@ -29,10 +29,9 @@ queue <TimeStamp> flyTimeStamps;
 
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
-queue <Point2f> disp_pt;
 
-queue <long int> fps;
-long int tc;
+//queue <long int> fps;
+//long int tc;
 
 class Timer
 {
@@ -177,6 +176,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
 
+	Point2f pt2d;
+
 	//FmfReader fin;
 	//fin.Open(argv[1]);
 	//fin.ReadHeader();
@@ -214,8 +215,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetCameraParameters(fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.SetTrigger();
-	error = fly_cam.SetProperty(SHUTTER, 0.006);
-	error = fly_cam.SetProperty(GAIN, 18.062);
+	error = fly_cam.SetProperty(SHUTTER, 0.198);
+	error = fly_cam.SetProperty(GAIN, 6.089);
 	error = fly_cam.Start();
 	
 	if (error != PGRERROR_OK)
@@ -257,8 +258,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	Timer tmr;
-	int imageCount = 0;
+	//Timer tmr;
+	//int imageCount = 0;
 
 	int key_state = 0;
 
@@ -273,17 +274,17 @@ int _tmain(int argc, _TCHAR* argv[])
 				for (int i = 0; i < NFLIES; i++)
 					pt[i] = tkf[i].Predict();
 
-				Point2f pt2d(-1, -1);
+				pt2d = Point2f(-1 , -1);
 
 				ndq.ConvertPtToVoltage(pt[0]);
 				ndq.write();
 
-				if (++imageCount == 100)
-				{
-					imageCount = 0;
-					fps.push(tmr.elapsed());
-					tmr.reset();
-				}
+				//if (++imageCount == 100)
+				//{
+				//	imageCount = 0;
+				//	fps.push(tmr.elapsed());
+				//	tmr.reset();
+				//}
 
 				//fly_frame = fin.ReadFrame(imageCount);
 				fly_img = fly_cam.GrabFrame();
@@ -302,19 +303,19 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					findContours(fly_mask_min, fly_contours_min, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 					
-					// Get the moments and mass centers
-					vector<Moments> fly_mu_min(fly_contours_min.size());
-					vector<Point2f> fly_mc_min(fly_contours_min.size());
-
-					for (int i = 0; i < fly_contours_min.size(); i++)
+					if (fly_contours_min.size() > 0)
 					{
-						//drawContours(fly_mask_min, fly_contours_min, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-						fly_mu_min[i] = moments(fly_contours_min[i], false);
-						fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
-					}
+						// Get the moments and mass centers
+						vector<Moments> fly_mu_min(fly_contours_min.size());
+						vector<Point2f> fly_mc_min(fly_contours_min.size());
 
-					if (fly_mc_min.size() > 0)
-					{
+						for (int i = 0; i < fly_contours_min.size(); i++)
+						{
+							//drawContours(fly_mask_min, fly_contours_min, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+							fly_mu_min[i] = moments(fly_contours_min[i], false);
+							fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
+						}
+						
 						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
 						pt2d = fly_mc_min[j];
 
@@ -374,7 +375,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								pt2d = p2;
 						}
 						
-						//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
+						circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
 						tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
 					}
 					else
@@ -404,29 +405,32 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					findContours(arena_mask, arena_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-					// Get the moments and mass centers
-					vector<Moments> arena_mu(arena_contours.size());
-					vector<Point2f> arena_mc(arena_contours.size());
-
-					vector<Point2f> arena_pt;
-
-					for (int i = 0; i < arena_contours.size(); i++)
+					if (arena_contours.size() > 0)
 					{
-						//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-						arena_mu[i] = moments(arena_contours[i], false);
-						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+						// Get the moments and mass centers
+						vector<Moments> arena_mu(arena_contours.size());
+						vector<Point2f> arena_mc(arena_contours.size());
 
-						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-						arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
-					}
+						vector<Point2f> arena_pt;
 
-					for (int i = 0; i < NFLIES; i++)
-					{
-						if (arena_pt.size() > 0)
+						for (int i = 0; i < arena_contours.size(); i++)
 						{
-							int j = findClosestPoint(pt[i], arena_pt);
-							tkf[i].Correct(arena_pt[j]);
-							arena_pt.erase(arena_pt.begin() + j);
+							//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+							arena_mu[i] = moments(arena_contours[i], false);
+							arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+
+							circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
+							arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
+						}
+
+						for (int i = 0; i < NFLIES; i++)
+						{
+							if (arena_pt.size() > 0)
+							{
+								int j = findClosestPoint(pt[i], arena_pt);
+								tkf[i].Correct(arena_pt[j]);
+								arena_pt.erase(arena_pt.begin() + j);
+							}
 						}
 					}
 				}
@@ -448,7 +452,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					laser_pt.push(pt[0]);
 					fly_pt.push(pt2d);
-					disp_pt.push(pt2d);
 				}
 
 				if (GetAsyncKeyState(VK_F1))
@@ -507,20 +510,21 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
-				if (!fps.empty())
-				{
-					if (fps.front() != 0)
-						tc = 1000 / (fps.front() / 100);
+				//if (!fps.empty())
+				//{
+				//	if (fps.front() != 0)
+				//		tc = 1000 / (fps.front() / 100);
 
-					#pragma omp critical
-					{
-						fps.pop();
-					}
-				}
+				//	#pragma omp critical
+				//	{
+				//		fps.pop();
+				//	}
+				//}
 
-				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
+				//printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
+				printf("Recording buffer size %06d, Frames written %06d\r", flyImageStream.size(), fout.nframes);
 
-				if (flyImageStream.size() == 0 && !stream)
+				if (flyImageStream.empty() && !stream)
 					break;
 			}
 		}
@@ -549,17 +553,14 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 				
-				if (!flyDispStream.empty() && !flyMinMaskStream.empty() && !flyMaxMaskStream.empty() && !disp_pt.empty())
+				if (!flyDispStream.empty() && !flyMinMaskStream.empty() && !flyMaxMaskStream.empty())
 				{
-					circle(flyDispStream.back(), disp_pt.back(), 1, Scalar(255, 255, 255), FILLED, 1);
-
 					imshow("fly image", flyDispStream.back());
 					imshow("fly min mask", flyMinMaskStream.back());
 					imshow("fly max mask", flyMaxMaskStream.back());
 					
 					#pragma omp critical
 					{
-						disp_pt = queue<Point2f>();
 						flyDispStream = queue<Mat>();
 						flyMinMaskStream = queue<Mat>();
 						flyMaxMaskStream = queue<Mat>();

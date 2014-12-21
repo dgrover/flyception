@@ -113,7 +113,7 @@ void FmfWriter::WriteLog(TimeStamp st)
 	SYSTEMTIME wt;
 	GetLocalTime(&wt);
 
-	fprintf(flog, "Frame %d - System Time [%02d:%02d:%02d:%d] - TimeStamp [%d %d]\n", nframes, wt.wHour, wt.wMinute, wt.wSecond, wt.wMilliseconds, st.seconds, st.microSeconds);
+	fprintf(flog, "Frame %d - System Time [%02d:%02d:%02d:%d] - TimeStamp [%d %d %d]\n", nframes, wt.wHour, wt.wMinute, wt.wSecond, wt.wMilliseconds, st.cycleSeconds, st.cycleCount, st.cycleOffset);
 }
 
 void FmfWriter::WriteTraj(Point2f pt1, Point2f pt2)
