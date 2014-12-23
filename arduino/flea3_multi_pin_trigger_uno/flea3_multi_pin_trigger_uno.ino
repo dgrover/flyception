@@ -1,20 +1,34 @@
 // TTL pulse to Arduino Uno pins 5,7
 //set Port D pins 5,7 as OUTPUT
+
 int count = 1;
+int incomingByte = 0;	              // for incoming serial data
+
 void setup()
 {
-  DDRD = B10100000;
+  Serial.begin(9600);	// opens serial port, sets data rate to 9600 bps
+  DDRD = B10101000;
 }
 
 void loop()
 {
+  if (Serial.available() > 0)
+    incomingByte = Serial.read();
+  
   if (count >10)
   {
-    PORTD = B10100000; //Set pins HIGH
+    if (incomingByte > 0)
+    {
+      PORTD = B10101000; //Set pins 3, 5, 7 to HIGH
+      incomingByte = 0;
+    }
+    else
+      PORTD = B10100000; //Set pins 5, 7 to HIGH
+   
     count = 1;
   }
   else
-    PORTD = B10000000; //Set pins HIGH
+    PORTD = B10000000; //Set pin 7 to HIGH
   
   delayMicroseconds(1000);
     

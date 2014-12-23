@@ -262,6 +262,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//int imageCount = 0;
 
 	int key_state = 0;
+	int lost = 0;
 
 	printf("Press [F1] to start/stop recording. Press [ESC] to exit.\n\n");
 
@@ -305,6 +306,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					
 					if (fly_contours_min.size() > 0)
 					{
+						lost = 0;
+
 						// Get the moments and mass centers
 						vector<Moments> fly_mu_min(fly_contours_min.size());
 						vector<Point2f> fly_mc_min(fly_contours_min.size());
@@ -381,9 +384,14 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 					else
 					{
-						flyview_track = false;
-						for (int i = 0; i < NFLIES; i++)
-							tkf[i].Init();
+						lost++;
+
+						if (lost > 1)
+						{
+							flyview_track = false;
+							for (int i = 0; i < NFLIES; i++)
+								tkf[i].Init();
+						}
 					}
 				}
 						
