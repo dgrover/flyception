@@ -33,19 +33,19 @@ queue <Point2f> fly_pt;
 //queue <long int> fps;
 //long int tc;
 
-class Timer
-{
-	public:
-		Timer() : beg_(clock_::now()) {}
-		void reset() { beg_ = clock_::now(); }
-		double elapsed() const {
-			return std::chrono::duration_cast<std::chrono::milliseconds>
-				(clock_::now() - beg_).count();	}
-
-	private:
-		typedef std::chrono::high_resolution_clock clock_;
-		std::chrono::time_point<clock_> beg_;
-};
+//class Timer
+//{
+//	public:
+//		Timer() : beg_(clock_::now()) {}
+//		void reset() { beg_ = clock_::now(); }
+//		double elapsed() const {
+//			return std::chrono::duration_cast<std::chrono::milliseconds>
+//				(clock_::now() - beg_).count();	}
+//
+//	private:
+//		typedef std::chrono::high_resolution_clock clock_;
+//		std::chrono::time_point<clock_> beg_;
+//};
 
 Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height)
 {
@@ -198,7 +198,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
-	error = arena_cam.SetProperty(SHUTTER, 0.006);
+	error = arena_cam.SetProperty(SHUTTER, 0.147);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 	error = arena_cam.Start();
 
@@ -215,8 +215,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetCameraParameters(fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.SetTrigger();
-	error = fly_cam.SetProperty(SHUTTER, 0.198);
-	error = fly_cam.SetProperty(GAIN, 6.089);
+	error = fly_cam.SetProperty(SHUTTER, 1.003);
+	error = fly_cam.SetProperty(GAIN, 0.0);
 	error = fly_cam.Start();
 	
 	if (error != PGRERROR_OK)
@@ -251,8 +251,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_frame, fly_mask_min, fly_mask_max;
 
 	int arena_thresh = 75;
-	int fly_min = 85; 
-	int fly_max = 140;
+	int fly_min = 75; 
+	int fly_max = 120;
 	int laser_pos = 0;
 
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -319,7 +319,8 @@ int _tmain(int argc, _TCHAR* argv[])
 						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
 						pt2d = fly_mc_min[j];
 
-						if (laser_pos > 0 && laser_pos < 40)
+						if (laser_pos > 0)
+						//if (laser_pos > 0 && laser_pos < 40)
 						{
 							erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 1);
 							dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 1);
@@ -358,22 +359,22 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 						}
 
-						if (laser_pos >= 40 && fly_contours_min[j].size() >= 5)
-						{
-							RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
+						//if (laser_pos >= 40 && fly_contours_min[j].size() >= 5)
+						//{
+						//	RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
 
-							float turn = flyEllipse.angle - 90;
-							Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
-							Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
+						//	float turn = flyEllipse.angle - 90;
+						//	Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
+						//	Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
 
-							float res1 = dist(p1, Point2f(fly_image_width / 2, fly_image_height / 2));
-							float res2 = dist(p2, Point2f(fly_image_width / 2, fly_image_height / 2));
+						//	float res1 = dist(p1, Point2f(fly_image_width / 2, fly_image_height / 2));
+						//	float res2 = dist(p2, Point2f(fly_image_width / 2, fly_image_height / 2));
 
-							if (res1 < res2)
-								pt2d = p1;
-							else
-								pt2d = p2;
-						}
+						//	if (res1 < res2)
+						//		pt2d = p1;
+						//	else
+						//		pt2d = p2;
+						//}
 						
 						circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
 						tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
@@ -542,9 +543,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (!arenaDispStream.empty() && !arenaMaskStream.empty())
 				{
-					ellipse(arenaDispStream.back(), arenaMask, Scalar(255, 255, 255));
-					imshow("arena image", arenaDispStream.back());
-					imshow("arena mask", arenaMaskStream.back());
+					ellipse(arenaDispStream.front(), arenaMask, Scalar(255, 255, 255));
+					imshow("arena image", arenaDispStream.front());
+					imshow("arena mask", arenaMaskStream.front());
 
 					#pragma omp critical
 					{
@@ -555,9 +556,9 @@ int _tmain(int argc, _TCHAR* argv[])
 				
 				if (!flyDispStream.empty() && !flyMinMaskStream.empty() && !flyMaxMaskStream.empty())
 				{
-					imshow("fly image", flyDispStream.back());
-					imshow("fly min mask", flyMinMaskStream.back());
-					imshow("fly max mask", flyMaxMaskStream.back());
+					imshow("fly image", flyDispStream.front());
+					imshow("fly min mask", flyMinMaskStream.front());
+					imshow("fly max mask", flyMaxMaskStream.front());
 					
 					#pragma omp critical
 					{
