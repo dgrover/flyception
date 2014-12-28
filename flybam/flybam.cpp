@@ -12,6 +12,7 @@ using namespace cv;
 #define GALVO_X_MIRROR_ANGLE 15
 
 #define NFLIES 1
+#define NLOSTFRAMES 1
 
 bool stream = true;
 bool flyview_track = false;
@@ -30,22 +31,22 @@ queue <TimeStamp> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
-//queue <long int> fps;
-//long int tc;
+queue <long int> fps;
+long int tc;
 
-//class Timer
-//{
-//	public:
-//		Timer() : beg_(clock_::now()) {}
-//		void reset() { beg_ = clock_::now(); }
-//		double elapsed() const {
-//			return std::chrono::duration_cast<std::chrono::milliseconds>
-//				(clock_::now() - beg_).count();	}
-//
-//	private:
-//		typedef std::chrono::high_resolution_clock clock_;
-//		std::chrono::time_point<clock_> beg_;
-//};
+class Timer
+{
+	public:
+		Timer() : beg_(clock_::now()) {}
+		void reset() { beg_ = clock_::now(); }
+		double elapsed() const {
+			return std::chrono::duration_cast<std::chrono::milliseconds>
+				(clock_::now() - beg_).count();	}
+
+	private:
+		typedef std::chrono::high_resolution_clock clock_;
+		std::chrono::time_point<clock_> beg_;
+}tmr;
 
 Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height)
 {
@@ -258,9 +259,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	//Timer tmr;
-	//int imageCount = 0;
-
+	int imageCount = 0;
 	int key_state = 0;
 	int lost = 0;
 
@@ -280,12 +279,12 @@ int _tmain(int argc, _TCHAR* argv[])
 				ndq.ConvertPtToVoltage(pt[0]);
 				ndq.write();
 
-				//if (++imageCount == 100)
-				//{
-				//	imageCount = 0;
-				//	fps.push(tmr.elapsed());
-				//	tmr.reset();
-				//}
+				if (++imageCount == 100)
+				{
+					imageCount = 0;
+					fps.push(tmr.elapsed());
+					tmr.reset();
+				}
 
 				//fly_frame = fin.ReadFrame(imageCount);
 				fly_img = fly_cam.GrabFrame();
@@ -386,7 +385,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					{
 						lost++;
 
-						if (lost > 1)
+						if (lost > NLOSTFRAMES)
 						{
 							flyview_track = false;
 							for (int i = 0; i < NFLIES; i++)
@@ -519,19 +518,19 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
-				//if (!fps.empty())
-				//{
-				//	if (fps.front() != 0)
-				//		tc = 1000 / (fps.front() / 100);
+				if (!fps.empty())
+				{
+					if (fps.front() != 0)
+						tc = 1000 / (fps.front() / 100);
 
-				//	#pragma omp critical
-				//	{
-				//		fps.pop();
-				//	}
-				//}
+					#pragma omp critical
+					{
+						fps.pop();
+					}
+				}
 
-				//printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
-				printf("Recording buffer size %06d, Frames written %06d\r", flyImageStream.size(), fout.nframes);
+				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
+				//printf("Recording buffer size %06d, Frames written %06d\r", flyImageStream.size(), fout.nframes);
 
 				if (flyImageStream.empty() && !stream)
 					break;
