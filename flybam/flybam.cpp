@@ -532,7 +532,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
 				//printf("Recording buffer size %06d, Frames written %06d\r", flyImageStream.size(), fout.nframes);
 
-				if (flyImageStream.empty() && !stream)
+				//if (flyImageStream.empty() && !stream)
+				if (!stream)
 					break;
 			}
 		}
