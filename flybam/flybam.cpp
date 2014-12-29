@@ -447,19 +447,19 @@ int _tmain(int argc, _TCHAR* argv[])
 				{
 					if (!flyview_track)
 					{
-						arenaDispStream.push(arena_frame);
 						arenaMaskStream.push(arena_mask);
+						arenaDispStream.push(arena_frame);
 					}
 
-					flyDispStream.push(fly_frame);
 					flyMinMaskStream.push(fly_mask_min);
 					flyMaxMaskStream.push(fly_mask_max);
-
-					flyImageStream.push(fly_img);
-					flyTimeStamps.push(fly_stamp);
+					flyDispStream.push(fly_frame);
 
 					laser_pt.push(pt[0]);
 					fly_pt.push(pt2d);
+
+					flyTimeStamps.push(fly_stamp);
+					flyImageStream.push(fly_img);
 				}
 
 				if (GetAsyncKeyState(VK_F1))
@@ -487,7 +487,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			while (true)
 			{
-				if (!flyImageStream.empty() && !flyTimeStamps.empty() && !laser_pt.empty() && !fly_pt.empty())
+				if (!flyImageStream.empty())
 				{
 					if (flyview_record)
 					{
@@ -549,7 +549,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			while (true)
 			{
 
-				if (!arenaDispStream.empty() && !arenaMaskStream.empty())
+				if (!arenaDispStream.empty())
 				{
 					ellipse(arenaDispStream.front(), arenaMask, Scalar(255, 255, 255));
 					imshow("arena image", arenaDispStream.front());
@@ -562,7 +562,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 				
-				if (!flyDispStream.empty() && !flyMinMaskStream.empty() && !flyMaxMaskStream.empty())
+				if (!flyDispStream.empty())
 				{
 					imshow("fly image", flyDispStream.front());
 					imshow("fly min mask", flyMinMaskStream.front());
