@@ -32,23 +32,6 @@ queue <TimeStamp> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
-queue <long int> fps;
-long int tc;
-
-class Timer
-{
-	public:
-		Timer() : beg_(clock_::now()) {}
-		void reset() { beg_ = clock_::now(); }
-		double elapsed() const {
-			return std::chrono::duration_cast<std::chrono::milliseconds>
-				(clock_::now() - beg_).count();	}
-
-	private:
-		typedef std::chrono::high_resolution_clock clock_;
-		std::chrono::time_point<clock_> beg_;
-}tmr;
-
 Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height)
 {
 	Point2f temp, refPt;
@@ -260,7 +243,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	int imageCount = 0;
 	int rcount = 0;
 	int key_state = 0;
 	int lost = 0;
@@ -280,13 +262,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				ndq.ConvertPtToVoltage(pt[0]);
 				ndq.write();
-
-				if (++imageCount == 100)
-				{
-					imageCount = 0;
-					fps.push(tmr.elapsed());
-					tmr.reset();
-				}
 
 				//fly_frame = fin.ReadFrame(imageCount);
 				fly_img = fly_cam.GrabFrame();
@@ -497,6 +472,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
+			int ltime = 0;
+			int ctime = 0;
+			int dtime;
+
 			while (true)
 			{
 				if (!flyImageStream.empty())
@@ -521,6 +500,20 @@ int _tmain(int argc, _TCHAR* argv[])
 							fout.Close();
 					}
 
+					ctime = flyTimeStamps.front().cycleCount;
+
+					if (ctime < ltime)
+						dtime = ctime + (8000 - ltime);
+					else
+						dtime = ctime - ltime;
+
+					if (dtime > 0)
+						dtime = 8000 / dtime;
+					else
+						dtime = 0;
+
+					ltime = ctime;
+
 					#pragma omp critical
 					{
 						flyImageStream.pop();
@@ -530,18 +523,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
-				if (!fps.empty())
-				{
-					if (fps.front() != 0)
-						tc = 1000 / (fps.front() / 100);
-
-					#pragma omp critical
-					{
-						fps.pop();
-					}
-				}
-
-				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", tc, flyImageStream.size(), fout.nframes);
+				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", dtime, flyImageStream.size(), fout.nframes);
 				//printf("Recording buffer size %06d, Frames written %06d\r", flyImageStream.size(), fout.nframes);
 
 				//if (flyImageStream.empty() && !stream)
