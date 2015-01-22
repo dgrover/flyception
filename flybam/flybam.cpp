@@ -13,7 +13,7 @@ using namespace cv;
 
 #define NFLIES 1
 #define NLOSTFRAMES 1
-#define NRECFRAMES 50000
+#define MAXRECFRAMES 50000
 
 bool stream = true;
 bool flyview_track = false;
@@ -485,7 +485,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (flyview_record)
 				{
-					if (rcount++ == NRECFRAMES)
+					if (rcount++ == MAXRECFRAMES)
 					{
 						rcount = 0;
 						flyview_record = false;
