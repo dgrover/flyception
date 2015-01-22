@@ -13,6 +13,7 @@ using namespace cv;
 
 #define NFLIES 1
 #define NLOSTFRAMES 1
+#define NRECFRAMES 50000
 
 bool stream = true;
 bool flyview_track = false;
@@ -260,6 +261,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
 	int imageCount = 0;
+	int rcount = 0;
 	int key_state = 0;
 	int lost = 0;
 
@@ -471,7 +473,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 				else
 					key_state = 0;
-
+				
 				if (GetAsyncKeyState(VK_RETURN))
 					flyview_track = true;
 
@@ -480,6 +482,16 @@ int _tmain(int argc, _TCHAR* argv[])
 					stream = false;
 					break;
 				}
+
+				if (flyview_record)
+				{
+					if (rcount++ == NRECFRAMES)
+					{
+						rcount = 0;
+						flyview_record = false;
+					}
+				}
+
 			}
 		}
 
