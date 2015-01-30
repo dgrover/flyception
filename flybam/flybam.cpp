@@ -456,17 +456,23 @@ int _tmain(int argc, _TCHAR* argv[])
 					flyMaxMaskStream.push(fly_mask_max);
 					flyDispStream.push(fly_frame);
 
-					laser_pt.push(pt[0]);
-					fly_pt.push(pt2d);
+					if (flyview_record)
+					{
+						laser_pt.push(pt[0]);
+						fly_pt.push(pt2d);
 
-					flyTimeStamps.push(fly_stamp);
-					flyImageStream.push(fly_img);
+						flyTimeStamps.push(fly_stamp);
+						flyImageStream.push(fly_img);
+					}
 				}
 
 				if (GetAsyncKeyState(VK_F1))
 				{
 					if (!key_state)
+					{
 						flyview_record = !flyview_record;
+						rcount = 0;
+					}
 
 					key_state = 1;
 				}
@@ -496,37 +502,22 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
-			int ltime = 0;
-			int ctime = 0;
-			int dtime;
-
 			while (true)
 			{
 				if (!flyImageStream.empty())
 				{
-					if (flyview_record)
+					if (!fout.IsOpen())
 					{
-						if (!fout.IsOpen())
-						{
-							fout.Open();
-							fout.InitHeader(fly_image_width, fly_image_height);
-							fout.WriteHeader();
-							printf("Recording ");
-						}
+						fout.Open();
+						fout.InitHeader(fly_image_width, fly_image_height);
+						fout.WriteHeader();
+						printf("Recording ");
+					}
 
-						fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
-						fout.WriteLog(flyTimeStamps.front());
-						fout.WriteTraj(laser_pt.front(), fly_pt.front());
-						fout.nframes++;
-					}
-					else
-					{
-						if (fout.IsOpen())
-						{
-							fout.Close();
-							printf("[OK]\n");
-						}
-					}
+					fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
+					fout.WriteLog(flyTimeStamps.front());
+					fout.WriteTraj(laser_pt.front(), fly_pt.front());
+					fout.nframes++;
 
 					#pragma omp critical
 					{
@@ -536,8 +527,28 @@ int _tmain(int argc, _TCHAR* argv[])
 						fly_pt.pop();
 					}
 				}
-				else if (!stream)
-					break;
+				else
+				{
+					if (!flyview_record && fout.IsOpen())
+					{
+						fout.Close();
+						printf("[OK]\n");
+					}
+				}
+
+				if (!stream)
+				{
+					if (flyImageStream.empty())
+					{
+						if (flyview_record)
+						{
+							fout.Close();
+							printf("[OK]\n");
+						}
+						break;
+					}
+
+				}
 			}
 		}
 
@@ -601,19 +612,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	arena_cam.Stop();
 	fly_cam.Stop();
 
-	if (flyview_record)
-	{
-		fout.Close();
-		printf("[OK]\n");
-	}
-
 	printf("\n\nCentering galvo ");
 	ndq.ConvertPtToVoltage(Point2f(0, 0));
 	ndq.write();
 	printf("[OK]\n");
-
-	//printf("Press Enter to exit...\n");
-	//getchar();
 
 	return 0;
 }
