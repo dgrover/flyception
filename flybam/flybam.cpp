@@ -253,6 +253,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		#pragma omp section
 		{
+			int ltime = 0;
+			int ctime = 0;
+			int dtime = 0;
+
 			while (true)
 			{
 				for (int i = 0; i < NFLIES; i++)
@@ -420,6 +424,26 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
+				ctime = fly_stamp.cycleCount;
+
+				if (ctime < ltime)
+					dtime = ctime + (8000 - ltime);
+				else
+					dtime = ctime - ltime;
+
+				if (dtime > 0)
+					dtime = 8000 / dtime;
+				else
+					dtime = 0;
+
+				ltime = ctime;
+
+				putText(fly_frame, to_string(dtime), Point(225, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
+				if (flyview_record)
+					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
+
 				#pragma omp critical
 				{
 					if (!flyview_track)
@@ -487,6 +511,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							fout.Open();
 							fout.InitHeader(fly_image_width, fly_image_height);
 							fout.WriteHeader();
+							printf("Recording ");
 						}
 
 						fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
@@ -496,23 +521,12 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 					else
 					{
-						if(fout.IsOpen())
+						if (fout.IsOpen())
+						{
 							fout.Close();
+							printf("[OK]\n");
+						}
 					}
-
-					ctime = flyTimeStamps.front().cycleCount;
-
-					if (ctime < ltime)
-						dtime = ctime + (8000 - ltime);
-					else
-						dtime = ctime - ltime;
-
-					if (dtime > 0)
-						dtime = 8000 / dtime;
-					else
-						dtime = 0;
-
-					ltime = ctime;
 
 					#pragma omp critical
 					{
@@ -522,12 +536,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						fly_pt.pop();
 					}
 				}
-
-				printf("Frame rate %04d, Recording buffer size %06d, Frames written %06d\r", dtime, flyImageStream.size(), fout.nframes);
-				//printf("Recording buffer size %06d, Frames written %06d\r", flyImageStream.size(), fout.nframes);
-
-				//if (flyImageStream.empty() && !stream)
-				if (!stream)
+				else if (!stream)
 					break;
 			}
 		}
@@ -593,7 +602,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	fly_cam.Stop();
 
 	if (flyview_record)
+	{
 		fout.Close();
+		printf("[OK]\n");
+	}
 
 	printf("\n\nCentering galvo ");
 	ndq.ConvertPtToVoltage(Point2f(0, 0));
