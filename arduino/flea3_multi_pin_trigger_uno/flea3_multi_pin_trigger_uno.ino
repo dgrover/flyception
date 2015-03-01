@@ -30,10 +30,10 @@ void loop()
   else
     PORTD = B10000000; //Set pin 7 to HIGH
   
-  delayMicroseconds(1000);
+  delayMicroseconds(100);
     
   PORTD = B00000000; //Set pins LOW
-  delayMicroseconds(1000);
+  delayMicroseconds(100);
   
   count++;
 }

@@ -31,7 +31,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	string imgfile = "..\\arena\\flyview.jpg";
+	string imgfile = "test.bmp";
 
 	// Read image from file 
 	Mat img = imread(imgfile);

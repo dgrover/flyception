@@ -139,7 +139,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>nidaqmx.lib;FlyCapture2.lib;FlyCapture2GUI.lib;opencv_core300.lib;opencv_highgui300.lib;opencv_video300.lib;opencv_imgproc300.lib;opencv_calib3d300.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>nidaqmx.lib;FlyCapture2.lib;FlyCapture2GUI.lib;opencv_core300.lib;opencv_highgui300.lib;opencv_video300.lib;opencv_imgproc300.lib;opencv_imgcodecs300.lib;opencv_calib3d300.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

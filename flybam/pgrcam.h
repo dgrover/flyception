@@ -37,7 +37,7 @@ public:
 	~PGRcam();
 
 	FlyCapture2::Error Connect(PGRGuid guid);
-	FlyCapture2::Error SetCameraParameters(int width, int height);
+	FlyCapture2::Error SetCameraParameters(int left, int top, int width, int height);
 	FlyCapture2::Error SetTrigger();
 	FlyCapture2::Error SetProperty(PropertyType type, float absValue);
 	FlyCapture2::Error Start();

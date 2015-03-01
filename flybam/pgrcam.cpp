@@ -18,7 +18,7 @@ FlyCapture2::Error PGRcam::Connect(PGRGuid guid)
 	return error;
 }
 
-FlyCapture2::Error PGRcam::SetCameraParameters(int width, int height)
+FlyCapture2::Error PGRcam::SetCameraParameters(int left, int top, int width, int height)
 {
 	// Get the camera information
 	error = cam.GetCameraInfo(&camInfo);
@@ -32,8 +32,10 @@ FlyCapture2::Error PGRcam::SetCameraParameters(int width, int height)
 		printf("Pixel format is not supported\n");
 
 	fmt7ImageSettings.mode = k_fmt7Mode;
-	fmt7ImageSettings.offsetX = fmt7Info.maxWidth / 2 - width / 2;
-	fmt7ImageSettings.offsetY = fmt7Info.maxHeight / 2 - height / 2;	
+	//fmt7ImageSettings.offsetX = fmt7Info.maxWidth / 2 - width / 2;
+	//fmt7ImageSettings.offsetY = fmt7Info.maxHeight / 2 - height / 2;	
+	fmt7ImageSettings.offsetX = left;
+	fmt7ImageSettings.offsetY = top;	
 	fmt7ImageSettings.width = width;			
 	fmt7ImageSettings.height = height;			
 	fmt7ImageSettings.pixelFormat = k_fmt7PixFmt;
