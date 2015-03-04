@@ -25,7 +25,6 @@ queue <Mat> arenaMaskStream;
 
 queue <Mat> flyDispStream;
 queue <Mat> flyMinMaskStream;
-//queue <Mat> flyMaxMaskStream;
 
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
@@ -179,12 +178,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f pt2d;
 
-	//FmfReader fin;
-	//fin.Open(argv[1]);
-	//fin.ReadHeader();
-	//fin.GetImageSize(arena_image_width, arena_image_height);
-	//nframes = fin.GetFrameCount();	
-	
 	error = busMgr.GetNumOfCameras(&numCameras);
 	printf("Number of cameras detected: %u\n", numCameras);
 
@@ -215,10 +208,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.Connect(guid);
 	error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
-	//error = fly_cam.SetTrigger();
-	//error = fly_cam.SetProperty(SHUTTER, 1.003);
-
-	error = fly_cam.SetProperty(SHUTTER, 1.642);
+	error = fly_cam.SetTrigger();
+	error = fly_cam.SetProperty(SHUTTER, 1.003);
 	error = fly_cam.SetProperty(GAIN, 0.0);
 	
 	error = fly_cam.Start();
@@ -252,17 +243,19 @@ int _tmain(int argc, _TCHAR* argv[])
 	TimeStamp fly_stamp;
 
 	Mat arena_frame, arena_mask;
-	Mat fly_frame, fly_mask_min, fly_mask_max;
+	Mat fly_frame, fly_mask_min;
 
-	int arena_thresh = 75;
-	
-	int fly_min = 85; 
-	//int fly_max = 120;
+	int arena_thresh = 85;
+	int fly_min = 65; 
 
-	//int laser_pos = 0;
+	int fly_erode = 2;
+	int fly_dilate = 2;
 
-	Mat erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-	Mat dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+
+	Mat arena_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	Mat arena_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 
 	int rcount = 0;
 	int key_state = 0;
@@ -288,30 +281,30 @@ int _tmain(int argc, _TCHAR* argv[])
 				ndq.ConvertPtToVoltage(pt[0]);
 				ndq.write();
 
-				//fly_frame = fin.ReadFrame(imageCount);
 				fly_img = fly_cam.GrabFrame();
 				fly_stamp = fly_cam.GetTimeStamp();
 				fly_frame = fly_cam.convertImagetoMat(fly_img);
 
 				threshold(fly_frame, fly_mask_min, fly_min, 255, THRESH_BINARY_INV);
-				//threshold(fly_frame, fly_mask_max, fly_max, 255, THRESH_BINARY_INV);
 
+				erode(fly_mask_min, fly_mask_min, fly_erodeElement, Point(-1, -1), fly_erode);
+				dilate(fly_mask_min, fly_mask_min, fly_dilateElement, Point(-1, -1), fly_dilate);
+				
 				if (flyview_track)
 				{
-					erode(fly_mask_min, fly_mask_min, erodeElement, Point(-1, -1), 2);
-					dilate(fly_mask_min, fly_mask_min, dilateElement, Point(-1, -1), 2);
-
 					vector<vector<Point>> fly_contours_min;
 					findContours(fly_mask_min, fly_contours_min, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-					
-					vector<vector<Point>> hull(fly_contours_min.size());
 
+					vector<vector<Point>> hull(fly_contours_min.size());
 					vector<vector<int>> hull2(fly_contours_min.size());
 					vector<vector<Vec4i>> defects(fly_contours_min.size());
+
+					int j;
 
 					if (fly_contours_min.size() > 0)
 					{
 						lost = 0;
+						double max_size = 0;
 
 						// Get the moments and mass centers
 						vector<Moments> fly_mu_min(fly_contours_min.size());
@@ -324,108 +317,59 @@ int _tmain(int argc, _TCHAR* argv[])
 							convexHull(Mat(fly_contours_min[i]), hull[i], false);
 							convexHull(Mat(fly_contours_min[i]), hull2[i], false);
 							
-							if (fly_contours_min[i].size() > 3)
-							{
-								convexityDefects(Mat(fly_contours_min[i]), hull2[i], defects[i]);
-							}
+							convexityDefects(Mat(fly_contours_min[i]), hull2[i], defects[i]);
 
 							fly_mu_min[i] = moments(fly_contours_min[i], false);
 							fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
+
+							double csize = contourArea(fly_contours_min[i]);
+
+							if (csize > max_size)
+							{
+								j = i;
+								max_size = csize;
+							}
+
 						}
 						
-						int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
-						pt2d = fly_mc_min[j];
+						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
+						//pt2d = fly_mc_min[j];
 
+						drawContours(fly_frame, fly_contours_min, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
 						std::sort(defects[j].begin(), defects[j].end(), mycomp);
 
-						int ind1 = defects[j][1][2];
-						int ind2 = defects[j][2][2];
-
-						bool ans = isLeft(fly_contours_min[j][ind1], fly_contours_min[j][ind2], pt2d);
-
-						vector<Point> fly_head;
-
-						for (int k = 0; k < fly_contours_min[j].size(); k++)
+						if (defects[j].size() >= 3)
 						{
-							if (isLeft(fly_contours_min[j][ind1], fly_contours_min[j][ind2], fly_contours_min[j][k]) != ans)
+							int ind1 = defects[j][1][2];
+							int ind2 = defects[j][2][2];
+
+							circle(fly_frame, fly_contours_min[j][ind1], 5, Scalar(255, 255, 255), FILLED, 1);
+							circle(fly_frame, fly_contours_min[j][ind2], 5, Scalar(255, 255, 255), FILLED, 1);
+
+							bool ans = isLeft(fly_contours_min[j][ind1], fly_contours_min[j][ind2], fly_mc_min[j]);
+
+							vector<Point> fly_head;
+
+							for (int k = 0; k < fly_contours_min[j].size(); k++)
 							{
-								fly_head.push_back(fly_contours_min[j][k]);
-								circle(fly_frame, fly_contours_min[j][k], 1, Scalar(255, 255, 255), FILLED, 1);
+								if (isLeft(fly_contours_min[j][ind1], fly_contours_min[j][ind2], fly_contours_min[j][k]) != ans)
+								{
+									fly_head.push_back(fly_contours_min[j][k]);
+									//circle(fly_frame, fly_contours_min[j][k], 1, Scalar(255, 255, 255), FILLED, 1);
+								}
 							}
+
+							Moments fly_head_mu = moments(fly_head, false);
+							Point2f fly_head_mc = Point2f(fly_head_mu.m10 / fly_head_mu.m00, fly_head_mu.m01 / fly_head_mu.m00);
+
+							circle(fly_frame, fly_head_mc, 1, Scalar(255, 255, 255), FILLED, 1);
+							pt2d = fly_head_mc;
+
+							//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
+							tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
 						}
-
-						Moments fly_head_mu = moments(fly_head, false);;
-						Point2f fly_head_mc = Point2f(fly_head_mu.m10 / fly_head_mu.m00, fly_head_mu.m01 / fly_head_mu.m00);
-
-						circle(fly_frame, fly_head_mc, 1, Scalar(255, 255, 255), FILLED, 1);
-
-						pt2d = fly_head_mc;
-
-						circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
-						tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
-
-						//if (laser_pos > 0)
-						////if (laser_pos > 0 && laser_pos < 50)
-						//{
-						//	erode(fly_mask_max, fly_mask_max, erodeElement, Point(-1, -1), 2);
-						//	dilate(fly_mask_max, fly_mask_max, dilateElement, Point(-1, -1), 2);
-
-						//	vector<vector<Point>> fly_contours_max;
-						//	findContours(fly_mask_max, fly_contours_max, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-						//	// Get the moments and mass centers
-						//	vector<Moments> fly_mu_max(fly_contours_max.size());
-						//	vector<Point2f> fly_mc_max(fly_contours_max.size());
-
-						//	for (int i = 0; i < fly_contours_max.size(); i++)
-						//	{
-						//		//drawContours(fly_mask_max, fly_contours_max, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-						//		
-						//		fly_mu_max[i] = moments(fly_contours_max[i], false);
-						//		fly_mc_max[i] = Point2f(fly_mu_max[i].m10 / fly_mu_max[i].m00, fly_mu_max[i].m01 / fly_mu_max[i].m00);
-						//	}
-
-						//	if (fly_contours_min[j].size() >= 5 && fly_mc_max.size() > 0)
-						//	{
-						//		int k = findClosestPoint(fly_mc_min[j], fly_mc_max);
-
-						//		RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
-
-						//		float turn = flyEllipse.angle - 90;
-						//		Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
-						//		Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
-
-						//		float res1 = dist(p1, fly_mc_max[k]);
-						//		float res2 = dist(p2, fly_mc_max[k]);
-
-						//		if (res1 > res2)
-						//			pt2d = p1;
-						//		else
-						//			pt2d = p2;
-						//	}
-						//}
-
-						//if (laser_pos >= 50 && fly_contours_min[j].size() >= 5)
-						//{
-						//	RotatedRect flyEllipse = fitEllipse(Mat(fly_contours_min[j]));
-
-						//	float turn = flyEllipse.angle - 90;
-						//	Point2f p1((fly_mc_min[j].x + cos(turn * CV_PI / 180) * laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * laser_pos));
-						//	Point2f p2((fly_mc_min[j].x + cos(turn * CV_PI / 180) * -laser_pos), (fly_mc_min[j].y + sin(turn * CV_PI / 180) * -laser_pos));
-
-						//	float res1 = dist(p1, Point2f(fly_image_width / 2, fly_image_height / 2));
-						//	float res2 = dist(p2, Point2f(fly_image_width / 2, fly_image_height / 2));
-
-						//	if (res1 < res2)
-						//		pt2d = p1;
-						//	else
-						//		pt2d = p2;
-						//}
-
-						//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
-						//tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
 					}
 					else
 					{
@@ -443,17 +387,17 @@ int _tmain(int argc, _TCHAR* argv[])
 				// if no fly detected, switch back to arena view to get coarse fly location and position update
 				if (!flyview_track)
 				{
-					//arena_frame = fin.ReadFrame(imageCount);
 					arena_img = arena_cam.GrabFrame();
 					arena_frame = arena_cam.convertImagetoMat(arena_img);
+					//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
 
 					//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
 
 					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 					arena_mask &= outer_mask;
 
-					erode(arena_mask, arena_mask, erodeElement, Point(-1, -1), 1);
-					dilate(arena_mask, arena_mask, dilateElement, Point(-1, -1), 1);
+					erode(arena_mask, arena_mask, arena_erodeElement, Point(-1, -1), 1);
+					dilate(arena_mask, arena_mask, arena_dilateElement, Point(-1, -1), 1);
 
 					vector<vector<Point>> arena_contours;
 
@@ -518,7 +462,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 
 					flyMinMaskStream.push(fly_mask_min);
-					//flyMaxMaskStream.push(fly_mask_max);
 					flyDispStream.push(fly_frame);
 
 					if (flyview_record)
@@ -622,8 +565,8 @@ int _tmain(int argc, _TCHAR* argv[])
 			namedWindow("controls", WINDOW_AUTOSIZE);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
 			createTrackbar("fly min", "controls", &fly_min, 255);
-			//createTrackbar("fly max", "controls", &fly_max, 255);
-			//createTrackbar("laser pos", "controls", &laser_pos, 200);
+			createTrackbar("erode", "controls", &fly_erode, 5);
+			createTrackbar("dilate", "controls", &fly_dilate, 5);
 
 			while (true)
 			{
@@ -645,13 +588,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				{
 					imshow("fly image", flyDispStream.front());
 					imshow("fly min mask", flyMinMaskStream.front());
-					//imshow("fly max mask", flyMaxMaskStream.front());
 					
 					#pragma omp critical
 					{
 						flyDispStream = queue<Mat>();
 						flyMinMaskStream = queue<Mat>();
-						//flyMaxMaskStream = queue<Mat>();
 					}
 				}
 
@@ -665,7 +606,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					
 					destroyWindow("fly image");
 					destroyWindow("fly min mask");
-					//destroyWindow("fly max mask");
 
 					break;
 				}
@@ -673,7 +613,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 	}
 
-	//fin.Close();
 	arena_cam.Stop();
 	fly_cam.Stop();
 
