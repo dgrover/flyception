@@ -24,7 +24,7 @@ queue <Mat> arenaDispStream;
 queue <Mat> arenaMaskStream;
 
 queue <Mat> flyDispStream;
-queue <Mat> flyMinMaskStream;
+queue <Mat> flyMaskStream;
 
 queue <Image> flyImageStream;
 queue <TimeStamp> flyTimeStamps;
@@ -76,16 +76,16 @@ Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 	return Point2f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0));
 }
 
-//vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
-//{
-//	vector<Point3f> p3d;
-//	vector<Point2f> p2d;
-//
-//	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), BASE_HEIGHT));
-//	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
-//
-//	return p2d;
-//}
+vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+{
+	vector<Point3f> p3d;
+	vector<Point2f> p2d;
+
+	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), BASE_HEIGHT));
+	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
+
+	return p2d;
+}
 
 RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
@@ -141,10 +141,10 @@ bool isLeft(Point a, Point b, Point c){
 	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
 }
 
-//int sign(int v)
-//{
-//	return v > 0 ? 1 : -1;
-//}
+int sign(int v)
+{
+	return v > 0 ? 1 : -1;
+}
 
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -243,12 +243,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	TimeStamp fly_stamp;
 
 	Mat arena_frame, arena_mask;
-	Mat fly_frame, fly_mask_min;
+	Mat fly_frame, fly_mask;
 
 	int arena_thresh = 85;
-	int fly_min = 65; 
+	int fly_thresh = 65; 
 
-	int fly_erode = 2;
+	int fly_erode = 4;
 	int fly_dilate = 2;
 
 	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
@@ -285,44 +285,44 @@ int _tmain(int argc, _TCHAR* argv[])
 				fly_stamp = fly_cam.GetTimeStamp();
 				fly_frame = fly_cam.convertImagetoMat(fly_img);
 
-				threshold(fly_frame, fly_mask_min, fly_min, 255, THRESH_BINARY_INV);
+				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 
-				erode(fly_mask_min, fly_mask_min, fly_erodeElement, Point(-1, -1), fly_erode);
-				dilate(fly_mask_min, fly_mask_min, fly_dilateElement, Point(-1, -1), fly_dilate);
+				erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
+				dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
 				
 				if (flyview_track)
 				{
-					vector<vector<Point>> fly_contours_min;
-					findContours(fly_mask_min, fly_contours_min, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+					vector<vector<Point>> fly_contours;
+					findContours(fly_mask, fly_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-					vector<vector<Point>> hull(fly_contours_min.size());
-					vector<vector<int>> hull2(fly_contours_min.size());
-					vector<vector<Vec4i>> defects(fly_contours_min.size());
+					vector<vector<Point>> hull(fly_contours.size());
+					vector<vector<int>> hull2(fly_contours.size());
+					vector<vector<Vec4i>> defects(fly_contours.size());
 
 					int j;
 
-					if (fly_contours_min.size() > 0)
+					if (fly_contours.size() > 0)
 					{
 						lost = 0;
 						double max_size = 0;
 
 						// Get the moments and mass centers
-						vector<Moments> fly_mu_min(fly_contours_min.size());
-						vector<Point2f> fly_mc_min(fly_contours_min.size());
+						vector<Moments> fly_mu(fly_contours.size());
+						vector<Point2f> fly_mc(fly_contours.size());
 
-						for (int i = 0; i < fly_contours_min.size(); i++)
+						for (int i = 0; i < fly_contours.size(); i++)
 						{
-							//drawContours(fly_mask_min, fly_contours_min, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+							//drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 							
-							convexHull(Mat(fly_contours_min[i]), hull[i], false);
-							convexHull(Mat(fly_contours_min[i]), hull2[i], false);
+							convexHull(Mat(fly_contours[i]), hull[i], false);
+							convexHull(Mat(fly_contours[i]), hull2[i], false);
 							
-							convexityDefects(Mat(fly_contours_min[i]), hull2[i], defects[i]);
+							convexityDefects(Mat(fly_contours[i]), hull2[i], defects[i]);
 
-							fly_mu_min[i] = moments(fly_contours_min[i], false);
-							fly_mc_min[i] = Point2f(fly_mu_min[i].m10 / fly_mu_min[i].m00, fly_mu_min[i].m01 / fly_mu_min[i].m00);
+							fly_mu[i] = moments(fly_contours[i], false);
+							fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
 
-							double csize = contourArea(fly_contours_min[i]);
+							double csize = contourArea(fly_contours[i]);
 
 							if (csize > max_size)
 							{
@@ -332,10 +332,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						}
 						
-						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc_min);
-						//pt2d = fly_mc_min[j];
+						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc);
+						//pt2d = fly_mc[j];
 
-						drawContours(fly_frame, fly_contours_min, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
 						std::sort(defects[j].begin(), defects[j].end(), mycomp);
@@ -345,19 +345,19 @@ int _tmain(int argc, _TCHAR* argv[])
 							int ind1 = defects[j][1][2];
 							int ind2 = defects[j][2][2];
 
-							circle(fly_frame, fly_contours_min[j][ind1], 5, Scalar(255, 255, 255), FILLED, 1);
-							circle(fly_frame, fly_contours_min[j][ind2], 5, Scalar(255, 255, 255), FILLED, 1);
+							circle(fly_frame, fly_contours[j][ind1], 5, Scalar(255, 255, 255), FILLED, 1);
+							circle(fly_frame, fly_contours[j][ind2], 5, Scalar(255, 255, 255), FILLED, 1);
 
-							bool ans = isLeft(fly_contours_min[j][ind1], fly_contours_min[j][ind2], fly_mc_min[j]);
+							bool ans = isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_mc[j]);
 
 							vector<Point> fly_head;
 
-							for (int k = 0; k < fly_contours_min[j].size(); k++)
+							for (int k = 0; k < fly_contours[j].size(); k++)
 							{
-								if (isLeft(fly_contours_min[j][ind1], fly_contours_min[j][ind2], fly_contours_min[j][k]) != ans)
+								if (isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][k]) != ans)
 								{
-									fly_head.push_back(fly_contours_min[j][k]);
-									//circle(fly_frame, fly_contours_min[j][k], 1, Scalar(255, 255, 255), FILLED, 1);
+									fly_head.push_back(fly_contours[j][k]);
+									//circle(fly_frame, fly_contours[j][k], 1, Scalar(255, 255, 255), FILLED, 1);
 								}
 							}
 
@@ -392,7 +392,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
 
 					//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
-
 					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 					arena_mask &= outer_mask;
 
@@ -461,7 +460,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						arenaDispStream.push(arena_frame);
 					}
 
-					flyMinMaskStream.push(fly_mask_min);
+					flyMaskStream.push(fly_mask);
 					flyDispStream.push(fly_frame);
 
 					if (flyview_record)
@@ -564,7 +563,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			namedWindow("controls", WINDOW_AUTOSIZE);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
-			createTrackbar("fly min", "controls", &fly_min, 255);
+			createTrackbar("fly thresh", "controls", &fly_thresh, 255);
 			createTrackbar("erode", "controls", &fly_erode, 5);
 			createTrackbar("dilate", "controls", &fly_dilate, 5);
 
@@ -587,12 +586,12 @@ int _tmain(int argc, _TCHAR* argv[])
 				if (!flyDispStream.empty())
 				{
 					imshow("fly image", flyDispStream.front());
-					imshow("fly min mask", flyMinMaskStream.front());
+					imshow("fly mask", flyMaskStream.front());
 					
 					#pragma omp critical
 					{
 						flyDispStream = queue<Mat>();
-						flyMinMaskStream = queue<Mat>();
+						flyMaskStream = queue<Mat>();
 					}
 				}
 
@@ -605,7 +604,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					destroyWindow("arena mask");
 					
 					destroyWindow("fly image");
-					destroyWindow("fly min mask");
+					destroyWindow("fly mask");
 
 					break;
 				}
