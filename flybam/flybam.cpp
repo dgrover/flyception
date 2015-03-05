@@ -340,21 +340,33 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						std::sort(defects[j].begin(), defects[j].end(), mycomp);
 
-						if (defects[j].size() >= 3)
+						if (defects[j].size() >= 6)
 						{
 							int ind1 = defects[j][1][2];
 							int ind2 = defects[j][2][2];
-
+							
 							circle(fly_frame, fly_contours[j][ind1], 5, Scalar(255, 255, 255), FILLED, 1);
 							circle(fly_frame, fly_contours[j][ind2], 5, Scalar(255, 255, 255), FILLED, 1);
 
-							bool ans = isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_mc[j]);
+							int lr = 0;
+							bool ans;
+
+							for (int a = 3; a < 6; a++)
+								lr += isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][defects[j][a][2]]);
+
+							if (lr >= 2)
+								ans = true;
+							else
+								ans = false;
+
+							//bool ans = isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_mc[j]);
+							//bool ans = isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][ind3]);
 
 							vector<Point> fly_head;
 
 							for (int k = 0; k < fly_contours[j].size(); k++)
 							{
-								if (isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][k]) != ans)
+								if (isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][k]) == ans)
 								{
 									fly_head.push_back(fly_contours[j][k]);
 									//circle(fly_frame, fly_contours[j][k], 1, Scalar(255, 255, 255), FILLED, 1);
