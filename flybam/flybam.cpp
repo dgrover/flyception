@@ -192,7 +192,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_left, arena_image_top, arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
-	error = arena_cam.SetProperty(SHUTTER, 1.003);
+	error = arena_cam.SetProperty(SHUTTER, 0.498);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 	error = arena_cam.Start();
 
@@ -246,7 +246,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_frame, fly_mask;
 
 	int arena_thresh = 85;
-	int fly_thresh = 65; 
+	int fly_thresh = 55; 
 
 	int fly_erode = 4;
 	int fly_dilate = 2;
