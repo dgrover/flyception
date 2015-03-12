@@ -24,7 +24,7 @@ class FmfReader
 		int Close();
 
 		int ReadHeader();
-		Mat ReadFrame(unsigned long frameIndex);
+		Mat ReadFrame(int frameIndex);
 		
 		int GetFrameCount();
 		void GetImageSize(int &imageWidth, int &imageHeight);

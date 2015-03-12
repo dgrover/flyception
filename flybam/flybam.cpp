@@ -210,7 +210,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.SetTrigger();
 	error = fly_cam.SetProperty(SHUTTER, 1.003);
-	error = fly_cam.SetProperty(GAIN, 0.0);
+	error = fly_cam.SetProperty(GAIN, 5.105);
 	
 	error = fly_cam.Start();
 	
@@ -246,7 +246,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_frame, fly_mask;
 
 	int arena_thresh = 85;
-	int fly_thresh = 55; 
+	int fly_thresh = 75; 
 
 	int fly_erode = 4;
 	int fly_dilate = 2;
@@ -576,8 +576,8 @@ int _tmain(int argc, _TCHAR* argv[])
 			namedWindow("controls", WINDOW_AUTOSIZE);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
 			createTrackbar("fly thresh", "controls", &fly_thresh, 255);
-			createTrackbar("erode", "controls", &fly_erode, 5);
-			createTrackbar("dilate", "controls", &fly_dilate, 5);
+			createTrackbar("erode", "controls", &fly_erode, 7);
+			createTrackbar("dilate", "controls", &fly_dilate, 7);
 
 			while (true)
 			{

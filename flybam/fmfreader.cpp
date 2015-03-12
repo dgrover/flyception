@@ -72,10 +72,10 @@ void FmfReader::GetImageSize(int &imageWidth, int &imageHeight)
 	imageHeight = SizeY;
 }
 
-Mat FmfReader::ReadFrame(unsigned long frameIndex)
+Mat FmfReader::ReadFrame(int frameIndex)
 {
-	if ((long)frameIndex >= 0L && (long)frameIndex < maxFramesInFile)
-		fseek(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
+	if (frameIndex >= 0 && frameIndex < maxFramesInFile)
+		_fseeki64(fp, frameIndex*bytesPerChunk + 28, SEEK_SET);
 
 	fread(buf, sizeof(double), 1, fp);
 	fread(buf, bytesPerChunk - sizeof(double), 1, fp);
