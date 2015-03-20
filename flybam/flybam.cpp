@@ -34,7 +34,7 @@ queue <Point2f> fly_pt;
 
 struct {
 	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
-} mycomp;
+} mycomp_dsize;
 
 Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height)
 {
@@ -152,11 +152,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_width = 512, arena_image_height = 512;
 	int arena_image_left = 384, arena_image_top = 256;
 
-	//int fly_image_width = 512, fly_image_height = 512;
-	//int fly_image_left = 384, fly_image_top = 256;
+	//int fly_image_width = 256, fly_image_height = 256;
+	//int fly_image_left = 512, fly_image_top = 384;
 
-	int fly_image_width = 256, fly_image_height = 256;
-	int fly_image_left = 512, fly_image_top = 384;
+	int fly_image_width = 192, fly_image_height = 192;
+	int fly_image_left = 544, fly_image_top = 416;
 
 	PGRcam arena_cam, fly_cam;
 	BusManager busMgr;
@@ -245,10 +245,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 85;
+	int arena_thresh = 75;
 	int fly_thresh = 75; 
 
-	int fly_erode = 4;
+	int fly_erode = 3;
 	int fly_dilate = 2;
 
 	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
@@ -329,7 +329,6 @@ int _tmain(int argc, _TCHAR* argv[])
 								j = i;
 								max_size = csize;
 							}
-
 						}
 						
 						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc);
@@ -338,13 +337,15 @@ int _tmain(int argc, _TCHAR* argv[])
 						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
-						std::sort(defects[j].begin(), defects[j].end(), mycomp);
+						std::sort(defects[j].begin(), defects[j].end(), mycomp_dsize);
 
 						if (defects[j].size() >= 6)
 						{
+							vector<Point> fly_head;
+
 							int ind1 = defects[j][1][2];
 							int ind2 = defects[j][2][2];
-							
+
 							circle(fly_frame, fly_contours[j][ind1], 5, Scalar(255, 255, 255), FILLED, 1);
 							circle(fly_frame, fly_contours[j][ind2], 5, Scalar(255, 255, 255), FILLED, 1);
 
@@ -352,17 +353,15 @@ int _tmain(int argc, _TCHAR* argv[])
 							bool ans;
 
 							for (int a = 3; a < 6; a++)
+							{
+								//circle(fly_frame, fly_contours[j][defects[j][a][2]], 5, Scalar(255, 255, 255), FILLED, 1);
 								lr += isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][defects[j][a][2]]);
+							}
 
 							if (lr >= 2)
 								ans = true;
 							else
 								ans = false;
-
-							//bool ans = isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_mc[j]);
-							//bool ans = isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][ind3]);
-
-							vector<Point> fly_head;
 
 							for (int k = 0; k < fly_contours[j].size(); k++)
 							{
@@ -533,7 +532,8 @@ int _tmain(int argc, _TCHAR* argv[])
 						printf("Recording ");
 					}
 
-					fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
+					//fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
+					fout.WriteFrame(flyImageStream.front());
 					fout.WriteLog(flyTimeStamps.front());
 					fout.WriteTraj(laser_pt.front(), fly_pt.front());
 					fout.nframes++;

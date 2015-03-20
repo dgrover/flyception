@@ -24,7 +24,7 @@ void Tracker::Init(float x, float y)
 
 	setIdentity(KF.measurementMatrix);
 	setIdentity(KF.processNoiseCov, Scalar::all(1e-4));		//adjust this for faster convergence - but higher noise (default: 1e-2)
-	setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1));
+	setIdentity(KF.measurementNoiseCov, Scalar::all(1e-2));
 	setIdentity(KF.errorCovPost, Scalar::all(1e-1));
 }
 

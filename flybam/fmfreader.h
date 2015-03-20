@@ -12,7 +12,7 @@ class FmfReader
 
 		unsigned __int32 fmfVersion, SizeY, SizeX;
 		unsigned __int64 bytesPerChunk, nframes;
-		long maxFramesInFile;
+		//long maxFramesInFile;
 		char *buf;
 
 	public:
