@@ -9,26 +9,26 @@ using namespace cv;
 
 class Daq
 {
-	private:
-		TaskHandle	taskHandleX;
-		TaskHandle	taskHandleY;
+private:
+	TaskHandle	taskHandleX;
+	TaskHandle	taskHandleY;
 
-		float voltperdeg;
-		float galvoheight;
+	float voltperdeg;
+	float galvoheight;
 
-		float lastx, lasty;
+	float lastx, lasty;
 
-		float64     dataX[SIZE];
-		float64     dataY[SIZE];
+	float64     dataX[SIZE];
+	float64     dataY[SIZE];
 
-	public:
-		Daq();
-		void configure();
-		void start();
-		void write();
-		void ConvertPtToVoltage(Point2f pt);
-
-
+public:
+	Daq();
+	void reset();
+	void configure();
+	void start();
+	void write();
+	void ConvertPtToVoltage(Point2f pt);
+	Point2f ConvertPixelToVoltage(float x, float y);
 };
 
 #endif

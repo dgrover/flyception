@@ -47,24 +47,39 @@ void Daq::write()
 
 void Daq::ConvertPtToVoltage(Point2f pt)
 {
-	float thetax = atan(pt.x / galvoheight) * 180 / CV_PI;
-	float thetay = atan(pt.y / galvoheight) * 180 / CV_PI;
+	// move mirror by half the angle
+	float thetax = atan(pt.x / galvoheight) * 180 / (CV_PI * 2);
+	float thetay = atan(pt.y / galvoheight) * 180 / (CV_PI * 2);
 
-	//dataX[0] = thetax/2 * voltperdeg;
-	//dataY[0] = thetay/2 * voltperdeg;
+	dataX[0] = thetax * voltperdeg;
+	dataY[0] = thetay * voltperdeg;
 
-	float finx = thetax / 2 * voltperdeg;
-	float finy = thetay / 2 * voltperdeg;
+	lastx = thetax;
+	lasty = thetay;
+}
 
-	float incx = (finx - lastx) / SIZE;
-	float incy = (finy - lasty) / SIZE;
+Point2f Daq::ConvertPixelToVoltage(float x, float y)
+{
+	float thetax = lastx + x;
+	float thetay = lasty + y;
 
-	for (int i = 0; i < SIZE; i++)
-	{
-		dataX[i] = lastx + ((i + 1)*incx);
-		dataY[i] = lasty + ((i + 1)*incy);
-	}
+	dataX[0] = thetax * voltperdeg;
+	dataY[0] = thetay * voltperdeg;
 
-	lastx = finx;
-	lasty = finy;
+	lastx = thetax;
+	lasty = thetay;
+
+	Point2f pt;
+
+	//final point would be at double the mirror angle
+	pt.x = galvoheight * tan(lastx * 2 * CV_PI / 180);
+	pt.y = galvoheight * tan(lasty * 2 * CV_PI / 180);
+
+	return pt;
+}
+
+void Daq::reset()
+{
+	lastx = 0.0;
+	lasty = 0.0;
 }

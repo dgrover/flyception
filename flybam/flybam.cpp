@@ -9,11 +9,12 @@ using namespace cv;
 
 #define BASE_HEIGHT 3.175
 
-#define SCALE 0.61/(2*65.638107)
 #define GALVO_X_MIRROR_ANGLE 15
 
+#define SCALE 0.001
+
 #define NFLIES 1
-#define NLOSTFRAMES 1
+#define NLOSTFRAMES 5
 #define MAXRECFRAMES 50000
 
 bool stream = true;
@@ -36,7 +37,7 @@ struct {
 	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
 } mycomp_dsize;
 
-Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height)
+Point2f rotateFlyCenter(Point2f p, int image_width, int image_height)
 {
 	Point2f temp, refPt;
 
@@ -44,8 +45,8 @@ Point2f refineFlyCenter(Point2f pt, Point2f p, int image_width, int image_height
 	temp.x = (cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) - sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 	temp.y = (sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) + cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 
-	refPt.x = pt.x + temp.x * SCALE;
-	refPt.y = pt.y + temp.y * SCALE;
+	refPt.x = (image_width / 2) + temp.x;
+	refPt.y = (image_height / 2) + temp.y;
 
 	//printf("[%f %f]\n", pt.at<double>(0, 0), pt.at<double>(1, 0));
 	//printf("[%f %f]\n", refPt.at<double>(0, 0), refPt.at<double>(1, 0));
@@ -76,16 +77,16 @@ Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 	return Point2f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0));
 }
 
-vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
-{
-	vector<Point3f> p3d;
-	vector<Point2f> p2d;
-
-	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), BASE_HEIGHT));
-	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
-
-	return p2d;
-}
+//vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+//{
+//	vector<Point3f> p3d;
+//	vector<Point2f> p2d;
+//
+//	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), BASE_HEIGHT));
+//	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
+//
+//	return p2d;
+//}
 
 RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
@@ -141,19 +142,16 @@ bool isLeft(Point a, Point b, Point c){
 	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
 }
 
-int sign(int v)
-{
-	return v > 0 ? 1 : -1;
-}
+//int sign(int v)
+//{
+//	return v > 0 ? 1 : -1;
+//}
 
 
 int _tmain(int argc, _TCHAR* argv[])
 {
 	int arena_image_width = 512, arena_image_height = 512;
 	int arena_image_left = 384, arena_image_top = 256;
-
-	//int fly_image_width = 256, fly_image_height = 256;
-	//int fly_image_left = 512, fly_image_top = 384;
 
 	int fly_image_width = 192, fly_image_height = 192;
 	int fly_image_left = 544, fly_image_top = 416;
@@ -173,7 +171,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	FmfWriter fout;
 
-	vector<Tracker> tkf(NFLIES);
+	//vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
 
 	Point2f pt2d;
@@ -273,13 +271,12 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
-				for (int i = 0; i < NFLIES; i++)
-					pt[i] = tkf[i].Predict();
-
+				//for (int i = 0; i < NFLIES; i++)
+				//	pt[i] = tkf[i].Predict();
+				//ndq.ConvertPtToVoltage(pt[0]);
+				//ndq.write();
+				
 				pt2d = Point2f(-1 , -1);
-
-				ndq.ConvertPtToVoltage(pt[0]);
-				ndq.write();
 
 				fly_img = fly_cam.GrabFrame();
 				fly_stamp = fly_cam.GetTimeStamp();
@@ -332,7 +329,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 						
 						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc);
-						//pt2d = fly_mc[j];
+						pt2d = fly_mc[j];
 
 						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
@@ -377,10 +374,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							circle(fly_frame, fly_head_mc, 1, Scalar(255, 255, 255), FILLED, 1);
 							pt2d = fly_head_mc;
-
-							//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
-							tkf[0].Correct(refineFlyCenter(pt[0], pt2d, fly_image_width, fly_image_height));
 						}
+
+						pt2d = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
+
+						float diffx = pt2d.x - (fly_image_width / 2);
+						float diffy = pt2d.y - (fly_image_height / 2);
+
+						pt[0] = ndq.ConvertPixelToVoltage(diffx*SCALE, diffy*SCALE);
+						ndq.write();
+						
+						//tkf[0].Correct(pt[0]);
 					}
 					else
 					{
@@ -389,8 +393,10 @@ int _tmain(int argc, _TCHAR* argv[])
 						if (lost > NLOSTFRAMES)
 						{
 							flyview_track = false;
-							for (int i = 0; i < NFLIES; i++)
-								tkf[i].Init();
+							flyview_record = false;
+							ndq.reset();
+							//for (int i = 0; i < NFLIES; i++)
+							//	tkf[i].Init();
 						}
 					}
 				}
@@ -436,11 +442,16 @@ int _tmain(int argc, _TCHAR* argv[])
 							if (arena_pt.size() > 0)
 							{
 								int j = findClosestPoint(pt[i], arena_pt);
-								tkf[i].Correct(arena_pt[j]);
+								pt[i] = arena_pt[j];
+								//tkf[i].Correct(pt[i]);
 								arena_pt.erase(arena_pt.begin() + j);
 							}
 						}
 					}
+
+					ndq.ConvertPtToVoltage(pt[0]);
+					ndq.write();
+
 				}
 
 				ctime = fly_stamp.cycleCount;
@@ -457,11 +468,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				ltime = ctime;
 
-				putText(fly_frame, to_string(dtime), Point(225, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+				putText(fly_frame, to_string(dtime), Point(150, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 				
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
-
 
 				#pragma omp critical
 				{
