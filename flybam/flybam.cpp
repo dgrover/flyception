@@ -11,7 +11,8 @@ using namespace cv;
 
 #define GALVO_X_MIRROR_ANGLE 15
 
-#define SCALE 0.001
+#define SCALEX 0.00075
+#define SCALEY 0.00075
 
 #define NFLIES 1
 #define NLOSTFRAMES 5
@@ -33,15 +34,29 @@ queue <TimeStamp> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
-struct {
-	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
-} mycomp_dsize;
+//struct {
+//	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
+//} mycomp_dsize;
+//
+//struct {
+//	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[2] < pt2[2]); }
+//} mycomp_dind;
+
+bool myfny(Point p1, Point p2)
+{
+	return p1.y < p2.y;
+}
+
+bool myfnx(Point p1, Point p2)
+{
+	return p1.x < p2.x;
+}
 
 Point2f rotateFlyCenter(Point2f p, int image_width, int image_height)
 {
 	Point2f temp, refPt;
-
-	//rotate fly center point by 15 degrees due to the tilt of the galvo x-mirror
+	
+	//move point to origin and rotate by 15 degrees due to the tilt of the galvo x-mirror
 	temp.x = (cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) - sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 	temp.y = (sin(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.x - image_width / 2) + cos(-GALVO_X_MIRROR_ANGLE * CV_PI / 180)*(p.y - image_height / 2));
 
@@ -142,6 +157,61 @@ bool isLeft(Point a, Point b, Point c){
 	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
 }
 
+//float angleBetween(Point v1, Point v2, Point c)
+//{
+//	v1 = v1 - c;
+//	v2 = v2 - c;
+//
+//	float len1 = sqrt(v1.x * v1.x + v1.y * v1.y);
+//	float len2 = sqrt(v2.x * v2.x + v2.y * v2.y);
+//
+//	float dot = v1.x * v2.x + v1.y * v2.y;
+//
+//	float a = dot / (len1 * len2);
+//
+//	if (a >= 1.0)
+//		return 0.0;
+//	else if (a <= -1.0)
+//		return CV_PI;
+//	else
+//		return acos(a) * 180 / CV_PI;
+//}
+
+//bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
+//{
+//	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
+//	s10_x = p1_x - p0_x;
+//	s10_y = p1_y - p0_y;
+//	s32_x = p3_x - p2_x;
+//	s32_y = p3_y - p2_y;
+//
+//	denom = s10_x * s32_y - s32_x * s10_y;
+//	if (denom == 0)
+//		return false; // Collinear
+//	bool denomPositive = denom > 0;
+//
+//	s02_x = p0_x - p2_x;
+//	s02_y = p0_y - p2_y;
+//	s_numer = s10_x * s02_y - s10_y * s02_x;
+//	if ((s_numer < 0) == denomPositive)
+//		return false; // No collision
+//
+//	t_numer = s32_x * s02_y - s32_y * s02_x;
+//	if ((t_numer < 0) == denomPositive)
+//		return false; // No collision
+//
+//	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
+//		return false; // No collision
+//	// Collision detected
+//	t = t_numer / denom;
+//	if (i_x != NULL)
+//		*i_x = p0_x + (t * s10_x);
+//	if (i_y != NULL)
+//		*i_y = p0_y + (t * s10_y);
+//
+//	return true;
+//}
+
 //int sign(int v)
 //{
 //	return v > 0 ? 1 : -1;
@@ -153,8 +223,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_width = 512, arena_image_height = 512;
 	int arena_image_left = 384, arena_image_top = 256;
 
-	int fly_image_width = 192, fly_image_height = 192;
-	int fly_image_left = 544, fly_image_top = 416;
+	//int fly_image_width = 192, fly_image_height = 192;
+	//int fly_image_left = 544, fly_image_top = 416;
+
+	int fly_image_width = 256, fly_image_height = 256;
+	int fly_image_left = 512, fly_image_top = 384;
+
+	//int fly_image_width = 512, fly_image_height = 512;
+	//int fly_image_left = 384, fly_image_top = 256;
 
 	PGRcam arena_cam, fly_cam;
 	BusManager busMgr;
@@ -209,6 +285,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetTrigger();
 	error = fly_cam.SetProperty(SHUTTER, 1.003);
 	error = fly_cam.SetProperty(GAIN, 5.105);
+
+	//error = fly_cam.SetProperty(SHUTTER, 0.447);
+	//error = fly_cam.SetProperty(GAIN, 12.108);
 	
 	error = fly_cam.Start();
 	
@@ -249,6 +328,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	int fly_erode = 3;
 	int fly_dilate = 2;
 
+	int head_center = 50;
+
 	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
 	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
 
@@ -273,7 +354,8 @@ int _tmain(int argc, _TCHAR* argv[])
 			{
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
-				//ndq.ConvertPtToVoltage(pt[0]);
+
+				//ndq.ConvertPtToDeg(pt[0]);
 				//ndq.write();
 				
 				pt2d = Point2f(-1 , -1);
@@ -282,19 +364,23 @@ int _tmain(int argc, _TCHAR* argv[])
 				fly_stamp = fly_cam.GetTimeStamp();
 				fly_frame = fly_cam.convertImagetoMat(fly_img);
 
+				//GaussianBlur(fly_frame, fly_frame, Size(5, 5), 50.0);
+
 				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 
 				erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
 				dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
 				
+
+
 				if (flyview_track)
 				{
 					vector<vector<Point>> fly_contours;
 					findContours(fly_mask, fly_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
 					vector<vector<Point>> hull(fly_contours.size());
-					vector<vector<int>> hull2(fly_contours.size());
-					vector<vector<Vec4i>> defects(fly_contours.size());
+					//vector<vector<int>> hull2(fly_contours.size());
+					//vector<vector<Vec4i>> defects(fly_contours.size());
 
 					int j;
 
@@ -312,9 +398,9 @@ int _tmain(int argc, _TCHAR* argv[])
 							//drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 							
 							convexHull(Mat(fly_contours[i]), hull[i], false);
-							convexHull(Mat(fly_contours[i]), hull2[i], false);
+							//convexHull(Mat(fly_contours[i]), hull2[i], false);
 							
-							convexityDefects(Mat(fly_contours[i]), hull2[i], defects[i]);
+							//convexityDefects(Mat(fly_contours[i]), hull2[i], defects[i]);
 
 							fly_mu[i] = moments(fly_contours[i], false);
 							fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
@@ -329,62 +415,272 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 						
 						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc);
-						pt2d = fly_mc[j];
+						//pt2d = fly_mc[j];
+						//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
 
 						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
-						std::sort(defects[j].begin(), defects[j].end(), mycomp_dsize);
+						
+						vector<bool> n = { false, false, false, false };
 
-						if (defects[j].size() >= 6)
+						vector<Point> left, top, bottom, right;
+						vector<Point> edge;
+
+						for (int i = 0; i < fly_contours[j].size(); i++)
 						{
-							vector<Point> fly_head;
-
-							int ind1 = defects[j][1][2];
-							int ind2 = defects[j][2][2];
-
-							circle(fly_frame, fly_contours[j][ind1], 5, Scalar(255, 255, 255), FILLED, 1);
-							circle(fly_frame, fly_contours[j][ind2], 5, Scalar(255, 255, 255), FILLED, 1);
-
-							int lr = 0;
-							bool ans;
-
-							for (int a = 3; a < 6; a++)
+							if (fly_contours[j][i].x == 1)
 							{
-								//circle(fly_frame, fly_contours[j][defects[j][a][2]], 5, Scalar(255, 255, 255), FILLED, 1);
-								lr += isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][defects[j][a][2]]);
+								n[0] = true;
+								left.push_back(fly_contours[j][i]);
 							}
 
-							if (lr >= 2)
-								ans = true;
-							else
-								ans = false;
-
-							for (int k = 0; k < fly_contours[j].size(); k++)
+							if (fly_contours[j][i].x == 254)
 							{
-								if (isLeft(fly_contours[j][ind1], fly_contours[j][ind2], fly_contours[j][k]) == ans)
-								{
-									fly_head.push_back(fly_contours[j][k]);
-									//circle(fly_frame, fly_contours[j][k], 1, Scalar(255, 255, 255), FILLED, 1);
-								}
+								n[1] = true;
+								right.push_back(fly_contours[j][i]);
 							}
 
-							Moments fly_head_mu = moments(fly_head, false);
-							Point2f fly_head_mc = Point2f(fly_head_mu.m10 / fly_head_mu.m00, fly_head_mu.m01 / fly_head_mu.m00);
+							if (fly_contours[j][i].y == 1)
+							{
+								n[2] = true;
+								top.push_back(fly_contours[j][i]);
+							}
 
-							circle(fly_frame, fly_head_mc, 1, Scalar(255, 255, 255), FILLED, 1);
-							pt2d = fly_head_mc;
+							if (fly_contours[j][i].y == 254)
+							{
+								n[3] = true;
+								bottom.push_back(fly_contours[j][i]);
+							}
+						}
+						
+						int sum = std::accumulate(n.begin(), n.end(), 0);
+
+						if (sum == 1)
+						{
+							if (!left.empty())
+							{
+								edge.push_back(*min_element(left.begin(), left.end(), myfny));
+								edge.push_back(*max_element(left.begin(), left.end(), myfny));
+							}
+
+							if (!right.empty())
+							{
+								edge.push_back(*min_element(right.begin(), right.end(), myfny));
+								edge.push_back(*max_element(right.begin(), right.end(), myfny));
+							}
+
+							if (!top.empty())
+							{
+								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
+								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
+							}
+
+							if (!bottom.empty())
+							{
+								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
+								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
+							}
 						}
 
-						pt2d = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
+						if (sum == 2)
+						{
+							if (!left.empty() && !top.empty())
+							{
+								edge.push_back(*max_element(left.begin(), left.end(), myfny));
+								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
+							}
 
-						float diffx = pt2d.x - (fly_image_width / 2);
-						float diffy = pt2d.y - (fly_image_height / 2);
+							if (!left.empty() && !bottom.empty())
+							{
+								edge.push_back(*min_element(left.begin(), left.end(), myfny));
+								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
+							}
 
-						pt[0] = ndq.ConvertPixelToVoltage(diffx*SCALE, diffy*SCALE);
-						ndq.write();
-						
-						//tkf[0].Correct(pt[0]);
+							if (!right.empty() && !bottom.empty())
+							{
+								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
+								edge.push_back(*min_element(right.begin(), right.end(), myfny));
+							}
+
+							if (!right.empty() && !top.empty())
+							{
+								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
+								edge.push_back(*max_element(right.begin(), right.end(), myfny));
+							}
+						}
+
+						if (edge.size() == 2)
+						{
+							//Point2f ec = Point((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+							//circle(fly_frame, ec, 5, Scalar(255, 255, 255), FILLED, 1);
+							//circle(fly_frame, fly_mc[j], 5, Scalar(255, 255, 255), FILLED, 1);
+
+							Point2f body_center = fly_mc[j];
+							Point2f edge_center = Point((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
+							Point2f p1, p2;
+							float m, c;
+
+							bool flag = false;
+
+							// Check if the line is a vertical line because vertical lines don't have slope
+							if (abs(body_center.x - edge_center.x) > 3.0)
+							{
+								flag = true;
+
+								p1.x = 0;
+								p2.x = fly_image_width;
+
+								// Slope equation (y1 - y2) / (x1 - x2)
+								m = (body_center.y - edge_center.y) / (body_center.x - edge_center.x);
+
+								// Line equation:  y = mx + c
+								c = body_center.y - (m * body_center.x);
+								p1.y = m * p1.x + c;
+								p2.y = m * p2.x + c;
+							}
+							else
+							{
+								p1.x = edge_center.x;
+								p2.x = edge_center.x;
+
+								p1.y = 0;
+								p2.y = fly_image_height;
+							}
+
+							//line(fly_frame, p, q, Scalar::all(255), 1, 8, 0);
+							
+							vector<Point2f> head;
+
+							//for (int i = 1; i < hull[j].size(); i++)
+							//{
+							//	float x, y;
+
+							//	bool flag = get_line_intersection(p.x, p.y, q.x, q.y, hull[j][i - 1].x, hull[j][i - 1].y, hull[j][i].x, hull[j][i].y, &x, &y);
+							//	
+							//	if (flag)
+							//		head.push_back(Point2f(x, y));
+
+							//}
+
+
+							Mat tmask(256, 256, CV_8UC1);
+							drawContours(tmask, hull, j, Scalar(255, 255, 255), FILLED, 1);
+							//drawContours(tmask, fly_contours, j, Scalar(255, 255, 255), FILLED, 1);
+
+							Point curr, last;
+
+							if (flag)
+							{
+								for (int i = 1; i < fly_image_width; i++)
+								{
+									bool bound = true;
+
+									last.x = i - 1;
+									last.y = m*last.x + c;
+
+									if (last.y < 0 || last.y >= fly_image_height)
+										bound = false;
+
+									curr.x = i;
+									curr.y = m*curr.x + c;
+
+									if (curr.y < 0 || curr.y >= fly_image_height)
+										bound = false;
+
+									if (bound)
+									{
+										if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
+										{
+											head.push_back(curr);
+											//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
+										}
+									}
+								}
+							}
+							else
+							{
+								for (int i = 1; i < fly_image_height; i++)
+								{
+									bool bound = true;
+
+									last.x = p1.x;
+									last.y = i-1;
+
+									if (last.x < 0 || last.x >= fly_image_width)
+										bound = false;
+
+									curr.x = p1.x;
+									curr.y = i;
+
+									if (curr.x < 0 || curr.x >= fly_image_width)
+										bound = false;
+
+									if (bound)
+									{
+										if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
+										{
+											head.push_back(curr);
+											//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
+										}
+									}
+								}
+
+							}
+
+
+							if (head.size() > 0)
+							{
+								int i = findClosestPoint(Point2f(fly_image_width / 2, fly_image_height / 2), head);
+								
+								Point2f a = head[i];
+								Point2f b = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
+								Point2f h;
+
+								if (abs(a.x - b.x) > 3.0)
+								{
+									// Slope equation (y1 - y2) / (x1 - x2)
+									//float m = (a.y - b.y) / (a.x - b.x);
+									//float p = a.y - (m * a.x);
+
+									if (a.x > b.x)
+										h.x = a.x - head_center / sqrt(1 + (m*m));
+									else
+										h.x = a.x + head_center / sqrt(1 + (m*m));
+
+									h.y = m*h.x + c;
+								}
+								else
+								{
+									h.x = a.x;
+
+									if (b.y < a.y)
+										h.y = a.y - head_center;
+									else
+										h.y = a.y + head_center;
+								}
+
+								circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
+								pt2d = h;
+
+								pt2d = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
+
+								float diffx = pt2d.x - (fly_image_width / 2);
+								float diffy = pt2d.y - (fly_image_height / 2);
+
+								//ndq.ConvertPixelToDeg(diffx*SCALE, diffy*SCALE);
+
+								ndq.ConvertPixelToDeg(diffx*SCALEX, diffy*SCALEY);
+								pt[0] = ndq.ConvertDegToPt();
+
+								//tkf[0].Correct(pt[0]);
+								ndq.write();
+
+
+							}
+						}
 					}
 					else
 					{
@@ -395,6 +691,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							flyview_track = false;
 							flyview_record = false;
 							ndq.reset();
+							
 							//for (int i = 0; i < NFLIES; i++)
 							//	tkf[i].Init();
 						}
@@ -442,14 +739,16 @@ int _tmain(int argc, _TCHAR* argv[])
 							if (arena_pt.size() > 0)
 							{
 								int j = findClosestPoint(pt[i], arena_pt);
+								
 								pt[i] = arena_pt[j];
 								//tkf[i].Correct(pt[i]);
+								
 								arena_pt.erase(arena_pt.begin() + j);
 							}
 						}
 					}
 
-					ndq.ConvertPtToVoltage(pt[0]);
+					ndq.ConvertPtToDeg(pt[0]);
 					ndq.write();
 
 				}
@@ -468,7 +767,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				ltime = ctime;
 
-				putText(fly_frame, to_string(dtime), Point(150, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+				putText(fly_frame, to_string(dtime), Point((fly_image_width-50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 				
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
@@ -586,8 +885,9 @@ int _tmain(int argc, _TCHAR* argv[])
 			namedWindow("controls", WINDOW_AUTOSIZE);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
 			createTrackbar("fly thresh", "controls", &fly_thresh, 255);
-			createTrackbar("erode", "controls", &fly_erode, 7);
-			createTrackbar("dilate", "controls", &fly_dilate, 7);
+			createTrackbar("erode", "controls", &fly_erode, 5);
+			createTrackbar("dilate", "controls", &fly_dilate, 5);
+			createTrackbar("head", "controls", &head_center, 100);
 
 			while (true)
 			{
@@ -638,7 +938,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	fly_cam.Stop();
 
 	printf("\n\nCentering galvo ");
-	ndq.ConvertPtToVoltage(Point2f(0, 0));
+	ndq.ConvertPtToDeg(Point2f(0, 0));
 	ndq.write();
 	printf("[OK]\n");
 

@@ -16,7 +16,7 @@ private:
 	float voltperdeg;
 	float galvoheight;
 
-	float lastx, lasty;
+	float thetax, thetay;
 
 	float64     dataX[SIZE];
 	float64     dataY[SIZE];
@@ -27,8 +27,9 @@ public:
 	void configure();
 	void start();
 	void write();
-	void ConvertPtToVoltage(Point2f pt);
-	Point2f ConvertPixelToVoltage(float x, float y);
+	void ConvertPtToDeg(Point2f pt);
+	void ConvertPixelToDeg(float x, float y);
+	Point2f Daq::ConvertDegToPt();
 };
 
 #endif

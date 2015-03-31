@@ -9,14 +9,11 @@ Daq::Daq()
 	voltperdeg = 0.5;
 	galvoheight = 65.0;
 
-	lastx = 0.0;
-	lasty = 0.0;
+	thetax = 0.0;
+	thetay = 0.0;
 
-	for (int i = 0; i < SIZE; i++)
-	{
-		dataX[i] = 0.0;
-		dataY[i] = 0.0;
-	}
+	dataX[0] = 0.0;
+	dataY[0] = 0.0;
 }
 
 void Daq::configure()
@@ -37,6 +34,10 @@ void Daq::start()
 
 void Daq::write()
 {
+
+	dataX[0] = thetax * voltperdeg;
+	dataY[0] = thetay * voltperdeg;
+	
 	// DAQmx Write Code
 	DAQmxWriteAnalogF64(taskHandleX,SIZE,0,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
 	DAQmxWriteAnalogF64(taskHandleY,SIZE,0,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
@@ -45,41 +46,32 @@ void Daq::write()
 	//DAQmxWriteAnalogScalarF64(taskHandleX, 0, 10.0, dataX, NULL);
 }
 
-void Daq::ConvertPtToVoltage(Point2f pt)
+void Daq::ConvertPtToDeg(Point2f pt)
 {
 	// move mirror by half the angle
-	float thetax = atan(pt.x / galvoheight) * 180 / (CV_PI * 2);
-	float thetay = atan(pt.y / galvoheight) * 180 / (CV_PI * 2);
-
-	dataX[0] = thetax * voltperdeg;
-	dataY[0] = thetay * voltperdeg;
-
-	lastx = thetax;
-	lasty = thetay;
+	thetax = atan(pt.x / galvoheight) * 180 / (CV_PI * 2);
+	thetay = atan(pt.y / galvoheight) * 180 / (CV_PI * 2);
 }
 
-Point2f Daq::ConvertPixelToVoltage(float x, float y)
+void Daq::ConvertPixelToDeg(float x, float y)
 {
-	float thetax = lastx + x;
-	float thetay = lasty + y;
+	thetax = thetax + x;
+	thetay = thetay + y;
+}
 
-	dataX[0] = thetax * voltperdeg;
-	dataY[0] = thetay * voltperdeg;
-
-	lastx = thetax;
-	lasty = thetay;
-
+Point2f Daq::ConvertDegToPt()
+{
 	Point2f pt;
 
 	//final point would be at double the mirror angle
-	pt.x = galvoheight * tan(lastx * 2 * CV_PI / 180);
-	pt.y = galvoheight * tan(lasty * 2 * CV_PI / 180);
+	pt.x = galvoheight * tan(thetax * 2 * CV_PI / 180);
+	pt.y = galvoheight * tan(thetay * 2 * CV_PI / 180);
 
 	return pt;
 }
 
 void Daq::reset()
 {
-	lastx = 0.0;
-	lasty = 0.0;
+	thetax = 0.0;
+	thetay = 0.0;
 }

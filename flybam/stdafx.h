@@ -14,6 +14,8 @@
 #include <vector>
 #include <omp.h>
 #include <queue>
+#include <algorithm>
+#include <numeric>
 
 #include "FlyCapture2.h"
 
