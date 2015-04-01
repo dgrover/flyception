@@ -146,6 +146,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="arduino.h" />
     <ClInclude Include="daq.h" />
     <ClInclude Include="fmfreader.h" />
     <ClInclude Include="fmfwriter.h" />
@@ -155,6 +156,7 @@
     <ClInclude Include="tracker.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="arduino.cpp" />
     <ClCompile Include="daq.cpp" />
     <ClCompile Include="flybam.cpp" />
     <ClCompile Include="fmfreader.cpp" />

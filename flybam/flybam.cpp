@@ -223,14 +223,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_width = 512, arena_image_height = 512;
 	int arena_image_left = 384, arena_image_top = 256;
 
-	//int fly_image_width = 192, fly_image_height = 192;
-	//int fly_image_left = 544, fly_image_top = 416;
-
 	int fly_image_width = 256, fly_image_height = 256;
 	int fly_image_left = 512, fly_image_top = 384;
-
-	//int fly_image_width = 512, fly_image_height = 512;
-	//int fly_image_left = 384, fly_image_top = 256;
 
 	PGRcam arena_cam, fly_cam;
 	BusManager busMgr;
@@ -286,9 +280,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetProperty(SHUTTER, 1.003);
 	error = fly_cam.SetProperty(GAIN, 5.105);
 
-	//error = fly_cam.SetProperty(SHUTTER, 0.447);
-	//error = fly_cam.SetProperty(GAIN, 12.108);
-	
 	error = fly_cam.Start();
 	
 	if (error != PGRERROR_OK)
@@ -306,6 +297,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	fs["rotation_matrix"] >> rotationMatrix;
 	fs.release();
 
+	Serial* SP = new Serial("COM4");    // adjust as needed
+
+	if (SP->IsConnected())
+		printf("Connecting arduino [OK]\n");
+	
 	//configure and start NIDAQ
 	Daq ndq;
 	ndq.configure();
@@ -325,7 +321,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 75;
 	int fly_thresh = 75; 
 
-	int fly_erode = 3;
+	int fly_erode = 2;
 	int fly_dilate = 2;
 
 	int head_center = 50;
@@ -338,9 +334,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int rcount = 0;
 	int key_state = 0;
+	
+	int track_key_state = 0;
+	int flash_key_state = 0;
+
 	int lost = 0;
 
-	printf("Press [F1] to start/stop recording. Press [ESC] to exit.\n\n");
+	printf("Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.\n\n");
 
 	#pragma omp parallel sections num_threads(3)
 	{
@@ -795,6 +795,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (GetAsyncKeyState(VK_F1))
 				{
+					if (!track_key_state)
+						flyview_track = !flyview_track;
+
+					track_key_state = 1;
+				}
+				else
+					track_key_state = 0;
+
+				if (GetAsyncKeyState(VK_F2))
+				{
 					if (!key_state)
 					{
 						flyview_record = !flyview_record;
@@ -805,10 +815,17 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 				else
 					key_state = 0;
-				
-				if (GetAsyncKeyState(VK_RETURN))
-					flyview_track = true;
 
+				if (GetAsyncKeyState(VK_F3))
+				{
+					if (!flash_key_state)
+						SP->WriteData("1", 1);
+
+					flash_key_state = 1;
+				}
+				else
+					flash_key_state = 0;
+				
 				if (GetAsyncKeyState(VK_ESCAPE))
 				{
 					stream = false;

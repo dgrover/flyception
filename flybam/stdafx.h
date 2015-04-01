@@ -36,5 +36,6 @@
 
 #include "tracker.h"
 #include "daq.h"
+#include "arduino.h"
 
 // TODO: reference additional headers your program requires here
