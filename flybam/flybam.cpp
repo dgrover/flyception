@@ -244,7 +244,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
 
-	Point2f pt2d;
+	Point2f pt2d(fly_image_width/2, fly_image_height/2);
 
 	error = busMgr.GetNumOfCameras(&numCameras);
 	printf("Number of cameras detected: %u\n", numCameras);
@@ -358,7 +358,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				//ndq.ConvertPtToDeg(pt[0]);
 				//ndq.write();
 				
-				pt2d = Point2f(-1 , -1);
+				//pt2d = Point2f(-1 , -1);
 
 				fly_img = fly_cam.GrabFrame();
 				fly_stamp = fly_cam.GetTimeStamp();
@@ -507,6 +507,46 @@ int _tmain(int argc, _TCHAR* argv[])
 								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
 								edge.push_back(*max_element(right.begin(), right.end(), myfny));
 							}
+
+							if (!left.empty() && !right.empty())
+							{
+								Point lmin = *min_element(left.begin(), left.end(), myfny);
+								Point lmax = *max_element(left.begin(), left.end(), myfny);
+
+								Point rmin = *min_element(right.begin(), right.end(), myfny);
+								Point rmax = *max_element(right.begin(), right.end(), myfny);
+
+								if (dist(lmin, lmax) < dist(rmin, rmax))
+								{
+									edge.push_back(rmin);
+									edge.push_back(rmax);
+								}
+								else if (dist(lmin, lmax) > dist(rmin, rmax))
+								{
+									edge.push_back(lmin);
+									edge.push_back(lmax);
+								}
+							}
+
+							if (!top.empty() && !bottom.empty())
+							{
+								Point tmin = *min_element(top.begin(), top.end(), myfnx);
+								Point tmax = *max_element(top.begin(), top.end(), myfnx);
+
+								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+								if (dist(tmin, tmax) < dist(bmin, bmax))
+								{
+									edge.push_back(bmin);
+									edge.push_back(bmax);
+								}
+								else if (dist(tmin, tmax) > dist(bmin, bmax))
+								{
+									edge.push_back(tmin);
+									edge.push_back(tmax);
+								}
+							}
 						}
 
 						if (edge.size() == 2)
@@ -641,8 +681,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							if (head.size() > 0)
 							{
-								int i = findClosestPoint(Point2f(fly_image_width / 2, fly_image_height / 2), head);
+								//int i = findClosestPoint(Point2f(fly_image_width / 2, fly_image_height / 2), head);
 								
+								int i = findClosestPoint(pt2d, head);
 								Point2f a = head[i];
 								Point2f b = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 
@@ -670,10 +711,10 @@ int _tmain(int argc, _TCHAR* argv[])
 								circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
 								pt2d = h;
 
-								pt2d = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
+								Point2f rotpt = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
 
-								float diffx = pt2d.x - (fly_image_width / 2);
-								float diffy = pt2d.y - (fly_image_height / 2);
+								float diffx = rotpt.x - (fly_image_width / 2);
+								float diffy = rotpt.y - (fly_image_height / 2);
 
 								ndq.ConvertPixelToDeg(diffx*SCALEX, diffy*SCALEY);
 								pt[0] = ndq.ConvertDegToPt();
