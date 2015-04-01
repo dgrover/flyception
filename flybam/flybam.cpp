@@ -177,40 +177,40 @@ bool isLeft(Point a, Point b, Point c){
 //		return acos(a) * 180 / CV_PI;
 //}
 
-//bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
-//{
-//	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
-//	s10_x = p1_x - p0_x;
-//	s10_y = p1_y - p0_y;
-//	s32_x = p3_x - p2_x;
-//	s32_y = p3_y - p2_y;
-//
-//	denom = s10_x * s32_y - s32_x * s10_y;
-//	if (denom == 0)
-//		return false; // Collinear
-//	bool denomPositive = denom > 0;
-//
-//	s02_x = p0_x - p2_x;
-//	s02_y = p0_y - p2_y;
-//	s_numer = s10_x * s02_y - s10_y * s02_x;
-//	if ((s_numer < 0) == denomPositive)
-//		return false; // No collision
-//
-//	t_numer = s32_x * s02_y - s32_y * s02_x;
-//	if ((t_numer < 0) == denomPositive)
-//		return false; // No collision
-//
-//	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
-//		return false; // No collision
-//	// Collision detected
-//	t = t_numer / denom;
-//	if (i_x != NULL)
-//		*i_x = p0_x + (t * s10_x);
-//	if (i_y != NULL)
-//		*i_y = p0_y + (t * s10_y);
-//
-//	return true;
-//}
+bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
+{
+	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
+	s10_x = p1_x - p0_x;
+	s10_y = p1_y - p0_y;
+	s32_x = p3_x - p2_x;
+	s32_y = p3_y - p2_y;
+
+	denom = s10_x * s32_y - s32_x * s10_y;
+	if (denom == 0)
+		return false; // Collinear
+	bool denomPositive = denom > 0;
+
+	s02_x = p0_x - p2_x;
+	s02_y = p0_y - p2_y;
+	s_numer = s10_x * s02_y - s10_y * s02_x;
+	if ((s_numer < 0) == denomPositive)
+		return false; // No collision
+
+	t_numer = s32_x * s02_y - s32_y * s02_x;
+	if ((t_numer < 0) == denomPositive)
+		return false; // No collision
+
+	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
+		return false; // No collision
+	// Collision detected
+	t = t_numer / denom;
+	if (i_x != NULL)
+		*i_x = p0_x + (t * s10_x);
+	if (i_y != NULL)
+		*i_y = p0_y + (t * s10_y);
+
+	return true;
+}
 
 //int sign(int v)
 //{
@@ -318,7 +318,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 75;
+	int arena_thresh = 85;
 	int fly_thresh = 75; 
 
 	int fly_erode = 2;
@@ -399,7 +399,6 @@ int _tmain(int argc, _TCHAR* argv[])
 							
 							convexHull(Mat(fly_contours[i]), hull[i], false);
 							//convexHull(Mat(fly_contours[i]), hull2[i], false);
-							
 							//convexityDefects(Mat(fly_contours[i]), hull2[i], defects[i]);
 
 							fly_mu[i] = moments(fly_contours[i], false);
@@ -512,12 +511,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						if (edge.size() == 2)
 						{
-							//Point2f ec = Point((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-							//circle(fly_frame, ec, 5, Scalar(255, 255, 255), FILLED, 1);
-							//circle(fly_frame, fly_mc[j], 5, Scalar(255, 255, 255), FILLED, 1);
-
 							Point2f body_center = fly_mc[j];
 							Point2f edge_center = Point((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
+							//line(fly_frame, body_center, edge_center, Scalar::all(255), 1, 8, 0);
 
 							Point2f p1, p2;
 							float m, c;
@@ -549,19 +546,32 @@ int _tmain(int argc, _TCHAR* argv[])
 								p2.y = fly_image_height;
 							}
 
-							//line(fly_frame, p, q, Scalar::all(255), 1, 8, 0);
-							
 							vector<Point2f> head;
 
-							//for (int i = 1; i < hull[j].size(); i++)
+							//for (int i = 1; i <= hull[j].size(); i++)
 							//{
 							//	float x, y;
+							//	Point2f p, q, r, s;
 
-							//	bool flag = get_line_intersection(p.x, p.y, q.x, q.y, hull[j][i - 1].x, hull[j][i - 1].y, hull[j][i].x, hull[j][i].y, &x, &y);
-							//	
-							//	if (flag)
+							//	p = p1;
+							//	q = p2;
+
+							//	if (i < hull[j].size())
+							//	{
+							//		r = hull[j][i - 1];
+							//		s = hull[j][i];
+							//	}
+							//	else
+							//	{
+							//		r = hull[j][i - 1];
+							//		s = hull[j][0];
+
+							//	}
+
+							//	bool cross = get_line_intersection(p.x, p.y, q.x, q.y, r.x, r.y, s.x, s.y, &x, &y);
+							//
+							//	if (cross)
 							//		head.push_back(Point2f(x, y));
-
 							//}
 
 
@@ -626,7 +636,6 @@ int _tmain(int argc, _TCHAR* argv[])
 										}
 									}
 								}
-
 							}
 
 
@@ -639,12 +648,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 								Point2f h;
 
-								if (abs(a.x - b.x) > 3.0)
+								if (flag)
 								{
-									// Slope equation (y1 - y2) / (x1 - x2)
-									//float m = (a.y - b.y) / (a.x - b.x);
-									//float p = a.y - (m * a.x);
-
 									if (a.x > b.x)
 										h.x = a.x - head_center / sqrt(1 + (m*m));
 									else
@@ -670,15 +675,10 @@ int _tmain(int argc, _TCHAR* argv[])
 								float diffx = pt2d.x - (fly_image_width / 2);
 								float diffy = pt2d.y - (fly_image_height / 2);
 
-								//ndq.ConvertPixelToDeg(diffx*SCALE, diffy*SCALE);
-
 								ndq.ConvertPixelToDeg(diffx*SCALEX, diffy*SCALEY);
 								pt[0] = ndq.ConvertDegToPt();
-
 								//tkf[0].Correct(pt[0]);
 								ndq.write();
-
-
 							}
 						}
 					}
