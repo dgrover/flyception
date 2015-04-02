@@ -7,9 +7,10 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-#define BASE_HEIGHT 3.175
-
-#define GALVO_X_MIRROR_ANGLE 15
+#define BASE_HEIGHT 3.175			//in mm
+#define GALVO_HEIGHT 65.0			//in mm
+#define GALVO_X_MIRROR_ANGLE 15		//in degrees
+#define ARENA_RADIUS 20				//in mm
 
 #define SCALEX 0.00075
 #define SCALEY 0.00075
@@ -69,7 +70,7 @@ Point2f rotateFlyCenter(Point2f p, int image_width, int image_height)
 	return refPt;
 }
 
-Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
+Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec, float height)
 {
 	cv::Mat uvPoint = cv::Mat::ones(3, 1, cv::DataType<double>::type); // [u v 1]
 	uvPoint.at<double>(0, 0) = p.x;
@@ -80,7 +81,7 @@ Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 
 	tempMat = rotationMatrix.inv() * cameraMatrix.inv() * uvPoint;
 	tempMat2 = rotationMatrix.inv() * tvec;
-	s = BASE_HEIGHT + tempMat2.at<double>(2, 0); //height Zconst is zero
+	s = height + tempMat2.at<double>(2, 0); //height Zconst is zero
 	s /= tempMat.at<double>(2, 0);
 
 	Mat pt = rotationMatrix.inv() * (s * cameraMatrix.inv() * uvPoint - tvec);
@@ -106,15 +107,14 @@ Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec)
 RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
 	Point2f center(0, 0);
-	double radius = 20; //in mm
-
+	
 	vector<Point3f> c3d;
 	vector<Point2f> c2d;
 
 	RotatedRect circleMask;
 
 	for (double angle = 0; angle <= 2 * CV_PI; angle += 0.001) //You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + radius*cos(angle), center.y + radius*sin(angle), BASE_HEIGHT));
+		c3d.push_back(Point3f(center.x + ARENA_RADIUS*cos(angle), center.y + ARENA_RADIUS*sin(angle), BASE_HEIGHT));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 
@@ -128,6 +128,14 @@ float dist(Point2f p1, Point2f p2)
 	float dx = p2.x - p1.x;
 	float dy = p2.y - p1.y;
 	return(sqrt(dx*dx + dy*dy));
+}
+
+float dist3d(Point3f p1, Point3f p2)
+{
+	float dx = p2.x - p1.x;
+	float dy = p2.y - p1.y;
+	float dz = p2.z - p1.z;
+	return(sqrt(dx*dx + dy*dy + dz*dz));
 }
 
 int findClosestPoint(Point2f pt, vector<Point2f> nbor)
@@ -177,40 +185,40 @@ bool isLeft(Point a, Point b, Point c){
 //		return acos(a) * 180 / CV_PI;
 //}
 
-bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
-{
-	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
-	s10_x = p1_x - p0_x;
-	s10_y = p1_y - p0_y;
-	s32_x = p3_x - p2_x;
-	s32_y = p3_y - p2_y;
-
-	denom = s10_x * s32_y - s32_x * s10_y;
-	if (denom == 0)
-		return false; // Collinear
-	bool denomPositive = denom > 0;
-
-	s02_x = p0_x - p2_x;
-	s02_y = p0_y - p2_y;
-	s_numer = s10_x * s02_y - s10_y * s02_x;
-	if ((s_numer < 0) == denomPositive)
-		return false; // No collision
-
-	t_numer = s32_x * s02_y - s32_y * s02_x;
-	if ((t_numer < 0) == denomPositive)
-		return false; // No collision
-
-	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
-		return false; // No collision
-	// Collision detected
-	t = t_numer / denom;
-	if (i_x != NULL)
-		*i_x = p0_x + (t * s10_x);
-	if (i_y != NULL)
-		*i_y = p0_y + (t * s10_y);
-
-	return true;
-}
+//bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
+//{
+//	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
+//	s10_x = p1_x - p0_x;
+//	s10_y = p1_y - p0_y;
+//	s32_x = p3_x - p2_x;
+//	s32_y = p3_y - p2_y;
+//
+//	denom = s10_x * s32_y - s32_x * s10_y;
+//	if (denom == 0)
+//		return false; // Collinear
+//	bool denomPositive = denom > 0;
+//
+//	s02_x = p0_x - p2_x;
+//	s02_y = p0_y - p2_y;
+//	s_numer = s10_x * s02_y - s10_y * s02_x;
+//	if ((s_numer < 0) == denomPositive)
+//		return false; // No collision
+//
+//	t_numer = s32_x * s02_y - s32_y * s02_x;
+//	if ((t_numer < 0) == denomPositive)
+//		return false; // No collision
+//
+//	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
+//		return false; // No collision
+//	// Collision detected
+//	t = t_numer / denom;
+//	if (i_x != NULL)
+//		*i_x = p0_x + (t * s10_x);
+//	if (i_y != NULL)
+//		*i_y = p0_y + (t * s10_y);
+//
+//	return true;
+//}
 
 //int sign(int v)
 //{
@@ -225,6 +233,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int fly_image_width = 256, fly_image_height = 256;
 	int fly_image_left = 512, fly_image_top = 384;
+
+	Point3f galvo_center(0, 0, (BASE_HEIGHT - sqrt((GALVO_HEIGHT * GALVO_HEIGHT) - (ARENA_RADIUS * ARENA_RADIUS))));
 
 	PGRcam arena_cam, fly_cam;
 	BusManager busMgr;
@@ -549,6 +559,33 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 						}
 
+						if (sum == 3)
+						{
+							if (!top.empty() && !left.empty() && !bottom.empty())
+							{
+								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
+								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
+							}
+
+							if (!left.empty() && !bottom.empty() && !right.empty())
+							{
+								edge.push_back(*min_element(left.begin(), left.end(), myfny));
+								edge.push_back(*min_element(right.begin(), right.end(), myfny));
+							}
+
+							if (!bottom.empty() && !right.empty() && !top.empty())
+							{
+								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
+								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
+							}
+
+							if (!right.empty() && !top.empty() && !left.empty())
+							{
+								edge.push_back(*max_element(right.begin(), right.end(), myfny));
+								edge.push_back(*max_element(left.begin(), left.end(), myfny));
+							}
+						}
+
 						if (edge.size() == 2)
 						{
 							Point2f body_center = fly_mc[j];
@@ -731,6 +768,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						{
 							flyview_track = false;
 							flyview_record = false;
+							pt2d = Point2f(fly_image_width / 2, fly_image_height / 2);
 							ndq.reset();
 							
 							//for (int i = 0; i < NFLIES; i++)
@@ -772,7 +810,28 @@ int _tmain(int argc, _TCHAR* argv[])
 							arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
 							circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-							arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec));
+							//arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
+							
+							float z = 0;
+							float flydist = 0;
+							Point2f fly_pos;
+
+							while (flydist < GALVO_HEIGHT)
+							{
+								fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z+=0.025);
+								flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
+							}
+							
+							float xang = asin(fly_pos.x / GALVO_HEIGHT);
+							float xdiff = (z - BASE_HEIGHT) * tan(xang);
+							fly_pos.x -= xdiff;
+							
+							float yang = asin(fly_pos.y / GALVO_HEIGHT);
+							float ydiff = (z - BASE_HEIGHT) * tan(yang);
+							fly_pos.y -= ydiff;
+							
+							arena_pt.push_back(fly_pos);
+
 						}
 
 						for (int i = 0; i < NFLIES; i++)
