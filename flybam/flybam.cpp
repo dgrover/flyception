@@ -185,40 +185,40 @@ bool isLeft(Point a, Point b, Point c){
 //		return acos(a) * 180 / CV_PI;
 //}
 
-//bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
-//{
-//	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
-//	s10_x = p1_x - p0_x;
-//	s10_y = p1_y - p0_y;
-//	s32_x = p3_x - p2_x;
-//	s32_y = p3_y - p2_y;
-//
-//	denom = s10_x * s32_y - s32_x * s10_y;
-//	if (denom == 0)
-//		return false; // Collinear
-//	bool denomPositive = denom > 0;
-//
-//	s02_x = p0_x - p2_x;
-//	s02_y = p0_y - p2_y;
-//	s_numer = s10_x * s02_y - s10_y * s02_x;
-//	if ((s_numer < 0) == denomPositive)
-//		return false; // No collision
-//
-//	t_numer = s32_x * s02_y - s32_y * s02_x;
-//	if ((t_numer < 0) == denomPositive)
-//		return false; // No collision
-//
-//	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
-//		return false; // No collision
-//	// Collision detected
-//	t = t_numer / denom;
-//	if (i_x != NULL)
-//		*i_x = p0_x + (t * s10_x);
-//	if (i_y != NULL)
-//		*i_y = p0_y + (t * s10_y);
-//
-//	return true;
-//}
+bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
+{
+	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
+	s10_x = p1_x - p0_x;
+	s10_y = p1_y - p0_y;
+	s32_x = p3_x - p2_x;
+	s32_y = p3_y - p2_y;
+
+	denom = s10_x * s32_y - s32_x * s10_y;
+	if (denom == 0)
+		return false; // Collinear
+	bool denomPositive = denom > 0;
+
+	s02_x = p0_x - p2_x;
+	s02_y = p0_y - p2_y;
+	s_numer = s10_x * s02_y - s10_y * s02_x;
+	if ((s_numer < 0) == denomPositive)
+		return false; // No collision
+
+	t_numer = s32_x * s02_y - s32_y * s02_x;
+	if ((t_numer < 0) == denomPositive)
+		return false; // No collision
+
+	if (((s_numer > denom) == denomPositive) || ((t_numer > denom) == denomPositive))
+		return false; // No collision
+	// Collision detected
+	t = t_numer / denom;
+	if (i_x != NULL)
+		*i_x = p0_x + (t * s10_x);
+	if (i_y != NULL)
+		*i_y = p0_y + (t * s10_y);
+
+	return true;
+}
 
 //int sign(int v)
 //{
@@ -368,7 +368,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				//ndq.ConvertPtToDeg(pt[0]);
 				//ndq.write();
 				
-				//pt2d = Point2f(-1 , -1);
+				//Point2f pt2d = Point2f(-1 , -1);
 
 				fly_img = fly_cam.GrabFrame();
 				fly_stamp = fly_cam.GetTimeStamp();
@@ -430,7 +430,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
-						
+						bool opp = false;
 						vector<bool> n = { false, false, false, false };
 
 						vector<Point> left, top, bottom, right;
@@ -536,6 +536,9 @@ int _tmain(int argc, _TCHAR* argv[])
 									edge.push_back(lmin);
 									edge.push_back(lmax);
 								}
+
+								opp = true;
+
 							}
 
 							if (!top.empty() && !bottom.empty())
@@ -556,35 +559,37 @@ int _tmain(int argc, _TCHAR* argv[])
 									edge.push_back(tmin);
 									edge.push_back(tmax);
 								}
+
+								opp = true;
 							}
 						}
 
-						if (sum == 3)
-						{
-							if (!top.empty() && !left.empty() && !bottom.empty())
-							{
-								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
-								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
-							}
+						//if (sum == 3)
+						//{
+						//	if (!top.empty() && !left.empty() && !bottom.empty())
+						//	{
+						//		edge.push_back(*max_element(top.begin(), top.end(), myfnx));
+						//		edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
+						//	}
 
-							if (!left.empty() && !bottom.empty() && !right.empty())
-							{
-								edge.push_back(*min_element(left.begin(), left.end(), myfny));
-								edge.push_back(*min_element(right.begin(), right.end(), myfny));
-							}
+						//	if (!left.empty() && !bottom.empty() && !right.empty())
+						//	{
+						//		edge.push_back(*min_element(left.begin(), left.end(), myfny));
+						//		edge.push_back(*min_element(right.begin(), right.end(), myfny));
+						//	}
 
-							if (!bottom.empty() && !right.empty() && !top.empty())
-							{
-								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
-								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
-							}
+						//	if (!bottom.empty() && !right.empty() && !top.empty())
+						//	{
+						//		edge.push_back(*min_element(top.begin(), top.end(), myfnx));
+						//		edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
+						//	}
 
-							if (!right.empty() && !top.empty() && !left.empty())
-							{
-								edge.push_back(*max_element(right.begin(), right.end(), myfny));
-								edge.push_back(*max_element(left.begin(), left.end(), myfny));
-							}
-						}
+						//	if (!right.empty() && !top.empty() && !left.empty())
+						//	{
+						//		edge.push_back(*max_element(right.begin(), right.end(), myfny));
+						//		edge.push_back(*max_element(left.begin(), left.end(), myfny));
+						//	}
+						//}
 
 						if (edge.size() == 2)
 						{
@@ -594,30 +599,46 @@ int _tmain(int argc, _TCHAR* argv[])
 							//line(fly_frame, body_center, edge_center, Scalar::all(255), 1, 8, 0);
 
 							Point2f p1, p2;
+							Point2f p1a, p1b, p2a, p2b;
+
 							float m, c;
 
-							bool flag = false;
-
 							// Check if the line is a vertical line because vertical lines don't have slope
-							if (abs(body_center.x - edge_center.x) > 3.0)
+							if (body_center.x != edge_center.x)
 							{
-								flag = true;
+								p1a.x = 0;
+								p2a.x = fly_image_width;
 
-								p1.x = 0;
-								p2.x = fly_image_width;
+								p1b.y = 0;
+								p2b.y = fly_image_height;
 
 								// Slope equation (y1 - y2) / (x1 - x2)
 								m = (body_center.y - edge_center.y) / (body_center.x - edge_center.x);
 
 								// Line equation:  y = mx + c
 								c = body_center.y - (m * body_center.x);
-								p1.y = m * p1.x + c;
-								p2.y = m * p2.x + c;
+
+
+								p1a.y = m * p1a.x + c;
+								p2a.y = m * p2a.x + c;
+
+								p1b.x = (p1b.y - c) / m;
+								p2b.x = (p2b.y - c) / m;
+
+								if (dist(p1a, Point2f(fly_image_width / 2, fly_image_height / 2)) <= dist(p1b, Point2f(fly_image_width / 2, fly_image_height / 2)))
+									p1 = p1a;
+								else
+									p1 = p1b;
+
+								if (dist(p2a, Point2f(fly_image_width / 2, fly_image_height / 2)) <= dist(p2b, Point2f(fly_image_width / 2, fly_image_height / 2)))
+									p2 = p2a;
+								else
+									p2 = p2b;
 							}
 							else
 							{
-								p1.x = edge_center.x;
-								p2.x = edge_center.x;
+								p1.x = body_center.x;
+								p2.x = body_center.x;
 
 								p1.y = 0;
 								p2.y = fly_image_height;
@@ -625,120 +646,129 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							vector<Point2f> head;
 
-							//for (int i = 1; i <= hull[j].size(); i++)
+							for (int i = 1; i <= hull[j].size(); i++)
+							{
+								float x, y;
+								Point2f p, q, r, s;
+
+								p = p1;
+								q = p2;
+
+								if (i < hull[j].size())
+								{
+									r = hull[j][i - 1];
+									s = hull[j][i];
+								}
+								else
+								{
+									r = hull[j][i - 1];
+									s = hull[j][0];
+
+								}
+
+								bool cross = get_line_intersection(p.x, p.y, q.x, q.y, r.x, r.y, s.x, s.y, &x, &y);
+							
+								if (cross)
+									head.push_back(Point2f(x, y));
+							}
+
+
+							//Mat tmask(256, 256, CV_8UC1);
+							//drawContours(tmask, hull, j, Scalar(255, 255, 255), FILLED, 1);
+							////drawContours(tmask, fly_contours, j, Scalar(255, 255, 255), FILLED, 1);
+
+							//Point curr, last;
+
+							//if (flag)
 							//{
-							//	float x, y;
-							//	Point2f p, q, r, s;
-
-							//	p = p1;
-							//	q = p2;
-
-							//	if (i < hull[j].size())
+							//	for (int i = 1; i < fly_image_width; i++)
 							//	{
-							//		r = hull[j][i - 1];
-							//		s = hull[j][i];
-							//	}
-							//	else
-							//	{
-							//		r = hull[j][i - 1];
-							//		s = hull[j][0];
+							//		bool bound = true;
 
-							//	}
+							//		last.x = i - 1;
+							//		last.y = m*last.x + c;
 
-							//	bool cross = get_line_intersection(p.x, p.y, q.x, q.y, r.x, r.y, s.x, s.y, &x, &y);
-							//
-							//	if (cross)
-							//		head.push_back(Point2f(x, y));
+							//		if (last.y < 0 || last.y >= fly_image_height)
+							//			bound = false;
+
+							//		curr.x = i;
+							//		curr.y = m*curr.x + c;
+
+							//		if (curr.y < 0 || curr.y >= fly_image_height)
+							//			bound = false;
+
+							//		if (bound)
+							//		{
+							//			if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
+							//			{
+							//				head.push_back(curr);
+							//				//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
+							//			}
+							//		}
+							//	}
 							//}
+							//else
+							//{
+							//	for (int i = 1; i < fly_image_height; i++)
+							//	{
+							//		bool bound = true;
 
+							//		last.x = p1.x;
+							//		last.y = i-1;
 
-							Mat tmask(256, 256, CV_8UC1);
-							drawContours(tmask, hull, j, Scalar(255, 255, 255), FILLED, 1);
-							//drawContours(tmask, fly_contours, j, Scalar(255, 255, 255), FILLED, 1);
+							//		if (last.x < 0 || last.x >= fly_image_width)
+							//			bound = false;
 
-							Point curr, last;
+							//		curr.x = p1.x;
+							//		curr.y = i;
 
-							if (flag)
-							{
-								for (int i = 1; i < fly_image_width; i++)
-								{
-									bool bound = true;
+							//		if (curr.x < 0 || curr.x >= fly_image_width)
+							//			bound = false;
 
-									last.x = i - 1;
-									last.y = m*last.x + c;
-
-									if (last.y < 0 || last.y >= fly_image_height)
-										bound = false;
-
-									curr.x = i;
-									curr.y = m*curr.x + c;
-
-									if (curr.y < 0 || curr.y >= fly_image_height)
-										bound = false;
-
-									if (bound)
-									{
-										if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
-										{
-											head.push_back(curr);
-											//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
-										}
-									}
-								}
-							}
-							else
-							{
-								for (int i = 1; i < fly_image_height; i++)
-								{
-									bool bound = true;
-
-									last.x = p1.x;
-									last.y = i-1;
-
-									if (last.x < 0 || last.x >= fly_image_width)
-										bound = false;
-
-									curr.x = p1.x;
-									curr.y = i;
-
-									if (curr.x < 0 || curr.x >= fly_image_width)
-										bound = false;
-
-									if (bound)
-									{
-										if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
-										{
-											head.push_back(curr);
-											//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
-										}
-									}
-								}
-							}
+							//		if (bound)
+							//		{
+							//			if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
+							//			{
+							//				head.push_back(curr);
+							//				//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
+							//			}
+							//		}
+							//	}
+							//}
 
 
 							if (head.size() > 0)
 							{
-								//int i = findClosestPoint(Point2f(fly_image_width / 2, fly_image_height / 2), head);
-								
-								int i = findClosestPoint(pt2d, head);
+								int i;
+
+								if (!opp)
+									i = findClosestPoint(pt2d, head);
+								else
+								{
+									if (dist(edge_center, head[0]) > dist(edge_center, head[1]))
+										i = 0;
+									else
+										i = 1;
+								}
+
 								Point2f a = head[i];
 								Point2f b = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 
 								Point2f h;
 
-								if (flag)
+								if (a.x != b.x)
 								{
+									// Slope equation (y1 - y2) / (x1 - x2)
 									if (a.x > b.x)
 										h.x = a.x - head_center / sqrt(1 + (m*m));
 									else
 										h.x = a.x + head_center / sqrt(1 + (m*m));
-
+									
 									h.y = m*h.x + c;
 								}
 								else
 								{
 									h.x = a.x;
-
 									if (b.y < a.y)
 										h.y = a.y - head_center;
 									else
@@ -747,6 +777,35 @@ int _tmain(int argc, _TCHAR* argv[])
 
 								circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
 								pt2d = h;
+								
+								////int i = findClosestPoint(Point2f(fly_image_width / 2, fly_image_height / 2), head);
+								//int i = findClosestPoint(pt2d, head);
+								//Point2f a = head[i];
+								//Point2f b = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
+								//Point2f h;
+
+								//if (flag)
+								//{
+								//	if (a.x > b.x)
+								//		h.x = a.x - head_center / sqrt(1 + (m*m));
+								//	else
+								//		h.x = a.x + head_center / sqrt(1 + (m*m));
+
+								//	h.y = m*h.x + c;
+								//}
+								//else
+								//{
+								//	h.x = a.x;
+
+								//	if (b.y < a.y)
+								//		h.y = a.y - head_center;
+								//	else
+								//		h.y = a.y + head_center;
+								//}
+
+								//circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
+								//pt2d = h;
 
 								Point2f rotpt = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
 
@@ -810,27 +869,28 @@ int _tmain(int argc, _TCHAR* argv[])
 							arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
 							circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-							//arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
+							arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
 							
-							float z = 0;
-							float flydist = 0;
-							Point2f fly_pos;
+							//fly z correction code
+							//float z = 0;
+							//float flydist = 0;
+							//Point2f fly_pos;
 
-							while (flydist < GALVO_HEIGHT)
-							{
-								fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z+=0.025);
-								flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
-							}
-							
-							float xang = asin(fly_pos.x / GALVO_HEIGHT);
-							float xdiff = (z - BASE_HEIGHT) * tan(xang);
-							fly_pos.x -= xdiff;
-							
-							float yang = asin(fly_pos.y / GALVO_HEIGHT);
-							float ydiff = (z - BASE_HEIGHT) * tan(yang);
-							fly_pos.y -= ydiff;
-							
-							arena_pt.push_back(fly_pos);
+							//while (flydist < GALVO_HEIGHT)
+							//{
+							//	fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z+=0.025);
+							//	flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
+							//}
+							//
+							//float xang = asin(fly_pos.x / GALVO_HEIGHT);
+							//float xdiff = (z - BASE_HEIGHT) * tan(xang);
+							//fly_pos.x -= xdiff;
+							//
+							//float yang = asin(fly_pos.y / GALVO_HEIGHT);
+							//float ydiff = (z - BASE_HEIGHT) * tan(yang);
+							//fly_pos.y -= ydiff;
+							//
+							//arena_pt.push_back(fly_pos);
 
 						}
 
