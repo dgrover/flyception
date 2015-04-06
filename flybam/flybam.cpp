@@ -381,8 +381,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
 				dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
 				
-
-
 				if (flyview_track)
 				{
 					vector<vector<Point>> fly_contours;
@@ -603,7 +601,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							float m, c;
 
-							// Check if the line is a vertical line because vertical lines don't have slope
+							// Check for vertical line (same x coordinate) because vertical lines don't have a slope
 							if (body_center.x != edge_center.x)
 							{
 								p1a.x = 0;
@@ -645,14 +643,10 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 
 							vector<Point2f> head;
-
 							for (int i = 1; i <= hull[j].size(); i++)
 							{
 								float x, y;
-								Point2f p, q, r, s;
-
-								p = p1;
-								q = p2;
+								Point2f r, s;
 
 								if (i < hull[j].size())
 								{
@@ -666,7 +660,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 								}
 
-								bool cross = get_line_intersection(p.x, p.y, q.x, q.y, r.x, r.y, s.x, s.y, &x, &y);
+								bool cross = get_line_intersection(p1.x, p1.y, p2.x, p2.y, r.x, r.y, s.x, s.y, &x, &y);
 							
 								if (cross)
 									head.push_back(Point2f(x, y));
