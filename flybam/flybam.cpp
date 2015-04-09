@@ -35,14 +35,6 @@ queue <TimeStamp> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
-//struct {
-//	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
-//} mycomp_dsize;
-//
-//struct {
-//	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[2] < pt2[2]); }
-//} mycomp_dind;
-
 bool myfny(Point p1, Point p2)
 {
 	return p1.y < p2.y;
@@ -164,26 +156,6 @@ int findClosestPoint(Point2f pt, vector<Point2f> nbor)
 bool isLeft(Point a, Point b, Point c){
 	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
 }
-
-//float angleBetween(Point v1, Point v2, Point c)
-//{
-//	v1 = v1 - c;
-//	v2 = v2 - c;
-//
-//	float len1 = sqrt(v1.x * v1.x + v1.y * v1.y);
-//	float len2 = sqrt(v2.x * v2.x + v2.y * v2.y);
-//
-//	float dot = v1.x * v2.x + v1.y * v2.y;
-//
-//	float a = dot / (len1 * len2);
-//
-//	if (a >= 1.0)
-//		return 0.0;
-//	else if (a <= -1.0)
-//		return CV_PI;
-//	else
-//		return acos(a) * 180 / CV_PI;
-//}
 
 bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
 {
@@ -334,7 +306,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	int fly_erode = 2;
 	int fly_dilate = 2;
 
-	int head_center = 50;
+	int head_center = 60;
 
 	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
 	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
@@ -343,8 +315,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 
 	int rcount = 0;
-	int key_state = 0;
 	
+	int record_key_state = 0;
 	int track_key_state = 0;
 	int flash_key_state = 0;
 
@@ -562,38 +534,37 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 						}
 
-						//if (sum == 3)
-						//{
-						//	if (!top.empty() && !left.empty() && !bottom.empty())
-						//	{
-						//		edge.push_back(*max_element(top.begin(), top.end(), myfnx));
-						//		edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
-						//	}
+						if (sum == 3)
+						{
+							if (!top.empty() && !left.empty() && !bottom.empty())
+							{
+								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
+								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
+							}
 
-						//	if (!left.empty() && !bottom.empty() && !right.empty())
-						//	{
-						//		edge.push_back(*min_element(left.begin(), left.end(), myfny));
-						//		edge.push_back(*min_element(right.begin(), right.end(), myfny));
-						//	}
+							if (!left.empty() && !bottom.empty() && !right.empty())
+							{
+								edge.push_back(*min_element(left.begin(), left.end(), myfny));
+								edge.push_back(*min_element(right.begin(), right.end(), myfny));
+							}
 
-						//	if (!bottom.empty() && !right.empty() && !top.empty())
-						//	{
-						//		edge.push_back(*min_element(top.begin(), top.end(), myfnx));
-						//		edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
-						//	}
+							if (!bottom.empty() && !right.empty() && !top.empty())
+							{
+								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
+								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
+							}
 
-						//	if (!right.empty() && !top.empty() && !left.empty())
-						//	{
-						//		edge.push_back(*max_element(right.begin(), right.end(), myfny));
-						//		edge.push_back(*max_element(left.begin(), left.end(), myfny));
-						//	}
-						//}
+							if (!right.empty() && !top.empty() && !left.empty())
+							{
+								edge.push_back(*max_element(right.begin(), right.end(), myfny));
+								edge.push_back(*max_element(left.begin(), left.end(), myfny));
+							}
+						}
 
 						if (edge.size() == 2)
 						{
 							Point2f body_center = fly_mc[j];
 							Point2f edge_center = Point((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-
 							//line(fly_frame, body_center, edge_center, Scalar::all(255), 1, 8, 0);
 
 							Point2f p1, p2;
@@ -666,73 +637,10 @@ int _tmain(int argc, _TCHAR* argv[])
 									head.push_back(Point2f(x, y));
 							}
 
-
-							//Mat tmask(256, 256, CV_8UC1);
-							//drawContours(tmask, hull, j, Scalar(255, 255, 255), FILLED, 1);
-							////drawContours(tmask, fly_contours, j, Scalar(255, 255, 255), FILLED, 1);
-
-							//Point curr, last;
-
-							//if (flag)
-							//{
-							//	for (int i = 1; i < fly_image_width; i++)
-							//	{
-							//		bool bound = true;
-
-							//		last.x = i - 1;
-							//		last.y = m*last.x + c;
-
-							//		if (last.y < 0 || last.y >= fly_image_height)
-							//			bound = false;
-
-							//		curr.x = i;
-							//		curr.y = m*curr.x + c;
-
-							//		if (curr.y < 0 || curr.y >= fly_image_height)
-							//			bound = false;
-
-							//		if (bound)
-							//		{
-							//			if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
-							//			{
-							//				head.push_back(curr);
-							//				//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
-							//			}
-							//		}
-							//	}
-							//}
-							//else
-							//{
-							//	for (int i = 1; i < fly_image_height; i++)
-							//	{
-							//		bool bound = true;
-
-							//		last.x = p1.x;
-							//		last.y = i-1;
-
-							//		if (last.x < 0 || last.x >= fly_image_width)
-							//			bound = false;
-
-							//		curr.x = p1.x;
-							//		curr.y = i;
-
-							//		if (curr.x < 0 || curr.x >= fly_image_width)
-							//			bound = false;
-
-							//		if (bound)
-							//		{
-							//			if (tmask.at<uchar>(curr.y, curr.x) != tmask.at<uchar>(last.y, last.x))
-							//			{
-							//				head.push_back(curr);
-							//				//circle(fly_frame, curr, 5, Scalar(255, 255, 255), FILLED, 1);
-							//			}
-							//		}
-							//	}
-							//}
-
-
 							if (head.size() > 0)
 							{
+								//int i = findClosestPoint(pt2d, head);
+
 								int i;
 
 								if (!opp)
@@ -863,28 +771,28 @@ int _tmain(int argc, _TCHAR* argv[])
 							arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
 							circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-							arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
+							//arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
 							
 							//fly z correction code
-							//float z = 0;
-							//float flydist = 0;
-							//Point2f fly_pos;
+							float z = 0;
+							float flydist = 0;
+							Point2f fly_pos;
 
-							//while (flydist < GALVO_HEIGHT)
-							//{
-							//	fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z+=0.025);
-							//	flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
-							//}
-							//
-							//float xang = asin(fly_pos.x / GALVO_HEIGHT);
-							//float xdiff = (z - BASE_HEIGHT) * tan(xang);
-							//fly_pos.x -= xdiff;
-							//
-							//float yang = asin(fly_pos.y / GALVO_HEIGHT);
-							//float ydiff = (z - BASE_HEIGHT) * tan(yang);
-							//fly_pos.y -= ydiff;
-							//
-							//arena_pt.push_back(fly_pos);
+							while (flydist < GALVO_HEIGHT)
+							{
+								fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z+=0.025);
+								flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
+							}
+							
+							float xang = asin(fly_pos.x / GALVO_HEIGHT);
+							float xdiff = (z - BASE_HEIGHT) * tan(xang);
+							fly_pos.x -= xdiff;
+							
+							float yang = asin(fly_pos.y / GALVO_HEIGHT);
+							float ydiff = (z - BASE_HEIGHT) * tan(yang);
+							fly_pos.y -= ydiff;
+							
+							arena_pt.push_back(fly_pos);
 
 						}
 
@@ -950,7 +858,12 @@ int _tmain(int argc, _TCHAR* argv[])
 				if (GetAsyncKeyState(VK_F1))
 				{
 					if (!track_key_state)
+					{
 						flyview_track = !flyview_track;
+
+						if (flyview_record)
+							flyview_record = !flyview_record;
+					}
 
 					track_key_state = 1;
 				}
@@ -959,16 +872,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (GetAsyncKeyState(VK_F2))
 				{
-					if (!key_state)
+					if (!record_key_state)
 					{
 						flyview_record = !flyview_record;
 						rcount = 0;
 					}
 
-					key_state = 1;
+					record_key_state = 1;
 				}
 				else
-					key_state = 0;
+					record_key_state = 0;
 
 				if (GetAsyncKeyState(VK_F3))
 				{
@@ -1012,14 +925,18 @@ int _tmain(int argc, _TCHAR* argv[])
 						printf("Recording ");
 					}
 
-					//fout.WriteFrame(flyTimeStamps.front(), flyImageStream.front());
-					fout.WriteFrame(flyImageStream.front());
-					fout.WriteLog(flyTimeStamps.front());
-					fout.WriteTraj(laser_pt.front(), fly_pt.front());
-					fout.nframes++;
+					//fout.WriteFrame(flyImageStream.front());
+					//fout.WriteLog(flyTimeStamps.front());
+					//fout.WriteTraj(laser_pt.front(), fly_pt.front());
+					//fout.nframes++;
 
 					#pragma omp critical
 					{
+						fout.WriteFrame(flyImageStream.front());
+						fout.WriteLog(flyTimeStamps.front());
+						fout.WriteTraj(laser_pt.front(), fly_pt.front());
+						fout.nframes++;
+						
 						flyImageStream.pop();
 						flyTimeStamps.pop();
 						laser_pt.pop();
@@ -1069,11 +986,14 @@ int _tmain(int argc, _TCHAR* argv[])
 					imshow("arena image", arenaDispStream.front());
 					imshow("arena mask", arenaMaskStream.front());
 
-					#pragma omp critical
-					{
-						arenaDispStream = queue<Mat>();
-						arenaMaskStream = queue<Mat>();
-					}
+					//#pragma omp critical
+					//{
+					//	//arenaDispStream = queue<Mat>();
+					//	//arenaMaskStream = queue<Mat>();
+
+					//	arenaDispStream = {};
+					//	arenaMaskStream = {};
+					//}
 				}
 				
 				if (!flyDispStream.empty())
@@ -1081,14 +1001,28 @@ int _tmain(int argc, _TCHAR* argv[])
 					imshow("fly image", flyDispStream.front());
 					imshow("fly mask", flyMaskStream.front());
 					
-					#pragma omp critical
-					{
-						flyDispStream = queue<Mat>();
-						flyMaskStream = queue<Mat>();
-					}
+					//#pragma omp critical
+					//{
+					//	//flyDispStream = queue<Mat>();
+					//	//flyMaskStream = queue<Mat>();
+
+					//	flyDispStream = {};
+					//	flyMaskStream = {};
+					//}
 				}
 
-				waitKey(1);
+				#pragma omp critical
+				{
+					//arenaDispStream = queue<Mat>();
+					//arenaMaskStream = queue<Mat>();
+
+					arenaDispStream = {};
+					arenaMaskStream = {};
+					flyDispStream = {};
+					flyMaskStream = {};
+				}
+
+				waitKey(2);
 
 				if (!stream)
 				{
