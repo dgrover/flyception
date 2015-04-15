@@ -271,9 +271,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	int fly_image_width = 256, fly_image_height = 256;
 	int fly_image_left = 512, fly_image_top = 384;
 
-	//int fly_image_width = 320, fly_image_height = 320;
-	//int fly_image_left = 480, fly_image_top = 352;
-
 	Point3f galvo_center(0, 0, (BASE_HEIGHT - sqrt((GALVO_HEIGHT * GALVO_HEIGHT) - (ARENA_RADIUS * ARENA_RADIUS))));
 
 	PGRcam arena_cam, fly_cam;
@@ -391,6 +388,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int lost = 0;
 
+	Point2f edge_center;
+
 	printf("Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.\n\n");
 
 	#pragma omp parallel sections num_threads(3)
@@ -474,8 +473,6 @@ int _tmain(int argc, _TCHAR* argv[])
 						vector<Point> left, top, bottom, right;
 						vector<Point> edge;
 
-						Point2f edge_center;
-
 						for (int i = 0; i < fly_contours[j].size(); i++)
 						{
 							if (fly_contours[j][i].x == 1)
@@ -484,7 +481,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								left.push_back(fly_contours[j][i]);
 							}
 
-							if (fly_contours[j][i].x == (fly_image_width-2))
+							if (fly_contours[j][i].x == 254)
 							{
 								n[1] = true;
 								right.push_back(fly_contours[j][i]);
@@ -496,7 +493,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								top.push_back(fly_contours[j][i]);
 							}
 
-							if (fly_contours[j][i].y == (fly_image_height-2))
+							if (fly_contours[j][i].y == 254)
 							{
 								n[3] = true;
 								bottom.push_back(fly_contours[j][i]);
@@ -686,15 +683,18 @@ int _tmain(int argc, _TCHAR* argv[])
 								Point rmin = *min_element(right.begin(), right.end(), myfny);
 								Point rmax = *max_element(right.begin(), right.end(), myfny);
 
-								if (dist(lmin, lmax) < dist(rmin, rmax))
-								{
-									edge.push_back(rmin);
-									edge.push_back(rmax);
-								}
-								else
+								Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+								Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+
+								if (dist(edge_center, ec1) < dist(edge_center, ec2))
 								{
 									edge.push_back(lmin);
 									edge.push_back(lmax);
+								}
+								else
+								{
+									edge.push_back(rmin);
+									edge.push_back(rmax);
 								}
 
 								edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
@@ -708,15 +708,18 @@ int _tmain(int argc, _TCHAR* argv[])
 								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
 								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
 
-								if (dist(tmin, tmax) < dist(bmin, bmax))
-								{
-									edge.push_back(bmin);
-									edge.push_back(bmax);
-								}
-								else
+								Point2f ec1 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+								Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+								if (dist(edge_center, ec1) < dist(edge_center, ec2))
 								{
 									edge.push_back(tmin);
 									edge.push_back(tmax);
+								}
+								else
+								{
+									edge.push_back(bmin);
+									edge.push_back(bmax);
 								}
 
 								edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
@@ -1123,7 +1126,64 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 						
 
+						if (sum == 4)
+						{
+							Point tmin = *min_element(top.begin(), top.end(), myfnx);
+							Point tmax = *max_element(top.begin(), top.end(), myfnx);
 
+							Point lmin = *min_element(left.begin(), left.end(), myfny);
+							Point lmax = *max_element(left.begin(), left.end(), myfny);
+
+							Point rmin = *min_element(right.begin(), right.end(), myfny);
+							Point rmax = *max_element(right.begin(), right.end(), myfny);
+
+							Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+							Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+							float ed1 = findEdgeDistance(tmin, lmin);
+							float ed2 = findEdgeDistance(tmax, rmin);
+
+							if (ed1 < ed2)
+							{
+								Point2f ec1 = findAxisCenter(tmax, lmax, Point2f(1, 1));
+								Point2f ec2 = findAxisCenter(bmin, rmin, Point2f(1, 1));
+
+								if (dist(edge_center, ec1) < dist(edge_center, ec2))
+								{
+									edge.push_back(tmax);
+									edge.push_back(lmax);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 1));
+								}
+								else
+								{
+									edge.push_back(bmin);
+									edge.push_back(rmin);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 254));
+								}
+							}
+							else
+							{
+								Point2f ec1 = findAxisCenter(tmin, rmax, Point2f(1, 1));
+								Point2f ec2 = findAxisCenter(lmin, bmax, Point2f(1, 1));
+
+								if (dist(edge_center, ec1) < dist(edge_center, ec2))
+								{
+									edge.push_back(tmin);
+									edge.push_back(rmax);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 1));
+								}
+								else
+								{
+									edge.push_back(lmin);
+									edge.push_back(bmax);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 254));
+								}
+							}
+						}
 
 
 						
@@ -1240,7 +1300,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 								ndq.ConvertPixelToDeg(diffx*SCALEX, diffy*SCALEY);
 								pt[0] = ndq.ConvertDegToPt();
+								
 								//tkf[0].Correct(pt[0]);
+								
 								ndq.write();
 							}
 						}
@@ -1253,7 +1315,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						{
 							flyview_track = false;
 							flyview_record = false;
-							pt2d = Point2f(fly_image_width / 2, fly_image_height / 2);
+							//pt2d = Point2f(fly_image_width / 2, fly_image_height / 2);
 							ndq.reset();
 							
 							//for (int i = 0; i < NFLIES; i++)
