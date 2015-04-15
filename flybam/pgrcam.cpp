@@ -67,6 +67,7 @@ FlyCapture2::Error PGRcam::SetTrigger()
 	triggerMode.onOff = true;
 	triggerMode.mode = 0;
 	triggerMode.parameter = 0;
+	triggerMode.polarity = 1;
 
 	// Triggering the camera externally using source 0.
 	triggerMode.source = 0;

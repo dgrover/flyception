@@ -153,9 +153,32 @@ int findClosestPoint(Point2f pt, vector<Point2f> nbor)
 	}
 }
 
-bool isLeft(Point a, Point b, Point c){
-	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
+int findFurthestPoint(Point2f pt, vector<Point2f> nbor)
+{
+	int fly_index = 0;
+	if (nbor.size() == 1)
+		return fly_index;
+	else
+	{
+		float fly_dist = dist(pt, nbor[0]);
+
+		for (int i = 1; i < nbor.size(); i++)
+		{
+			float res = dist(pt, nbor[i]);
+			if (res > fly_dist)
+			{
+				fly_dist = res;
+				fly_index = i;                //Store the index of nearest point
+			}
+		}
+
+		return fly_index;
+	}
 }
+
+//bool isLeft(Point a, Point b, Point c){
+//	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
+//}
 
 bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
 {
@@ -192,6 +215,48 @@ bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float
 	return true;
 }
 
+Point2f findAxisCenter(Point2f p1, Point2f p2, Point2f origin)
+{
+	Point2f p;
+
+	float xdiff = abs(p1.x - p2.x);
+	float ydiff = abs(p1.y - p2.y);
+
+	if (xdiff == ydiff)
+		return origin;
+
+	float avgdist = (xdiff + ydiff) / 2;
+
+	if (xdiff > ydiff)
+	{
+		p.y = origin.y;
+
+		if (origin.x == 1)
+			p.x = max(p1.x, p2.x) - avgdist;
+		else
+			p.x = min(p1.x, p2.x) + avgdist;
+	}
+	else if (xdiff < ydiff)
+	{
+		p.x = origin.x;
+
+		if (origin.y == 1)
+			p.y = max(p1.y, p2.y) - avgdist;
+		else
+			p.y = min(p1.y, p2.y) + avgdist;
+	}
+
+	return p;
+}
+
+float findEdgeDistance(Point2f p1, Point2f p2)
+{
+	float xdiff = abs(p1.x - p2.x);
+	float ydiff = abs(p1.y - p2.y);
+
+	return (xdiff + ydiff);
+}
+
 //int sign(int v)
 //{
 //	return v > 0 ? 1 : -1;
@@ -205,6 +270,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	int fly_image_width = 256, fly_image_height = 256;
 	int fly_image_left = 512, fly_image_top = 384;
+
+	//int fly_image_width = 320, fly_image_height = 320;
+	//int fly_image_left = 480, fly_image_top = 352;
 
 	Point3f galvo_center(0, 0, (BASE_HEIGHT - sqrt((GALVO_HEIGHT * GALVO_HEIGHT) - (ARENA_RADIUS * ARENA_RADIUS))));
 
@@ -303,13 +371,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 85;
 	int fly_thresh = 75; 
 
-	int fly_erode = 2;
-	int fly_dilate = 2;
+	int fly_erode = 1;
+	int fly_dilate = 1;
 
 	int head_center = 60;
+	int sep = 50;
 
-	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
-	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
 	Mat arena_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	Mat arena_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
@@ -346,7 +415,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				fly_stamp = fly_cam.GetTimeStamp();
 				fly_frame = fly_cam.convertImagetoMat(fly_img);
 
-				//GaussianBlur(fly_frame, fly_frame, Size(5, 5), 50.0);
+				//GaussianBlur(fly_frame, fly_frame, Size(5, 5), 0, 0);
 
 				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 
@@ -400,11 +469,12 @@ int _tmain(int argc, _TCHAR* argv[])
 						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
-						bool opp = false;
 						vector<bool> n = { false, false, false, false };
 
 						vector<Point> left, top, bottom, right;
 						vector<Point> edge;
+
+						Point2f edge_center;
 
 						for (int i = 0; i < fly_contours[j].size(); i++)
 						{
@@ -414,7 +484,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								left.push_back(fly_contours[j][i]);
 							}
 
-							if (fly_contours[j][i].x == 254)
+							if (fly_contours[j][i].x == (fly_image_width-2))
 							{
 								n[1] = true;
 								right.push_back(fly_contours[j][i]);
@@ -426,14 +496,17 @@ int _tmain(int argc, _TCHAR* argv[])
 								top.push_back(fly_contours[j][i]);
 							}
 
-							if (fly_contours[j][i].y == 254)
+							if (fly_contours[j][i].y == (fly_image_height-2))
 							{
 								n[3] = true;
 								bottom.push_back(fly_contours[j][i]);
 							}
 						}
-						
+
 						int sum = std::accumulate(n.begin(), n.end(), 0);
+
+
+
 
 						if (sum == 1)
 						{
@@ -460,32 +533,149 @@ int _tmain(int argc, _TCHAR* argv[])
 								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
 								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
 							}
+
+							edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 						}
+
+
+
+
+
+
+
 
 						if (sum == 2)
 						{
 							if (!left.empty() && !top.empty())
 							{
-								edge.push_back(*max_element(left.begin(), left.end(), myfny));
-								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
+								Point lmin = *min_element(left.begin(), left.end(), myfny);
+								Point lmax = *max_element(left.begin(), left.end(), myfny);
+								Point tmin = *min_element(top.begin(), top.end(), myfnx);
+								Point tmax = *max_element(top.begin(), top.end(), myfnx);
+
+								float ed = findEdgeDistance(lmin, tmin);
+
+								if (ed < sep)
+								{
+									edge.push_back(lmax);
+									edge.push_back(tmax);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 1));
+								}
+								else
+								{
+									if (dist(lmin, lmax) < dist(tmin, tmax))
+									{
+										edge.push_back(tmin);
+										edge.push_back(tmax);
+									}
+									else
+									{
+										edge.push_back(lmin);
+										edge.push_back(lmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
 							}
 
 							if (!left.empty() && !bottom.empty())
 							{
-								edge.push_back(*min_element(left.begin(), left.end(), myfny));
-								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
+								Point lmin = *min_element(left.begin(), left.end(), myfny);
+								Point lmax = *max_element(left.begin(), left.end(), myfny);
+								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+								float ed = findEdgeDistance(lmax, bmin);
+
+								if (ed < sep)
+								{
+									edge.push_back(lmin);
+									edge.push_back(bmax);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 254));
+								}
+								else
+								{
+									if (dist(lmin, lmax) < dist(bmin, bmax))
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+									}
+									else
+									{
+										edge.push_back(lmin);
+										edge.push_back(lmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
 							}
 
 							if (!right.empty() && !bottom.empty())
 							{
-								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
-								edge.push_back(*min_element(right.begin(), right.end(), myfny));
+								Point rmin = *min_element(right.begin(), right.end(), myfny);
+								Point rmax = *max_element(right.begin(), right.end(), myfny);
+								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+								float ed = findEdgeDistance(rmax, bmax);
+
+								if (ed < sep)
+								{
+									edge.push_back(rmin);
+									edge.push_back(bmin);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 254));
+								}
+								else
+								{
+									if (dist(rmin, rmax) < dist(bmin, bmax))
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+									}
+									else
+									{
+										edge.push_back(rmin);
+										edge.push_back(rmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
 							}
 
 							if (!right.empty() && !top.empty())
 							{
-								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
-								edge.push_back(*max_element(right.begin(), right.end(), myfny));
+								Point tmin = *min_element(top.begin(), top.end(), myfnx);
+								Point tmax = *max_element(top.begin(), top.end(), myfnx);
+								Point rmin = *min_element(right.begin(), right.end(), myfny);
+								Point rmax = *max_element(right.begin(), right.end(), myfny);
+
+								float ed = findEdgeDistance(tmax, rmin);
+
+								if (ed < sep)
+								{
+									edge.push_back(tmin);
+									edge.push_back(rmax);
+
+									edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 1));
+								}
+								else
+								{
+									if (dist(rmin, rmax) < dist(tmin, tmax))
+									{
+										edge.push_back(tmin);
+										edge.push_back(tmax);
+									}
+									else
+									{
+										edge.push_back(rmin);
+										edge.push_back(rmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
 							}
 
 							if (!left.empty() && !right.empty())
@@ -501,14 +691,13 @@ int _tmain(int argc, _TCHAR* argv[])
 									edge.push_back(rmin);
 									edge.push_back(rmax);
 								}
-								else if (dist(lmin, lmax) > dist(rmin, rmax))
+								else
 								{
 									edge.push_back(lmin);
 									edge.push_back(lmax);
 								}
 
-								opp = true;
-
+								edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 							}
 
 							if (!top.empty() && !bottom.empty())
@@ -524,47 +713,423 @@ int _tmain(int argc, _TCHAR* argv[])
 									edge.push_back(bmin);
 									edge.push_back(bmax);
 								}
-								else if (dist(tmin, tmax) > dist(bmin, bmax))
+								else
 								{
 									edge.push_back(tmin);
 									edge.push_back(tmax);
 								}
 
-								opp = true;
+								edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 							}
 						}
+
+
 
 						if (sum == 3)
 						{
-							if (!top.empty() && !left.empty() && !bottom.empty())
-							{
-								edge.push_back(*max_element(top.begin(), top.end(), myfnx));
-								edge.push_back(*max_element(bottom.begin(), bottom.end(), myfnx));
-							}
-
 							if (!left.empty() && !bottom.empty() && !right.empty())
 							{
-								edge.push_back(*min_element(left.begin(), left.end(), myfny));
-								edge.push_back(*min_element(right.begin(), right.end(), myfny));
+								Point lmin = *min_element(left.begin(), left.end(), myfny);
+								Point lmax = *max_element(left.begin(), left.end(), myfny);
+
+								Point rmin = *min_element(right.begin(), right.end(), myfny);
+								Point rmax = *max_element(right.begin(), right.end(), myfny);
+
+								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+
+								float ed1 = findEdgeDistance(lmax, bmin);
+								float ed2 = findEdgeDistance(bmax, rmax);
+
+								if ((ed1 < sep) && (ed2 < sep))
+								{
+
+									if (dist(lmin, lmax) < dist(rmin, rmax))
+									{
+										edge.push_back(rmin);
+										edge.push_back(rmax);
+									}
+									else
+									{
+										edge.push_back(lmin);
+										edge.push_back(lmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
+								}
+								else if ((ed1 > sep) && (ed2 > sep))
+								{
+									float ldist = dist(lmin, lmax);
+									float rdist = dist(rmin, rmax);
+									float bdist = dist(bmin, bmax);
+
+									float res = ldist;
+
+									edge.push_back(lmin);
+									edge.push_back(lmax);
+
+									if (rdist > res)
+									{
+										edge[0] = rmin;
+										edge[1] = rmax;
+										res = rdist;
+									}
+
+									if (bdist > res)
+									{
+										edge[0] = bmin;
+										edge[1] = bmax;
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else
+								{
+									if (ed1 < sep)
+									{
+										if (dist(lmin, bmax) < dist(rmin, rmax))
+										{
+											edge.push_back(rmin);
+											edge.push_back(rmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(lmin);
+											edge.push_back(bmax);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 254));
+										}
+									}
+
+									if (ed2 < sep)
+									{
+										if (dist(rmin, bmin) < dist(lmin, lmax))
+										{
+											edge.push_back(lmin);
+											edge.push_back(lmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(rmin);
+											edge.push_back(bmin);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 254));
+										}
+									}
+								}
 							}
 
-							if (!bottom.empty() && !right.empty() && !top.empty())
+
+
+
+							if (!left.empty() && !top.empty() && !right.empty())
 							{
-								edge.push_back(*min_element(top.begin(), top.end(), myfnx));
-								edge.push_back(*min_element(bottom.begin(), bottom.end(), myfnx));
+								Point lmin = *min_element(left.begin(), left.end(), myfny);
+								Point lmax = *max_element(left.begin(), left.end(), myfny);
+
+								Point rmin = *min_element(right.begin(), right.end(), myfny);
+								Point rmax = *max_element(right.begin(), right.end(), myfny);
+
+								Point tmin = *min_element(top.begin(), top.end(), myfnx);
+								Point tmax = *max_element(top.begin(), top.end(), myfnx);
+
+
+								float ed1 = findEdgeDistance(lmin, tmin);
+								float ed2 = findEdgeDistance(tmax, rmin);
+
+								if ((ed1 < sep) && (ed2 < sep))
+								{
+
+									if (dist(lmin, lmax) < dist(rmin, rmax))
+									{
+										edge.push_back(rmin);
+										edge.push_back(rmax);
+									}
+									else
+									{
+										edge.push_back(lmin);
+										edge.push_back(lmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else if ((ed1 > sep) && (ed2 > sep))
+								{
+									float ldist = dist(lmin, lmax);
+									float rdist = dist(rmin, rmax);
+									float tdist = dist(tmin, tmax);
+
+									float res = ldist;
+
+									edge.push_back(lmin);
+									edge.push_back(lmax);
+
+									if (rdist > res)
+									{
+										edge[0] = rmin;
+										edge[1] = rmax;
+										res = rdist;
+									}
+
+									if (tdist > res)
+									{
+										edge[0] = tmin;
+										edge[1] = tmax;
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else
+								{
+									if (ed1 < sep)
+									{
+										if (dist(lmax, tmax) < dist(rmin, rmax))
+										{
+											edge.push_back(rmin);
+											edge.push_back(rmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(lmax);
+											edge.push_back(tmax);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 1));
+										}
+									}
+
+									if (ed2 < sep)
+									{
+										if (dist(rmax, tmin) < dist(lmin, lmax))
+										{
+											edge.push_back(lmin);
+											edge.push_back(lmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(rmax);
+											edge.push_back(tmin);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 1));
+										}
+									}
+								}
 							}
 
-							if (!right.empty() && !top.empty() && !left.empty())
+
+							if (!top.empty() && !left.empty() && !bottom.empty())
 							{
-								edge.push_back(*max_element(right.begin(), right.end(), myfny));
-								edge.push_back(*max_element(left.begin(), left.end(), myfny));
+								Point tmin = *min_element(top.begin(), top.end(), myfnx);
+								Point tmax = *max_element(top.begin(), top.end(), myfnx);
+
+								Point lmin = *min_element(left.begin(), left.end(), myfny);
+								Point lmax = *max_element(left.begin(), left.end(), myfny);
+
+								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+								float ed1 = findEdgeDistance(tmin, lmin);
+								float ed2 = findEdgeDistance(lmax, bmin);
+
+								if ((ed1 < sep) && (ed2 < sep))
+								{
+
+									if (dist(tmin, tmax) < dist(bmin, bmax))
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+									}
+									else
+									{
+										edge.push_back(tmin);
+										edge.push_back(tmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else if ((ed1 > sep) && (ed2 > sep))
+								{
+									float ldist = dist(lmin, lmax);
+									float tdist = dist(tmin, tmax);
+									float bdist = dist(bmin, bmax);
+
+									float res = ldist;
+
+									edge.push_back(lmin);
+									edge.push_back(lmax);
+
+									if (tdist > res)
+									{
+										edge[0] = tmin;
+										edge[1] = tmax;
+										res = tdist;
+									}
+
+									if (bdist > res)
+									{
+										edge[0] = bmin;
+										edge[1] = bmax;
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else
+								{
+									if (ed1 < sep)
+									{
+										if (dist(tmax, lmax) < dist(bmin, bmax))
+										{
+											edge.push_back(bmin);
+											edge.push_back(bmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(tmax);
+											edge.push_back(lmax);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 1));
+										}
+									}
+
+									if (ed2 < sep)
+									{
+										if (dist(bmax, lmin) < dist(tmin, tmax))
+										{
+											edge.push_back(tmin);
+											edge.push_back(tmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(bmax);
+											edge.push_back(lmin);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 254));
+										}
+									}
+								}
+							}
+
+
+
+							if (!top.empty() && !right.empty() && !bottom.empty())
+							{
+								Point tmin = *min_element(top.begin(), top.end(), myfnx);
+								Point tmax = *max_element(top.begin(), top.end(), myfnx);
+
+								Point rmin = *min_element(right.begin(), right.end(), myfny);
+								Point rmax = *max_element(right.begin(), right.end(), myfny);
+
+								Point bmin = *min_element(bottom.begin(), bottom.end(), myfnx);
+								Point bmax = *max_element(bottom.begin(), bottom.end(), myfnx);
+
+
+								float ed1 = findEdgeDistance(tmax, rmin);
+								float ed2 = findEdgeDistance(rmax, bmax);
+
+								if ((ed1 < sep) && (ed2 < sep))
+								{
+
+									if (dist(tmin, tmax) < dist(bmin, bmax))
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+									}
+									else
+									{
+										edge.push_back(tmin);
+										edge.push_back(tmax);
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else if ((ed1 > sep) && (ed2 > sep))
+								{
+									float tdist = dist(tmin, tmax);
+									float rdist = dist(rmin, rmax);
+									float bdist = dist(bmin, bmax);
+
+									float res = tdist;
+
+									edge.push_back(tmin);
+									edge.push_back(tmax);
+
+									if (rdist > res)
+									{
+										edge[0] = rmin;
+										edge[1] = rmax;
+										res = rdist;
+									}
+
+									if (bdist > res)
+									{
+										edge[0] = bmin;
+										edge[1] = bmax;
+									}
+
+									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								}
+								else
+								{
+									if (ed1 < sep)
+									{
+										if (dist(tmin, rmax) < dist(bmin, bmax))
+										{
+											edge.push_back(bmin);
+											edge.push_back(bmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(tmin);
+											edge.push_back(rmax);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 1));
+										}
+									}
+
+									if (ed2 < sep)
+									{
+										if (dist(bmin, rmin) < dist(tmin, tmax))
+										{
+											edge.push_back(tmin);
+											edge.push_back(tmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
+										else
+										{
+											edge.push_back(bmin);
+											edge.push_back(rmin);
+
+											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 254));
+										}
+									}
+								}
 							}
 						}
+						
 
+
+
+
+						
 						if (edge.size() == 2)
 						{
 							Point2f body_center = fly_mc[j];
-							Point2f edge_center = Point((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 							//line(fly_frame, body_center, edge_center, Scalar::all(255), 1, 8, 0);
 
 							Point2f p1, p2;
@@ -639,22 +1204,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							if (head.size() > 0)
 							{
-								//int i = findClosestPoint(pt2d, head);
+								int head_index = findFurthestPoint(edge_center, head);
 
-								int i;
-
-								if (!opp)
-									i = findClosestPoint(pt2d, head);
-								else
-								{
-									if (dist(edge_center, head[0]) > dist(edge_center, head[1]))
-										i = 0;
-									else
-										i = 1;
-								}
-
-								Point2f a = head[i];
-								Point2f b = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+								Point2f a = head[head_index];
+								Point2f b = edge_center;
 
 								Point2f h;
 
@@ -680,35 +1233,6 @@ int _tmain(int argc, _TCHAR* argv[])
 								circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
 								pt2d = h;
 								
-								////int i = findClosestPoint(Point2f(fly_image_width / 2, fly_image_height / 2), head);
-								//int i = findClosestPoint(pt2d, head);
-								//Point2f a = head[i];
-								//Point2f b = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-
-								//Point2f h;
-
-								//if (flag)
-								//{
-								//	if (a.x > b.x)
-								//		h.x = a.x - head_center / sqrt(1 + (m*m));
-								//	else
-								//		h.x = a.x + head_center / sqrt(1 + (m*m));
-
-								//	h.y = m*h.x + c;
-								//}
-								//else
-								//{
-								//	h.x = a.x;
-
-								//	if (b.y < a.y)
-								//		h.y = a.y - head_center;
-								//	else
-								//		h.y = a.y + head_center;
-								//}
-
-								//circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
-								//pt2d = h;
-
 								Point2f rotpt = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
 
 								float diffx = rotpt.x - (fly_image_width / 2);
@@ -925,11 +1449,6 @@ int _tmain(int argc, _TCHAR* argv[])
 						printf("Recording ");
 					}
 
-					//fout.WriteFrame(flyImageStream.front());
-					//fout.WriteLog(flyTimeStamps.front());
-					//fout.WriteTraj(laser_pt.front(), fly_pt.front());
-					//fout.nframes++;
-
 					#pragma omp critical
 					{
 						fout.WriteFrame(flyImageStream.front());
@@ -979,45 +1498,24 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
-
-				if (!arenaDispStream.empty())
-				{
-					ellipse(arenaDispStream.front(), arenaMask, Scalar(255, 255, 255));
-					imshow("arena image", arenaDispStream.front());
-					imshow("arena mask", arenaMaskStream.front());
-
-					//#pragma omp critical
-					//{
-					//	//arenaDispStream = queue<Mat>();
-					//	//arenaMaskStream = queue<Mat>();
-
-					//	arenaDispStream = {};
-					//	arenaMaskStream = {};
-					//}
-				}
-				
-				if (!flyDispStream.empty())
-				{
-					imshow("fly image", flyDispStream.front());
-					imshow("fly mask", flyMaskStream.front());
-					
-					//#pragma omp critical
-					//{
-					//	//flyDispStream = queue<Mat>();
-					//	//flyMaskStream = queue<Mat>();
-
-					//	flyDispStream = {};
-					//	flyMaskStream = {};
-					//}
-				}
-
 				#pragma omp critical
 				{
-					//arenaDispStream = queue<Mat>();
-					//arenaMaskStream = queue<Mat>();
+					if (!arenaDispStream.empty())
+					{
+						ellipse(arenaDispStream.front(), arenaMask, Scalar(255, 255, 255));
+						imshow("arena image", arenaDispStream.front());
+						imshow("arena mask", arenaMaskStream.front());
+					}
+				
+					if (!flyDispStream.empty())
+					{
+						imshow("fly image", flyDispStream.front());
+						imshow("fly mask", flyMaskStream.front());
+					}
 
 					arenaDispStream = {};
 					arenaMaskStream = {};
+					
 					flyDispStream = {};
 					flyMaskStream = {};
 				}
