@@ -177,10 +177,6 @@ int findFurthestPoint(Point2f pt, vector<Point2f> nbor)
 	}
 }
 
-//bool isLeft(Point a, Point b, Point c){
-//	return ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x)) > 0;
-//}
-
 bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
 {
 	float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
@@ -258,11 +254,22 @@ float findEdgeDistance(Point2f p1, Point2f p2)
 	return (xdiff + ydiff);
 }
 
-//int sign(int v)
-//{
-//	return v > 0 ? 1 : -1;
-//}
+int ConvertTimeToFPS(int ctime, int ltime)
+{
+	int dtime;
 
+	if (ctime < ltime)
+		dtime = ctime + (8000 - ltime);
+	else
+		dtime = ctime - ltime;
+
+	if (dtime > 0)
+		dtime = 8000 / dtime;
+	else
+		dtime = 0;
+
+	return dtime;
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -328,8 +335,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.SetTrigger();
-	error = fly_cam.SetProperty(SHUTTER, 0.249);
-	error = fly_cam.SetProperty(GAIN, 5.105);
+	error = fly_cam.SetProperty(SHUTTER, 0.498);
+	error = fly_cam.SetProperty(GAIN, 0.0);
 
 	error = fly_cam.Start();
 	
@@ -394,15 +401,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f edge_center;
 
-	//printf("Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.\n\n");
-
+	//Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.
 	#pragma omp parallel sections num_threads(4)
 	{
 		#pragma omp section
 		{
 			int fly_ltime = 0;
-			int fly_ctime = 0;
-			int fly_dtime = 0;
+			int fly_fps = 0;
 
 			while (true)
 			{
@@ -454,10 +459,6 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 						}
 						
-						//int j = findClosestPoint(Point2f(fly_image_width/2, fly_image_height/2), fly_mc);
-						//pt2d = fly_mc[j];
-						//circle(fly_frame, pt2d, 1, Scalar(255, 255, 255), FILLED, 1);
-
 						drawContours(fly_frame, fly_contours, j, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						//drawContours(fly_frame, hull, j, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
@@ -494,10 +495,8 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 
 						int sum = std::accumulate(n.begin(), n.end(), 0);
-
-
-
-
+						
+						// fly makes contact with single edge
 						if (sum == 1)
 						{
 							if (!left.empty())
@@ -527,7 +526,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 						}
 
-
+						// fly makes contact with two edges
 						if (sum == 2)
 						{
 							if (!left.empty() && !top.empty())
@@ -734,7 +733,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 
 
-
+						// fly makes contact with three edges
 						if (sum == 3)
 						{
 							if (!left.empty() && !bottom.empty() && !right.empty())
@@ -1186,7 +1185,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 						}
 						
-
+						// fly makes contact with four edges
 						if (sum == 4)
 						{
 							Point tmin = *min_element(top.begin(), top.end(), myfnx);
@@ -1383,22 +1382,12 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 					}
 				}
-						
-				fly_ctime = fly_stamp.cycleCount;
+					
+				//Calculate frame rate
+				fly_fps = ConvertTimeToFPS(fly_stamp.cycleCount, fly_ltime);
+				fly_ltime = fly_stamp.cycleCount;
 
-				if (fly_ctime < fly_ltime)
-					fly_dtime = fly_ctime + (8000 - fly_ltime);
-				else
-					fly_dtime = fly_ctime - fly_ltime;
-
-				if (fly_dtime > 0)
-					fly_dtime = 8000 / fly_dtime;
-				else
-					fly_dtime = 0;
-
-				fly_ltime = fly_ctime;
-
-				putText(fly_frame, to_string(fly_dtime), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+				putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 				
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
@@ -1476,8 +1465,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		#pragma omp section
 		{
 			int arena_ltime = 0;
-			int arena_ctime = 0;
-			int arena_dtime = 0;
+			int arena_fps = 0;
 
 			while (true)
 			{
@@ -1570,21 +1558,11 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 				}
 
-				arena_ctime = arena_stamp.cycleCount;
+				//Calculate frame rate
+				arena_fps = ConvertTimeToFPS(arena_stamp.cycleCount, arena_ltime);
+				arena_ltime = arena_stamp.cycleCount;
 
-				if (arena_ctime < arena_ltime)
-					arena_dtime = arena_ctime + (8000 - arena_ltime);
-				else
-					arena_dtime = arena_ctime - arena_ltime;
-
-				if (arena_dtime > 0)
-					arena_dtime = 8000 / arena_dtime;
-				else
-					arena_dtime = 0;
-
-				arena_ltime = arena_ctime;
-
-				putText(arena_frame, to_string(arena_dtime), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+				putText(arena_frame, to_string(arena_fps), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
 				#pragma omp critical
 				{
@@ -1594,6 +1572,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (!stream)
 					break;
+
 			}
 
 		}
@@ -1670,15 +1649,18 @@ int _tmain(int argc, _TCHAR* argv[])
 						imshow("arena image", arenaDispStream.front());
 						imshow("arena mask", arenaMaskStream.front());
 					}
-				
+
+					arenaDispStream = {};
+					arenaMaskStream = {};
+				}
+
+				#pragma omp critical
+				{
 					if (!flyDispStream.empty())
 					{
 						imshow("fly image", flyDispStream.front());
 						imshow("fly mask", flyMaskStream.front());
 					}
-
-					arenaDispStream = {};
-					arenaMaskStream = {};
 					
 					flyDispStream = {};
 					flyMaskStream = {};
