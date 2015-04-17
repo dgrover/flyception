@@ -307,8 +307,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_left, arena_image_top, arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
-	error = arena_cam.SetProperty(SHUTTER, 0.498);
+	//error = arena_cam.SetProperty(SHUTTER, 0.498);
+	error = arena_cam.SetProperty(SHUTTER, 0.249);
 	error = arena_cam.SetProperty(GAIN, 0.0);
+
 	error = arena_cam.Start();
 
 	if (error != PGRERROR_OK)
@@ -324,7 +326,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.SetTrigger();
-	error = fly_cam.SetProperty(SHUTTER, 1.003);
+	
+	//error = fly_cam.SetProperty(SHUTTER, 1.003);
+	//error = fly_cam.SetProperty(GAIN, 5.105);
+	
+	error = fly_cam.SetProperty(SHUTTER, 0.249);
 	error = fly_cam.SetProperty(GAIN, 5.105);
 
 	error = fly_cam.Start();
@@ -365,8 +371,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
 
-	int arena_thresh = 85;
-	int fly_thresh = 75; 
+	int arena_thresh = 75;
+	int fly_thresh = 45; 
 
 	int fly_erode = 1;
 	int fly_dilate = 1;
@@ -535,12 +541,6 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 
 
-
-
-
-
-
-
 						if (sum == 2)
 						{
 							if (!left.empty() && !top.empty())
@@ -561,18 +561,23 @@ int _tmain(int argc, _TCHAR* argv[])
 								}
 								else
 								{
-									if (dist(lmin, lmax) < dist(tmin, tmax))
-									{
-										edge.push_back(tmin);
-										edge.push_back(tmax);
-									}
-									else
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(lmin);
 										edge.push_back(lmax);
-									}
 
-									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										edge_center = ec1;
+									}
+									else
+									{
+										edge.push_back(tmin);
+										edge.push_back(tmax);
+
+										edge_center = ec2;
+									}
 								}
 							}
 
@@ -594,18 +599,23 @@ int _tmain(int argc, _TCHAR* argv[])
 								}
 								else
 								{
-									if (dist(lmin, lmax) < dist(bmin, bmax))
-									{
-										edge.push_back(bmin);
-										edge.push_back(bmax);
-									}
-									else
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(lmin);
 										edge.push_back(lmax);
-									}
 
-									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										edge_center = ec1;
+									}
+									else
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+
+										edge_center = ec2;
+									}
 								}
 							}
 
@@ -627,18 +637,23 @@ int _tmain(int argc, _TCHAR* argv[])
 								}
 								else
 								{
-									if (dist(rmin, rmax) < dist(bmin, bmax))
-									{
-										edge.push_back(bmin);
-										edge.push_back(bmax);
-									}
-									else
+									Point2f ec1 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+									Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(rmin);
 										edge.push_back(rmax);
-									}
 
-									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										edge_center = ec1;
+									}
+									else
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+
+										edge_center = ec2;
+									}
 								}
 							}
 
@@ -660,18 +675,23 @@ int _tmain(int argc, _TCHAR* argv[])
 								}
 								else
 								{
-									if (dist(rmin, rmax) < dist(tmin, tmax))
-									{
-										edge.push_back(tmin);
-										edge.push_back(tmax);
-									}
-									else
+									Point2f ec1 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+									Point2f ec2 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(rmin);
 										edge.push_back(rmax);
-									}
 
-									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										edge_center = ec1;
+									}
+									else
+									{
+										edge.push_back(tmin);
+										edge.push_back(tmax);
+
+										edge_center = ec2;
+									}
 								}
 							}
 
@@ -748,15 +768,18 @@ int _tmain(int argc, _TCHAR* argv[])
 								if ((ed1 < sep) && (ed2 < sep))
 								{
 
-									if (dist(lmin, lmax) < dist(rmin, rmax))
-									{
-										edge.push_back(rmin);
-										edge.push_back(rmax);
-									}
-									else
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(lmin);
 										edge.push_back(lmax);
+									}
+									else
+									{
+										edge.push_back(rmin);
+										edge.push_back(rmax);
 									}
 
 									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
@@ -764,23 +787,27 @@ int _tmain(int argc, _TCHAR* argv[])
 								}
 								else if ((ed1 > sep) && (ed2 > sep))
 								{
-									float ldist = dist(lmin, lmax);
-									float rdist = dist(rmin, rmax);
-									float bdist = dist(bmin, bmax);
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+									Point2f ec3 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									float ldist = dist(ec1, edge_center);
+									float rdist = dist(ec2, edge_center);
+									float bdist = dist(ec3, edge_center);
 
 									float res = ldist;
 
 									edge.push_back(lmin);
 									edge.push_back(lmax);
 
-									if (rdist > res)
+									if (rdist < res)
 									{
 										edge[0] = rmin;
 										edge[1] = rmax;
 										res = rdist;
 									}
 
-									if (bdist > res)
+									if (bdist < res)
 									{
 										edge[0] = bmin;
 										edge[1] = bmax;
@@ -792,42 +819,47 @@ int _tmain(int argc, _TCHAR* argv[])
 								{
 									if (ed1 < sep)
 									{
-										if (dist(lmin, bmax) < dist(rmin, rmax))
-										{
-											edge.push_back(rmin);
-											edge.push_back(rmax);
+										Point2f ec1 = findAxisCenter(lmin, bmax, Point2f(1, 254));
+										Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(lmin);
 											edge.push_back(bmax);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 254));
 										}
+										else
+										{
+											edge.push_back(rmin);
+											edge.push_back(rmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
 									}
 
 									if (ed2 < sep)
 									{
-										if (dist(rmin, bmin) < dist(lmin, lmax))
-										{
-											edge.push_back(lmin);
-											edge.push_back(lmax);
+										Point2f ec1 = findAxisCenter(rmin, bmin, Point2f(254, 254));
+										Point2f ec2 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(rmin);
 											edge.push_back(bmin);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 254));
 										}
+										else
+										{
+											edge.push_back(lmin);
+											edge.push_back(lmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
 									}
 								}
 							}
-
 
 
 
@@ -849,38 +881,46 @@ int _tmain(int argc, _TCHAR* argv[])
 								if ((ed1 < sep) && (ed2 < sep))
 								{
 
-									if (dist(lmin, lmax) < dist(rmin, rmax))
-									{
-										edge.push_back(rmin);
-										edge.push_back(rmax);
-									}
-									else
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(lmin);
 										edge.push_back(lmax);
 									}
+									else
+									{
+										edge.push_back(rmin);
+										edge.push_back(rmax);
+									}
 
 									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
 								}
 								else if ((ed1 > sep) && (ed2 > sep))
 								{
-									float ldist = dist(lmin, lmax);
-									float rdist = dist(rmin, rmax);
-									float tdist = dist(tmin, tmax);
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+									Point2f ec3 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+
+									float ldist = dist(ec1, edge_center);
+									float rdist = dist(ec2, edge_center);
+									float tdist = dist(ec3, edge_center);
 
 									float res = ldist;
 
 									edge.push_back(lmin);
 									edge.push_back(lmax);
 
-									if (rdist > res)
+									if (rdist < res)
 									{
 										edge[0] = rmin;
 										edge[1] = rmax;
 										res = rdist;
 									}
 
-									if (tdist > res)
+									if (tdist < res)
 									{
 										edge[0] = tmin;
 										edge[1] = tmax;
@@ -892,37 +932,43 @@ int _tmain(int argc, _TCHAR* argv[])
 								{
 									if (ed1 < sep)
 									{
-										if (dist(lmax, tmax) < dist(rmin, rmax))
-										{
-											edge.push_back(rmin);
-											edge.push_back(rmax);
+										Point2f ec1 = findAxisCenter(lmax, tmax, Point2f(1, 1));
+										Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(lmax);
 											edge.push_back(tmax);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 1));
 										}
+										else
+										{
+											edge.push_back(rmin);
+											edge.push_back(rmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
 									}
 
 									if (ed2 < sep)
 									{
-										if (dist(rmax, tmin) < dist(lmin, lmax))
-										{
-											edge.push_back(lmin);
-											edge.push_back(lmax);
+										Point2f ec1 = findAxisCenter(rmax, tmin, Point2f(254, 1));
+										Point2f ec2 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(rmax);
 											edge.push_back(tmin);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 1));
+										}
+										else
+										{
+											edge.push_back(lmin);
+											edge.push_back(lmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 										}
 									}
 								}
@@ -946,38 +992,46 @@ int _tmain(int argc, _TCHAR* argv[])
 								if ((ed1 < sep) && (ed2 < sep))
 								{
 
-									if (dist(tmin, tmax) < dist(bmin, bmax))
-									{
-										edge.push_back(bmin);
-										edge.push_back(bmax);
-									}
-									else
+									Point2f ec1 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+									Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(tmin);
 										edge.push_back(tmax);
 									}
+									else
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+									}
 
 									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
 								}
 								else if ((ed1 > sep) && (ed2 > sep))
 								{
-									float ldist = dist(lmin, lmax);
-									float tdist = dist(tmin, tmax);
-									float bdist = dist(bmin, bmax);
+									Point2f ec1 = Point2f((lmin.x + lmax.x) / 2, (lmin.y + lmax.y) / 2);
+									Point2f ec2 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+									Point2f ec3 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									float ldist = dist(ec1, edge_center);
+									float tdist = dist(ec2, edge_center);
+									float bdist = dist(ec3, edge_center);
 
 									float res = ldist;
 
 									edge.push_back(lmin);
 									edge.push_back(lmax);
 
-									if (tdist > res)
+									if (tdist < res)
 									{
 										edge[0] = tmin;
 										edge[1] = tmax;
 										res = tdist;
 									}
 
-									if (bdist > res)
+									if (bdist < res)
 									{
 										edge[0] = bmin;
 										edge[1] = bmax;
@@ -989,37 +1043,43 @@ int _tmain(int argc, _TCHAR* argv[])
 								{
 									if (ed1 < sep)
 									{
-										if (dist(tmax, lmax) < dist(bmin, bmax))
-										{
-											edge.push_back(bmin);
-											edge.push_back(bmax);
+										Point2f ec1 = findAxisCenter(tmax, lmax, Point2f(1, 1));
+										Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(tmax);
 											edge.push_back(lmax);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 1));
 										}
+										else
+										{
+											edge.push_back(bmin);
+											edge.push_back(bmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
 									}
 
 									if (ed2 < sep)
 									{
-										if (dist(bmax, lmin) < dist(tmin, tmax))
-										{
-											edge.push_back(tmin);
-											edge.push_back(tmax);
+										Point2f ec1 = findAxisCenter(bmax, lmin, Point2f(1, 254));
+										Point2f ec2 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(bmax);
 											edge.push_back(lmin);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(1, 254));
+										}
+										else
+										{
+											edge.push_back(tmin);
+											edge.push_back(tmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 										}
 									}
 								}
@@ -1045,38 +1105,46 @@ int _tmain(int argc, _TCHAR* argv[])
 								if ((ed1 < sep) && (ed2 < sep))
 								{
 
-									if (dist(tmin, tmax) < dist(bmin, bmax))
-									{
-										edge.push_back(bmin);
-										edge.push_back(bmax);
-									}
-									else
+									Point2f ec1 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+									Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									if (dist(edge_center, ec1) < dist(edge_center, ec2))
 									{
 										edge.push_back(tmin);
 										edge.push_back(tmax);
 									}
+									else
+									{
+										edge.push_back(bmin);
+										edge.push_back(bmax);
+									}
 
 									edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+
 								}
 								else if ((ed1 > sep) && (ed2 > sep))
 								{
-									float tdist = dist(tmin, tmax);
-									float rdist = dist(rmin, rmax);
-									float bdist = dist(bmin, bmax);
+									Point2f ec1 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
+									Point2f ec2 = Point2f((rmin.x + rmax.x) / 2, (rmin.y + rmax.y) / 2);
+									Point2f ec3 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
+
+									float tdist = dist(ec1, edge_center);
+									float rdist = dist(ec2, edge_center);
+									float bdist = dist(ec3, edge_center);
 
 									float res = tdist;
 
 									edge.push_back(tmin);
 									edge.push_back(tmax);
 
-									if (rdist > res)
+									if (rdist < res)
 									{
 										edge[0] = rmin;
 										edge[1] = rmax;
 										res = rdist;
 									}
 
-									if (bdist > res)
+									if (bdist < res)
 									{
 										edge[0] = bmin;
 										edge[1] = bmax;
@@ -1088,37 +1156,43 @@ int _tmain(int argc, _TCHAR* argv[])
 								{
 									if (ed1 < sep)
 									{
-										if (dist(tmin, rmax) < dist(bmin, bmax))
-										{
-											edge.push_back(bmin);
-											edge.push_back(bmax);
+										Point2f ec1 = findAxisCenter(tmin, rmax, Point2f(254, 1));
+										Point2f ec2 = Point2f((bmin.x + bmax.x) / 2, (bmin.y + bmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(tmin);
 											edge.push_back(rmax);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 1));
 										}
+										else
+										{
+											edge.push_back(bmin);
+											edge.push_back(bmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
+										}
 									}
 
 									if (ed2 < sep)
 									{
-										if (dist(bmin, rmin) < dist(tmin, tmax))
-										{
-											edge.push_back(tmin);
-											edge.push_back(tmax);
+										Point2f ec1 = findAxisCenter(bmin, rmin, Point2f(254, 254));
+										Point2f ec2 = Point2f((tmin.x + tmax.x) / 2, (tmin.y + tmax.y) / 2);
 
-											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
-										}
-										else
+										if (dist(ec1, edge_center) < dist(ec2, edge_center))
 										{
 											edge.push_back(bmin);
 											edge.push_back(rmin);
 
 											edge_center = findAxisCenter(edge[0], edge[1], Point2f(254, 254));
+										}
+										else
+										{
+											edge.push_back(tmin);
+											edge.push_back(tmax);
+
+											edge_center = Point2f((edge[0].x + edge[1].x) / 2, (edge[0].y + edge[1].y) / 2);
 										}
 									}
 								}
@@ -1582,7 +1656,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					flyMaskStream = {};
 				}
 
-				waitKey(2);
+				waitKey(1);
 
 				if (!stream)
 				{
