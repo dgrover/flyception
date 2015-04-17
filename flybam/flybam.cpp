@@ -96,6 +96,17 @@ Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec, f
 //	return p2d;
 //}
 
+Point2f project3d2d(Point2f pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+{
+	vector<Point3f> p3d;
+	vector<Point2f> p2d;
+
+	p3d.push_back(Point3f(pt.x, pt.y, BASE_HEIGHT));
+	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
+
+	return p2d[0];
+}
+
 RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
 	Point2f center(0, 0);
@@ -291,7 +302,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	//vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
 
-	Point2f pt2d(fly_image_width/2, fly_image_height/2);
+	//vector<vector<Point2f>> arena_pt2d(NFLIES);
+
+	Point2f pt2d, wpt;
 
 	error = busMgr.GetNumOfCameras(&numCameras);
 	printf("Number of cameras detected: %u\n", numCameras);
@@ -307,7 +320,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_left, arena_image_top, arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
-	//error = arena_cam.SetProperty(SHUTTER, 0.498);
 	error = arena_cam.SetProperty(SHUTTER, 0.249);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
@@ -326,10 +338,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
 	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
 	error = fly_cam.SetTrigger();
-	
-	//error = fly_cam.SetProperty(SHUTTER, 1.003);
-	//error = fly_cam.SetProperty(GAIN, 5.105);
-	
 	error = fly_cam.SetProperty(SHUTTER, 0.249);
 	error = fly_cam.SetProperty(GAIN, 5.105);
 
@@ -366,7 +374,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 	
 	Image fly_img, arena_img;
-	TimeStamp fly_stamp;
+	TimeStamp fly_stamp, arena_stamp;
 
 	Mat arena_frame, arena_mask;
 	Mat fly_frame, fly_mask;
@@ -396,25 +404,20 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f edge_center;
 
-	printf("Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.\n\n");
+	//printf("Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.\n\n");
 
-	#pragma omp parallel sections num_threads(3)
+	#pragma omp parallel sections num_threads(4)
 	{
 		#pragma omp section
 		{
-			int ltime = 0;
-			int ctime = 0;
-			int dtime = 0;
+			int fly_ltime = 0;
+			int fly_ctime = 0;
+			int fly_dtime = 0;
 
 			while (true)
 			{
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
-
-				//ndq.ConvertPtToDeg(pt[0]);
-				//ndq.write();
-				
-				//Point2f pt2d = Point2f(-1 , -1);
 
 				fly_img = fly_cam.GrabFrame();
 				fly_stamp = fly_cam.GetTimeStamp();
@@ -433,9 +436,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					findContours(fly_mask, fly_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
 					vector<vector<Point>> hull(fly_contours.size());
-					//vector<vector<int>> hull2(fly_contours.size());
-					//vector<vector<Vec4i>> defects(fly_contours.size());
-
+					
 					int j;
 
 					if (fly_contours.size() > 0)
@@ -449,12 +450,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						for (int i = 0; i < fly_contours.size(); i++)
 						{
-							//drawContours(fly_mask, fly_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-							
 							convexHull(Mat(fly_contours[i]), hull[i], false);
-							//convexHull(Mat(fly_contours[i]), hull2[i], false);
-							//convexityDefects(Mat(fly_contours[i]), hull2[i], defects[i]);
-
+							
 							fly_mu[i] = moments(fly_contours[i], false);
 							fly_mc[i] = Point2f(fly_mu[i].m10 / fly_mu[i].m00, fly_mu[i].m01 / fly_mu[i].m00);
 
@@ -1373,10 +1370,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								float diffy = rotpt.y - (fly_image_height / 2);
 
 								ndq.ConvertPixelToDeg(diffx*SCALEX, diffy*SCALEY);
-								pt[0] = ndq.ConvertDegToPt();
-								
-								//tkf[0].Correct(pt[0]);
-								
+								wpt = ndq.ConvertDegToPt();
 								ndq.write();
 							}
 						}
@@ -1389,125 +1383,44 @@ int _tmain(int argc, _TCHAR* argv[])
 						{
 							flyview_track = false;
 							flyview_record = false;
-							//pt2d = Point2f(fly_image_width / 2, fly_image_height / 2);
 							ndq.reset();
 							
+							pt2d = Point2f(0, 0);
+							wpt = Point2f(0, 0);
+
 							//for (int i = 0; i < NFLIES; i++)
 							//	tkf[i].Init();
 						}
 					}
 				}
 						
-				// if no fly detected, switch back to arena view to get coarse fly location and position update
-				if (!flyview_track)
-				{
-					arena_img = arena_cam.GrabFrame();
-					arena_frame = arena_cam.convertImagetoMat(arena_img);
-					//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
+				fly_ctime = fly_stamp.cycleCount;
 
-					//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
-					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
-					arena_mask &= outer_mask;
-
-					erode(arena_mask, arena_mask, arena_erodeElement, Point(-1, -1), 1);
-					dilate(arena_mask, arena_mask, arena_dilateElement, Point(-1, -1), 1);
-
-					vector<vector<Point>> arena_contours;
-
-					findContours(arena_mask, arena_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-					if (arena_contours.size() > 0)
-					{
-						// Get the moments and mass centers
-						vector<Moments> arena_mu(arena_contours.size());
-						vector<Point2f> arena_mc(arena_contours.size());
-
-						vector<Point2f> arena_pt;
-
-						for (int i = 0; i < arena_contours.size(); i++)
-						{
-							//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-							arena_mu[i] = moments(arena_contours[i], false);
-							arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
-
-							circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-							//arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
-							
-							//fly z correction code
-							float z = 0;
-							float flydist = 0;
-							Point2f fly_pos;
-
-							while (flydist < GALVO_HEIGHT)
-							{
-								fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z+=0.025);
-								flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
-							}
-							
-							float xang = asin(fly_pos.x / GALVO_HEIGHT);
-							float xdiff = (z - BASE_HEIGHT) * tan(xang);
-							fly_pos.x -= xdiff;
-							
-							float yang = asin(fly_pos.y / GALVO_HEIGHT);
-							float ydiff = (z - BASE_HEIGHT) * tan(yang);
-							fly_pos.y -= ydiff;
-							
-							arena_pt.push_back(fly_pos);
-
-						}
-
-						for (int i = 0; i < NFLIES; i++)
-						{
-							if (arena_pt.size() > 0)
-							{
-								int j = findClosestPoint(pt[i], arena_pt);
-								
-								pt[i] = arena_pt[j];
-								//tkf[i].Correct(pt[i]);
-								
-								arena_pt.erase(arena_pt.begin() + j);
-							}
-						}
-					}
-
-					ndq.ConvertPtToDeg(pt[0]);
-					ndq.write();
-
-				}
-
-				ctime = fly_stamp.cycleCount;
-
-				if (ctime < ltime)
-					dtime = ctime + (8000 - ltime);
+				if (fly_ctime < fly_ltime)
+					fly_dtime = fly_ctime + (8000 - fly_ltime);
 				else
-					dtime = ctime - ltime;
+					fly_dtime = fly_ctime - fly_ltime;
 
-				if (dtime > 0)
-					dtime = 8000 / dtime;
+				if (fly_dtime > 0)
+					fly_dtime = 8000 / fly_dtime;
 				else
-					dtime = 0;
+					fly_dtime = 0;
 
-				ltime = ctime;
+				fly_ltime = fly_ctime;
 
-				putText(fly_frame, to_string(dtime), Point((fly_image_width-50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+				putText(fly_frame, to_string(fly_dtime), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 				
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
 				#pragma omp critical
 				{
-					if (!flyview_track)
-					{
-						arenaMaskStream.push(arena_mask);
-						arenaDispStream.push(arena_frame);
-					}
-
 					flyMaskStream.push(fly_mask);
 					flyDispStream.push(fly_frame);
 
 					if (flyview_record)
 					{
-						laser_pt.push(pt[0]);
+						laser_pt.push(wpt);
 						fly_pt.push(pt2d);
 
 						flyTimeStamps.push(fly_stamp);
@@ -1567,9 +1480,128 @@ int _tmain(int argc, _TCHAR* argv[])
 						flyview_record = false;
 					}
 				}
-
 			}
 		}
+
+		#pragma omp section
+		{
+			int arena_ltime = 0;
+			int arena_ctime = 0;
+			int arena_dtime = 0;
+
+			while (true)
+			{
+				arena_img = arena_cam.GrabFrame();
+				arena_stamp = arena_cam.GetTimeStamp();
+				arena_frame = arena_cam.convertImagetoMat(arena_img);
+				
+				//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
+				//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
+				
+				threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
+				arena_mask &= outer_mask;
+
+				erode(arena_mask, arena_mask, arena_erodeElement, Point(-1, -1), 1);
+				dilate(arena_mask, arena_mask, arena_dilateElement, Point(-1, -1), 1);
+
+				vector<vector<Point>> arena_contours;
+
+				findContours(arena_mask, arena_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+				if (arena_contours.size() > 0)
+				{
+					// Get the moments and mass centers
+					vector<Moments> arena_mu(arena_contours.size());
+					vector<Point2f> arena_mc(arena_contours.size());
+
+					vector<Point2f> arena_pt;
+
+					for (int i = 0; i < arena_contours.size(); i++)
+					{
+						//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+						arena_mu[i] = moments(arena_contours[i], false);
+						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+
+						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
+						arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
+
+						////fly z correction code
+						//float z = 0;
+						//float flydist = 0;
+						//Point2f fly_pos;
+
+						//while (flydist < GALVO_HEIGHT)
+						//{
+						//	fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z += 0.025);
+						//	flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
+						//}
+
+						//float xang = asin(fly_pos.x / GALVO_HEIGHT);
+						//float xdiff = (z - BASE_HEIGHT) * tan(xang);
+						//fly_pos.x -= xdiff;
+
+						//float yang = asin(fly_pos.y / GALVO_HEIGHT);
+						//float ydiff = (z - BASE_HEIGHT) * tan(yang);
+						//fly_pos.y -= ydiff;
+
+						//arena_pt.push_back(fly_pos);
+
+					}
+
+					for (int i = 0; i < NFLIES; i++)
+					{
+						if (arena_pt.size() > 0)
+						{
+							int j = findClosestPoint(pt[i], arena_pt);
+
+							pt[i] = arena_pt[j];
+							//tkf[i].Correct(pt[i]);
+							
+							//Point2f apt = project3d2d(arena_pt[j], cameraMatrix, distCoeffs, rvec, tvec);
+							//arena_pt2d[i].push_back(apt);
+
+							//for (int k = 0; k < arena_pt2d[i].size() - 1; k++)
+							//	line(arena_frame, arena_pt2d[i][k], arena_pt2d[i][k+1], Scalar(255, 255, 0), 1);
+
+							arena_pt.erase(arena_pt.begin() + j);
+						}
+					}
+					
+					if (!flyview_track)
+					{
+						ndq.ConvertPtToDeg(pt[0]);
+						ndq.write();
+					}
+				}
+
+				arena_ctime = arena_stamp.cycleCount;
+
+				if (arena_ctime < arena_ltime)
+					arena_dtime = arena_ctime + (8000 - arena_ltime);
+				else
+					arena_dtime = arena_ctime - arena_ltime;
+
+				if (arena_dtime > 0)
+					arena_dtime = 8000 / arena_dtime;
+				else
+					arena_dtime = 0;
+
+				arena_ltime = arena_ctime;
+
+				putText(arena_frame, to_string(arena_dtime), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
+				#pragma omp critical
+				{
+					arenaMaskStream.push(arena_mask);
+					arenaDispStream.push(arena_frame);
+				}
+
+				if (!stream)
+					break;
+			}
+
+		}
+
 
 		#pragma omp section
 		{
