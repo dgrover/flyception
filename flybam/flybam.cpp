@@ -301,8 +301,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	//vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
-
-	//vector<vector<Point2f>> arena_pt2d(NFLIES);
+	vector<vector<Point2f>> arena_pt2d(NFLIES);
 
 	Point2f pt2d, wpt;
 
@@ -1557,11 +1556,14 @@ int _tmain(int argc, _TCHAR* argv[])
 							pt[i] = arena_pt[j];
 							//tkf[i].Correct(pt[i]);
 							
-							//Point2f apt = project3d2d(arena_pt[j], cameraMatrix, distCoeffs, rvec, tvec);
-							//arena_pt2d[i].push_back(apt);
+							Point2f apt = project3d2d(arena_pt[j], cameraMatrix, distCoeffs, rvec, tvec);
+							arena_pt2d[i].push_back(apt);
 
-							//for (int k = 0; k < arena_pt2d[i].size() - 1; k++)
-							//	line(arena_frame, arena_pt2d[i][k], arena_pt2d[i][k+1], Scalar(255, 255, 0), 1);
+							for (int k = 0; k < arena_pt2d[i].size() - 1; k++)
+								line(arena_frame, arena_pt2d[i][k], arena_pt2d[i][k+1], Scalar(255, 255, 0), 1);
+							
+							if (arena_pt2d[i].size() > 20)
+								arena_pt2d[i].erase(arena_pt2d[i].begin());
 
 							arena_pt.erase(arena_pt.begin() + j);
 						}
