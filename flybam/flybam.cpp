@@ -11,6 +11,7 @@ using namespace cv;
 #define GALVO_HEIGHT 65.0			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
 #define ARENA_RADIUS 20				//in mm
+#define TAIL_LENGTH 100
 
 #define SCALEX 0.00075
 #define SCALEY 0.00075
@@ -84,17 +85,6 @@ Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec, f
 
 	return Point2f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0));
 }
-
-//vector<Point2f> project3d2d(Mat pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
-//{
-//	vector<Point3f> p3d;
-//	vector<Point2f> p2d;
-//
-//	p3d.push_back(Point3f((float)pt.at<double>(0, 0), (float)pt.at<double>(1, 0), BASE_HEIGHT));
-//	projectPoints(p3d, rvec, tvec, cameraMatrix, distCoeffs, p2d);
-//
-//	return p2d;
-//}
 
 Point2f project3d2d(Point2f pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
@@ -301,7 +291,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	//vector<Tracker> tkf(NFLIES);
 	vector<Point2f> pt(NFLIES);
-	vector<vector<Point2f>> arena_pt2d(NFLIES);
+	vector<Point2f> arena_pt(NFLIES);
+	vector<vector<Point2f>> arena_pt_vec(NFLIES);
 
 	Point2f pt2d, wpt;
 
@@ -1513,16 +1504,18 @@ int _tmain(int argc, _TCHAR* argv[])
 					vector<Moments> arena_mu(arena_contours.size());
 					vector<Point2f> arena_mc(arena_contours.size());
 
-					vector<Point2f> arena_pt;
-
+					vector<Point2f> arena_ctr_pts;
+					
 					for (int i = 0; i < arena_contours.size(); i++)
 					{
 						//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
 						arena_mu[i] = moments(arena_contours[i], false);
 						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
-						circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-						arena_pt.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
+						arena_ctr_pts.push_back(arena_mc[i]);
+
+						//circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
+						//arena_pts.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
 
 						////fly z correction code
 						//float z = 0;
@@ -1549,23 +1542,24 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					for (int i = 0; i < NFLIES; i++)
 					{
-						if (arena_pt.size() > 0)
+						if (arena_ctr_pts.size() > 0)
 						{
-							int j = findClosestPoint(pt[i], arena_pt);
+							int j = findClosestPoint(arena_pt[i], arena_ctr_pts);
 
-							pt[i] = arena_pt[j];
+							arena_pt[i] = arena_ctr_pts[j];
+							pt[i] = backProject(arena_pt[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
+							
 							//tkf[i].Correct(pt[i]);
-							
-							Point2f apt = project3d2d(arena_pt[j], cameraMatrix, distCoeffs, rvec, tvec);
-							arena_pt2d[i].push_back(apt);
 
-							for (int k = 0; k < arena_pt2d[i].size() - 1; k++)
-								line(arena_frame, arena_pt2d[i][k], arena_pt2d[i][k+1], Scalar(255, 255, 0), 1);
-							
-							if (arena_pt2d[i].size() > 20)
-								arena_pt2d[i].erase(arena_pt2d[i].begin());
+							arena_pt_vec[i].push_back(arena_pt[i]);
 
-							arena_pt.erase(arena_pt.begin() + j);
+							for (int k = 0; k < arena_pt_vec[i].size() - 1; k++)
+								line(arena_frame, arena_pt_vec[i][k], arena_pt_vec[i][k + 1], Scalar(255, 255, 0), 1);
+
+							if (arena_pt_vec[i].size() > TAIL_LENGTH)
+								arena_pt_vec[i].erase(arena_pt_vec[i].begin());
+
+							arena_ctr_pts.erase(arena_ctr_pts.begin() + j);
 						}
 					}
 					
