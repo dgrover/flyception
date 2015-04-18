@@ -402,7 +402,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Point2f edge_center;
 
 	//Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.
-	#pragma omp parallel sections num_threads(4)
+	#pragma omp parallel sections num_threads(5)
 	{
 		#pragma omp section
 		{
@@ -1654,6 +1654,24 @@ int _tmain(int argc, _TCHAR* argv[])
 					arenaMaskStream = {};
 				}
 
+				waitKey(1);
+
+				if (!stream)
+				{
+					destroyWindow("controls");
+					destroyWindow("arena image");
+					destroyWindow("arena mask");
+
+					break;
+				}
+			}
+		}
+
+
+		#pragma omp section
+		{
+			while (true)
+			{
 				#pragma omp critical
 				{
 					if (!flyDispStream.empty())
@@ -1661,7 +1679,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						imshow("fly image", flyDispStream.front());
 						imshow("fly mask", flyMaskStream.front());
 					}
-					
+
 					flyDispStream = {};
 					flyMaskStream = {};
 				}
@@ -1670,10 +1688,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				if (!stream)
 				{
-					destroyWindow("controls");
-					destroyWindow("arena image");
-					destroyWindow("arena mask");
-					
 					destroyWindow("fly image");
 					destroyWindow("fly mask");
 
