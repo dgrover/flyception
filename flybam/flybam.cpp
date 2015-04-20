@@ -382,8 +382,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	int head_center = 60;
 	int sep = 50;
 
-	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat fly_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	Mat fly_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 
 	Mat arena_erodeElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	Mat arena_dilateElement = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
@@ -415,7 +415,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				fly_stamp = fly_cam.GetTimeStamp();
 				fly_frame = fly_cam.convertImagetoMat(fly_img);
 
-				GaussianBlur(fly_frame, fly_frame, Size(5, 5), 0, 0);
+				//GaussianBlur(fly_frame, fly_frame, Size(5, 5), 0, 0);
 
 				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 
@@ -1164,6 +1164,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					if (flyview_record)
 					{
+					
 						laser_pt.push(wpt);
 						fly_pt.push(pt2d);
 
@@ -1330,6 +1331,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				arena_ltime = arena_stamp.cycleCount;
 
 				putText(arena_frame, to_string(arena_fps), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
 
 				#pragma omp critical
 				{
