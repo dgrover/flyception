@@ -13,8 +13,8 @@ using namespace cv;
 #define ARENA_RADIUS 20				//in mm
 #define TAIL_LENGTH 100
 
-#define SCALEX 0.00075
-#define SCALEY 0.00075
+#define SCALEX 0.0015
+#define SCALEY 0.0015
 
 #define NFLIES 1
 #define NLOSTFRAMES 5
@@ -331,6 +331,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = fly_cam.SetTrigger();
 	error = fly_cam.SetProperty(SHUTTER, 0.498);
 	error = fly_cam.SetProperty(GAIN, 0.0);
+	//error = fly_cam.SetHighPerformanceMode();
 
 	error = fly_cam.Start();
 
@@ -1157,9 +1158,9 @@ int _tmain(int argc, _TCHAR* argv[])
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
-				#pragma omp critical
+				#pragma omp critical (flyview)
 				{
-					flyMaskStream = fly_mask.clone();
+					//flyMaskStream = fly_mask.clone();
 					flyDispStream = fly_frame.clone();
 
 					if (flyview_record)
@@ -1333,9 +1334,9 @@ int _tmain(int argc, _TCHAR* argv[])
 				putText(arena_frame, to_string(arena_fps), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
 
-				#pragma omp critical
+				#pragma omp critical (arenaview)
 				{
-					arenaMaskStream = arena_mask.clone();
+					//arenaMaskStream = arena_mask.clone();
 					arenaDispStream = arena_frame.clone();
 				}
 
@@ -1349,6 +1350,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
+			Image tImage;
+			TimeStamp tStamp;
+			Point2f tlaser, tfly;
+
 			while (true)
 			{
 				if (!flyImageStream.empty())
@@ -1361,18 +1366,24 @@ int _tmain(int argc, _TCHAR* argv[])
 						printf("Recording ");
 					}
 
-					#pragma omp critical
+					#pragma omp critical (flyview)
 					{
-						fout.WriteFrame(flyImageStream.front());
-						fout.WriteLog(flyTimeStamps.front());
-						fout.WriteTraj(laser_pt.front(), fly_pt.front());
-						fout.nframes++;
-
+						tImage = flyImageStream.front();
+						tStamp = flyTimeStamps.front();
+						tlaser = laser_pt.front();
+						tfly = fly_pt.front();
+					
 						flyImageStream.pop();
 						flyTimeStamps.pop();
 						laser_pt.pop();
 						fly_pt.pop();
 					}
+
+					fout.WriteFrame(tImage);
+					fout.WriteLog(tStamp);
+					fout.WriteTraj(tlaser, tfly);
+					fout.nframes++;
+
 				}
 				else
 				{
@@ -1408,25 +1419,28 @@ int _tmain(int argc, _TCHAR* argv[])
 			createTrackbar("dilate", "controls", &fly_dilate, 5);
 			createTrackbar("head", "controls", &head_center, 100);
 
+			Mat tframe;
 			while (true)
 			{
-				#pragma omp critical
+				#pragma omp critical (arenaview)
 				{
-					if (!arenaDispStream.empty())
-					{
-						ellipse(arenaDispStream, arenaMask, Scalar(255, 255, 255));
-						imshow("arena image", arenaDispStream);
-						imshow("arena mask", arenaMaskStream);
-					}
+					tframe = arenaDispStream.clone();
 				}
 
+				if (!tframe.empty())
+				{
+					ellipse(tframe, arenaMask, Scalar(255, 255, 255));
+					imshow("arena image", tframe);
+					//imshow("arena mask", arenaMaskStream);
+				}
+				
 				waitKey(1);
 
 				if (!stream)
 				{
 					destroyWindow("controls");
 					destroyWindow("arena image");
-					destroyWindow("arena mask");
+					//destroyWindow("arena mask");
 					break;
 				}
 			}
@@ -1435,23 +1449,27 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
+			Mat tframe;
 			while (true)
 			{
-				#pragma omp critical
+				#pragma omp critical (flyview)
 				{
-					if (!flyDispStream.empty())
-					{
-						imshow("fly image", flyDispStream);
-						imshow("fly mask", flyMaskStream);
-					}
+					tframe = flyDispStream.clone();
 				}
+
+				if (!tframe.empty())
+				{
+						imshow("fly image", tframe);
+						//imshow("fly mask", flyMaskStream);
+				}
+				
 
 				waitKey(1);
 
 				if (!stream)
 				{
 					destroyWindow("fly image");
-					destroyWindow("fly mask");
+					//destroyWindow("fly mask");
 					break;
 				}
 			}

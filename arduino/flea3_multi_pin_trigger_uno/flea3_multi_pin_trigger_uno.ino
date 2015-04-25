@@ -15,7 +15,7 @@ void loop()
   if (Serial.available() > 0)
     incomingByte = Serial.read();
   
-  if (count >10)
+  if (count >11)
   {
     if (incomingByte > 0)
     {
@@ -30,10 +30,10 @@ void loop()
   else
     PORTD = B10000000; //Set pin 7 to HIGH
   
-  delayMicroseconds(1000);
+  delayMicroseconds(875);
     
   PORTD = B00000000; //Set pins LOW
-  delayMicroseconds(1000);
+  delayMicroseconds(875);
   
   count++;
 }

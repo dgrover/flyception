@@ -52,6 +52,18 @@ FlyCapture2::Error PGRcam::SetCameraParameters(int left, int top, int width, int
 	return error;
 }
 
+FlyCapture2::Error PGRcam::SetHighPerformanceMode()
+{
+	cam.GetConfiguration(&BufferFrame);
+
+	BufferFrame.numBuffers = 100;
+	BufferFrame.grabMode = BUFFER_FRAMES;
+	BufferFrame.highPerformanceRetrieveBuffer = true;
+
+	error = cam.SetConfiguration(&BufferFrame);
+	return error;
+}
+
 FlyCapture2::Error PGRcam::SetTrigger()
 {
 	// Check for external trigger support

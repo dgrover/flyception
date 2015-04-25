@@ -22,6 +22,8 @@ private:
 	Format7Info fmt7Info;
 	bool supported;
 
+	FC2Config BufferFrame;
+
 	Format7ImageSettings fmt7ImageSettings;
 	Format7PacketInfo fmt7PacketInfo;
 
@@ -46,6 +48,7 @@ public:
 	Mat convertImagetoMat(Image img);
 	FlyCapture2::TimeStamp GetTimeStamp();
 	void GetImageSize(int &imageWidth, int &imageHeight);
+	FlyCapture2::Error SetHighPerformanceMode();
 };
 
 #endif
