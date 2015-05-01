@@ -2,22 +2,20 @@
 #include "tracker.h"
 
 Tracker::Tracker()
-{
-	Init();
-}
+{}
 
 Tracker::~Tracker()
 {}
 
-void Tracker::Init(float x, float y)
+void Tracker::Init(Point2f pt)
 {
 	KF.init(4, 2, 0);
 
 	measurement.create(2, 1);
 	measurement.setTo(Scalar(0));
 
-	KF.statePre.at<float>(0) = x;
-	KF.statePre.at<float>(1) = y;
+	KF.statePre.at<float>(0) = pt.x;
+	KF.statePre.at<float>(1) = pt.y;
 	KF.statePre.at<float>(2) = 0;
 	KF.statePre.at<float>(3) = 0;
 	KF.transitionMatrix = (Mat_<float>(4, 4) << 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
