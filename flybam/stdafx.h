@@ -46,10 +46,10 @@
 #define ARENA_RADIUS 20				//in mm
 #define TAIL_LENGTH 100
 
-#define SCALEX 0.00095
-#define SCALEY 0.00095
+#define SCALEX 0.00075
+#define SCALEY 0.00075
 
-#define NFLIES 2
+#define NFLIES 1
 #define NLOSTFRAMES 5
 #define MAXRECFRAMES 50000
 
