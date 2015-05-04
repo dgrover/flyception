@@ -137,19 +137,23 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_thresh = 45;
 	int fly_thresh = 45;
 
-	int fly_erode = 2;
-	int fly_dilate = 2;
+	int fly_open = 2;
+	//int fly_erode = 2;
+	//int fly_dilate = 2;
 
 	int head_center = 60;
 	int sep = 50;
 
 	int focal_fly = 0;
 
-	Mat fly_erodeElement = getStructuringElement(MORPH_RECT, Size(9, 9));
-	Mat fly_dilateElement = getStructuringElement(MORPH_RECT, Size(9, 9));
+	Mat fly_element = getStructuringElement(MORPH_RECT, Size(9, 9), Point(4, 4));
+	Mat arena_element = getStructuringElement(MORPH_RECT, Size(3, 3), Point(1, 1));
 
-	Mat arena_erodeElement = getStructuringElement(MORPH_RECT, Size(3, 3));
-	Mat arena_dilateElement = getStructuringElement(MORPH_RECT, Size(3, 3));
+	//Mat fly_erodeElement = getStructuringElement(MORPH_RECT, Size(9, 9));
+	//Mat fly_dilateElement = getStructuringElement(MORPH_RECT, Size(9, 9));
+
+	//Mat arena_erodeElement = getStructuringElement(MORPH_RECT, Size(3, 3));
+	//Mat arena_dilateElement = getStructuringElement(MORPH_RECT, Size(3, 3));
 
 	int rcount = 0;
 
@@ -179,12 +183,12 @@ int _tmain(int argc, _TCHAR* argv[])
 				fly_stamp = fly_cam.GetTimeStamp();
 				fly_frame = fly_cam.convertImagetoMat(fly_img);
 
-				//GaussianBlur(fly_frame, fly_frame, Size(5, 5), 0, 0);
-
 				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
-
-				erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
-				dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
+				//morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element);
+				
+				morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element, Point(-1, -1), fly_open);
+				//erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
+				//dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
 
 				if (flyview_track)
 				{
@@ -1020,16 +1024,15 @@ int _tmain(int argc, _TCHAR* argv[])
 				arena_stamp = arena_cam.GetTimeStamp();
 				arena_frame = arena_cam.convertImagetoMat(arena_img);
 
-				//GaussianBlur(arena_frame, arena_frame, Size(15, 15), 0, 0);
-
 				//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
 				//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
 
 				threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 				arena_mask &= outer_mask;
 
-				erode(arena_mask, arena_mask, arena_erodeElement, Point(-1, -1), 1);
-				dilate(arena_mask, arena_mask, arena_dilateElement, Point(-1, -1), 1);
+				morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
+				//erode(arena_mask, arena_mask, arena_erodeElement, Point(-1, -1), 1);
+				//dilate(arena_mask, arena_mask, arena_dilateElement, Point(-1, -1), 1);
 
 				vector<vector<Point>> arena_contours;
 
@@ -1201,8 +1204,9 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (NFLIES > 1)
 				createTrackbar("focal fly", "controls", &focal_fly, NFLIES-1);
 			
-			createTrackbar("erode", "controls", &fly_erode, 5);
-			createTrackbar("dilate", "controls", &fly_dilate, 5);
+			createTrackbar("morph open", "controls", &fly_open, 5);
+			//createTrackbar("erode", "controls", &fly_erode, 5);
+			//createTrackbar("dilate", "controls", &fly_dilate, 5);
 			createTrackbar("head", "controls", &head_center, 100);
 
 			Mat tframe, tmask;
