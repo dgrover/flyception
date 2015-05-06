@@ -1,7 +1,8 @@
 // TTL pulse to Arduino Uno pins 5,7
 //set Port D pins 5,7 as OUTPUT
 
-int count = 1;
+int fps_factor = 10;
+int count = 0;
 int incomingByte = 0;	              // for incoming serial data
 
 void setup()
@@ -15,7 +16,11 @@ void loop()
   if (Serial.available() > 0)
     incomingByte = Serial.read();
   
-  if (count >16)
+  if (count == fps_factor/4)
+  {
+    PORTD = B10000000; //Set pins 5 to LOW, 7 to HIGH
+  }
+  else if (count == fps_factor)
   {
     if (incomingByte > 0)
     {
@@ -25,15 +30,17 @@ void loop()
     else
       PORTD = B10100000; //Set pins 5, 7 to HIGH
    
-    count = 1;
+    count = 0;
   }
   else
-    PORTD = B10000000; //Set pin 7 to HIGH
+  {
+    PORTD = (1<<PD7); //Set pin 7 to HIGH
+  }
   
-  delayMicroseconds(625);
+  delayMicroseconds(1000);
     
-  PORTD = B00000000; //Set pins LOW
-  delayMicroseconds(625);
+  PORTD = (0<<PD7) && (0<<PD3); //Set pins 3 and 7 to LOW
+  delayMicroseconds(1000);  
   
   count++;
 }
