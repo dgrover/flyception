@@ -39,8 +39,8 @@ void Daq::write()
 	dataY[0] = thetay * voltperdeg;
 	
 	// DAQmx Write Code
-	DAQmxWriteAnalogF64(taskHandleX,SIZE,0,10.0,DAQmx_Val_GroupByChannel,dataX,NULL,NULL);
-	DAQmxWriteAnalogF64(taskHandleY,SIZE,0,10.0,DAQmx_Val_GroupByChannel,dataY,NULL,NULL);
+	DAQmxWriteAnalogF64(taskHandleX, STEP_SIZE, 0, 10.0, DAQmx_Val_GroupByChannel, dataX, NULL, NULL);
+	DAQmxWriteAnalogF64(taskHandleY, STEP_SIZE, 0, 10.0, DAQmx_Val_GroupByChannel, dataY, NULL, NULL);
 
 	//function for scalar value
 	//DAQmxWriteAnalogScalarF64(taskHandleX, 0, 10.0, dataX, NULL);

@@ -11,18 +11,62 @@ bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
 
-queue <Image> flyImageStream;
-queue <TimeStamp> flyTimeStamps;
+queue <Mat> flyImageStream;
+//queue <Image> flyImageStream;
+//queue <TimeStamp> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	SapAcquisition		*Acq = NULL;
+	SapBuffer			*Buffers = NULL;
+	SapTransfer			*Xfer = NULL;
+	SapView				*View = NULL;
+
+	UINT32   acqDeviceNumber;
+	char*    acqServerName = new char[CORSERVER_MAX_STRLEN];
+	char*    configFilename = new char[MAX_PATH];
+
+	acqServerName = "Xcelera-CL_PX4_1";
+	acqDeviceNumber = 0;
+	configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_256x256.ccf";
+
+	printf("Initializing camera link fly view camera ");
+
+	SapLocation loc(acqServerName, acqDeviceNumber);
+
+	if (SapManager::GetResourceCount(acqServerName, SapManager::ResourceAcq) > 0)
+	{
+		Acq = new SapAcquisition(loc, configFilename);
+		Buffers = new SapBuffer(1, Acq);
+		View = new SapView(Buffers, SapHwndAutomatic);
+		Xfer = new SapAcqToBuf(Acq, Buffers, NULL, View);
+
+		// Create acquisition object
+		if (Acq && !*Acq && !Acq->Create())
+			return -1;
+
+	}
+
+	// Create buffer object
+	if (Buffers && !*Buffers && !Buffers->Create())
+		return -1;
+
+	// Create transfer object
+	if (Xfer && !*Xfer && !Xfer->Create())
+		return -1;
+
+	// Start continous grab
+	Xfer->Grab();
+
+	printf("[OK]\n");
+	
 	int arena_image_width = 512, arena_image_height = 512;
 	int arena_image_left = 384, arena_image_top = 256;
 
 	int fly_image_width = 256, fly_image_height = 256;
-	int fly_image_left = 512, fly_image_top = 384;
+	//int fly_image_left = 512, fly_image_top = 384;
 
 	int edge_min = 1;
 	int edge_max = fly_image_width - 2;
@@ -50,20 +94,20 @@ int _tmain(int argc, _TCHAR* argv[])
 	Point2f pt2d, wpt;
 
 	error = busMgr.GetNumOfCameras(&numCameras);
-	printf("Number of cameras detected: %u\n", numCameras);
+	//printf("Number of cameras detected: %u\n", numCameras);
 
-	if (numCameras < 2)
-	{
-		printf("Insufficient number of cameras... exiting\n");
-		return -1;
-	}
+	//if (numCameras < 1)
+	//{
+	//	printf("Insufficient number of cameras... exiting\n");
+	//	return -1;
+	//}
 
 	printf("Initializing arena view camera ");
 	error = busMgr.GetCameraFromIndex(0, &guid);
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_left, arena_image_top, arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
-	error = arena_cam.SetProperty(SHUTTER, 0.249);
+	error = arena_cam.SetProperty(SHUTTER, 1.003);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
 	error = arena_cam.Start();
@@ -75,24 +119,24 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	printf("[OK]\n");
 
-	printf("Initializing fly view camera ");
-	error = busMgr.GetCameraFromIndex(1, &guid);
-	error = fly_cam.Connect(guid);
-	error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
-	//fly_cam.GetImageSize(fly_image_width, fly_image_height);
-	error = fly_cam.SetTrigger();
-	error = fly_cam.SetProperty(SHUTTER, 0.498);
-	error = fly_cam.SetProperty(GAIN, 0.0);
-	//error = fly_cam.SetHighPerformanceMode();
+	//printf("Initializing fly view camera ");
+	//error = busMgr.GetCameraFromIndex(1, &guid);
+	//error = fly_cam.Connect(guid);
+	//error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
+	////fly_cam.GetImageSize(fly_image_width, fly_image_height);
+	//error = fly_cam.SetTrigger();
+	//error = fly_cam.SetProperty(SHUTTER, 0.498);
+	//error = fly_cam.SetProperty(GAIN, 0.0);
+	////error = fly_cam.SetHighPerformanceMode();
 
-	error = fly_cam.Start();
+	//error = fly_cam.Start();
 
-	if (error != PGRERROR_OK)
-	{
-		error.PrintErrorTrace();
-		return -1;
-	}
-	printf("[OK]\n\n");
+	//if (error != PGRERROR_OK)
+	//{
+	//	error.PrintErrorTrace();
+	//	return -1;
+	//}
+	//printf("[OK]\n\n");
 
 	FileStorage fs(filename, FileStorage::READ);
 	fs["camera_matrix"] >> cameraMatrix;
@@ -125,28 +169,31 @@ int _tmain(int argc, _TCHAR* argv[])
 	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 
-	Image fly_img, arena_img;
-	TimeStamp fly_stamp, arena_stamp;
+	//Image fly_img, arena_img;
+	//TimeStamp fly_stamp, arena_stamp;
+
+	Image arena_img;
+	TimeStamp arena_stamp;
 
 	Mat arena_frame, arena_mask;
-	Mat fly_frame, fly_mask;
+	Mat fly_img, fly_frame, fly_mask;
 
 	Mat arenaDispStream, arenaMaskStream;
 	Mat flyDispStream, flyMaskStream;
 
-	int arena_thresh = 45;
-	int fly_thresh = 45;
+	int arena_thresh = 75;
+	int fly_thresh = 65;
 
-	int fly_open = 2;
-	//int fly_erode = 2;
-	//int fly_dilate = 2;
+	//int fly_open = 2;
+	int fly_erode = 1;
+	int fly_dilate = 2;
 
 	int head_center = 60;
-	int sep = 50;
+	int sep = 25;
 
 	int focal_fly = 0;
 
-	Mat fly_element = getStructuringElement(MORPH_RECT, Size(9, 9), Point(4, 4));
+	Mat fly_element = getStructuringElement(MORPH_RECT, Size(7, 7), Point(3, 3));
 	Mat arena_element = getStructuringElement(MORPH_RECT, Size(3, 3), Point(1, 1));
 
 	//Mat fly_erodeElement = getStructuringElement(MORPH_RECT, Size(9, 9));
@@ -171,24 +218,44 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		#pragma omp section
 		{
-			int fly_ltime = 0;
-			int fly_fps = 0;
-
+			//int fly_ltime = 0;
+			//int fly_fps = 0;
+			SYSTEMTIME wt;
+			
 			while (true)
 			{
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
 
-				fly_img = fly_cam.GrabFrame();
-				fly_stamp = fly_cam.GetTimeStamp();
-				fly_frame = fly_cam.convertImagetoMat(fly_img);
+				SapView *pView = (SapView *)Xfer->GetContext();
+				SapBuffer *pBuffer;
+				pBuffer = pView->GetBuffer();
+
+				void *pData = NULL;
+				pBuffer->GetAddress(&pData);
+
+				int width = pBuffer->GetWidth();
+				int height = pBuffer->GetHeight();
+				int depth = pBuffer->GetPixelDepth();
+
+				Mat tframe(height, width, CV_8U, (void*)pData);
+
+				fly_frame = tframe.clone();
+				fly_img = tframe.clone();
+
+				//fly_img = fly_cam.GrabFrame();
+				//fly_stamp = fly_cam.GetTimeStamp();
+				//fly_frame = fly_cam.convertImagetoMat(fly_img);
 
 				threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
 				//morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element);
 				
-				morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element, Point(-1, -1), fly_open);
+				//morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element, Point(-1, -1), fly_open);
 				//erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
 				//dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
+
+				erode(fly_mask, fly_mask, fly_element, Point(-1, -1), fly_erode);
+				dilate(fly_mask, fly_mask, fly_element, Point(-1, -1), fly_dilate);
 
 				if (flyview_track)
 				{
@@ -918,11 +985,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 
 				//Calculate frame rate
-				fly_fps = ConvertTimeToFPS(fly_stamp.cycleCount, fly_ltime);
-				fly_ltime = fly_stamp.cycleCount;
+				//fly_fps = ConvertTimeToFPS(fly_stamp.cycleCount, fly_ltime);
+				//fly_ltime = fly_stamp.cycleCount;
 
-				putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
-
+				//putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+				
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
@@ -937,7 +1004,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						laser_pt.push(wpt);
 						fly_pt.push(pt2d);
 
-						flyTimeStamps.push(fly_stamp);
+						//flyTimeStamps.push(fly_stamp);
 						flyImageStream.push(fly_img);
 					}
 				}
@@ -1135,8 +1202,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
-			Image tImage;
-			TimeStamp tStamp;
+			Mat tImage;
+			//Image tImage;
+			//TimeStamp tStamp;
 			Point2f tlaser, tfly;
 
 			while (true)
@@ -1154,18 +1222,18 @@ int _tmain(int argc, _TCHAR* argv[])
 					#pragma omp critical (flyview)
 					{
 						tImage = flyImageStream.front();
-						tStamp = flyTimeStamps.front();
+						//tStamp = flyTimeStamps.front();
 						tlaser = laser_pt.front();
 						tfly = fly_pt.front();
 					
 						flyImageStream.pop();
-						flyTimeStamps.pop();
+						//flyTimeStamps.pop();
 						laser_pt.pop();
 						fly_pt.pop();
 					}
 
 					fout.WriteFrame(tImage);
-					fout.WriteLog(tStamp);
+					//fout.WriteLog(tStamp);
 					fout.WriteTraj(tlaser, tfly);
 					fout.nframes++;
 
@@ -1204,9 +1272,9 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (NFLIES > 1)
 				createTrackbar("focal fly", "controls", &focal_fly, NFLIES-1);
 			
-			createTrackbar("morph open", "controls", &fly_open, 5);
-			//createTrackbar("erode", "controls", &fly_erode, 5);
-			//createTrackbar("dilate", "controls", &fly_dilate, 5);
+			//createTrackbar("morph open", "controls", &fly_open, 5);
+			createTrackbar("erode", "controls", &fly_erode, 5);
+			createTrackbar("dilate", "controls", &fly_dilate, 5);
 			createTrackbar("head", "controls", &head_center, 100);
 
 			Mat tframe, tmask;
@@ -1271,8 +1339,31 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	arena_cam.Stop();
-	fly_cam.Stop();
+	//fly_cam.Stop();
 
+	// Stop grab
+	Xfer->Freeze();
+	if (!Xfer->Wait(5000))
+		printf("Grab could not stop properly.\n");
+
+	// Destroy view object
+	if (View && *View && !View->Destroy()) return FALSE;
+
+	// Destroy transfer object
+	if (Xfer && *Xfer && !Xfer->Destroy()) return FALSE;
+
+	// Destroy buffer object
+	if (Buffers && *Buffers && !Buffers->Destroy()) return FALSE;
+
+	// Destroy acquisition object
+	if (Acq && *Acq && !Acq->Destroy()) return FALSE;
+
+	// Delete all objects
+	if (View)		delete View;
+	if (Xfer)		delete Xfer;
+	if (Buffers)	delete Buffers;
+	if (Acq)		delete Acq;
+	
 	printf("\n\nCentering galvo ");
 	ndq.ConvertPtToDeg(Point2f(0, 0));
 	ndq.write();

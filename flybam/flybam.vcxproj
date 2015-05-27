@@ -77,8 +77,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Program Files\Point Grey Research\FlyCapture2\include;C:\SDK\opencv-3.0.0\build\install\include;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files\Point Grey Research\FlyCapture2\lib64;C:\SDK\opencv-3.0.0\build\install\x64\vc12\lib;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\lib64\msvc;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Program Files\Point Grey Research\FlyCapture2\include;C:\SDK\opencv-3.0.0\build\install\include;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\include;C:\Program Files\Teledyne DALSA\Sapera\Examples\Classes\Common;C:\Program Files\Teledyne DALSA\Sapera\Classes\Basic;C:\Program Files\Teledyne DALSA\Sapera\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files\Point Grey Research\FlyCapture2\lib64;C:\SDK\opencv-3.0.0\build\install\x64\vc12\lib;C:\Program Files %28x86%29\National Instruments\Shared\ExternalCompilerSupport\C\lib64\msvc;C:\Program Files\Teledyne DALSA\Sapera\Lib\Win64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -139,7 +139,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>winmm.lib;nidaqmx.lib;FlyCapture2.lib;FlyCapture2GUI.lib;opencv_core300.lib;opencv_highgui300.lib;opencv_video300.lib;opencv_imgproc300.lib;opencv_imgcodecs300.lib;opencv_calib3d300.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;nidaqmx.lib;FlyCapture2.lib;FlyCapture2GUI.lib;opencv_core300.lib;opencv_highgui300.lib;opencv_video300.lib;opencv_imgproc300.lib;opencv_imgcodecs300.lib;opencv_calib3d300.lib;SapClassBasic.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClInclude Include="arduino.h" />
     <ClInclude Include="daq.h" />
+    <ClInclude Include="ExampleUtils.h" />
     <ClInclude Include="fmfreader.h" />
     <ClInclude Include="fmfwriter.h" />
     <ClInclude Include="pgrcam.h" />
@@ -159,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="arduino.cpp" />
     <ClCompile Include="daq.cpp" />
+    <ClCompile Include="ExampleUtils.cpp" />
     <ClCompile Include="flybam.cpp" />
     <ClCompile Include="fmfreader.cpp" />
     <ClCompile Include="fmfwriter.cpp" />

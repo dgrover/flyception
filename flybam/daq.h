@@ -5,7 +5,7 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-#define SIZE 1
+#define STEP_SIZE 1
 
 class Daq
 {
@@ -18,8 +18,8 @@ private:
 
 	float thetax, thetay;
 
-	float64     dataX[SIZE];
-	float64     dataY[SIZE];
+	float64     dataX[STEP_SIZE];
+	float64     dataY[STEP_SIZE];
 
 public:
 	Daq();

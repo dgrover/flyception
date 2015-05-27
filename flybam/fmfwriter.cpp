@@ -4,7 +4,7 @@
 FmfWriter::FmfWriter()
 {
 	fp = NULL;
-	flog = NULL;
+	//flog = NULL;
 	ftraj = NULL;
 	nframes = 0;
 }
@@ -12,7 +12,7 @@ FmfWriter::FmfWriter()
 int FmfWriter::Open()
 {
 	fp = new FILE;
-	flog = new FILE;
+	//flog = new FILE;
 	ftraj = new FILE;
 
 	SYSTEMTIME st;
@@ -21,8 +21,8 @@ int FmfWriter::Open()
 	sprintf_s(fname, "D:\\flyception-%d%02d%02dT%02d%02d%02d.fmf", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(fname);
 
-	sprintf_s(flogname, "D:\\flyception-log-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-	remove(flogname);
+	//sprintf_s(flogname, "D:\\flyception-log-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	//remove(flogname);
 
 	sprintf_s(ftrajname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(ftrajname);
@@ -35,13 +35,13 @@ int FmfWriter::Open()
 		return -1;	
 	}
 
-	fopen_s(&flog, flogname, "w");
+	//fopen_s(&flog, flogname, "w");
 		
-	if(flog == NULL)
-	{
-		printf("\nError creating log file. Recording terminated.");
-		return -1;
-	}
+	//if(flog == NULL)
+	//{
+	//	printf("\nError creating log file. Recording terminated.");
+	//	return -1;
+	//}
 
 	fopen_s(&ftraj, ftrajname, "w");
 
@@ -62,11 +62,11 @@ int FmfWriter::Close()
 	fwrite(&nframes, sizeof(unsigned __int64), 1, fp);
 
 	fclose(fp);
-	fclose(flog);
+	//fclose(flog);
 	fclose(ftraj);
 
 	fp = NULL;
-	flog = NULL;
+	//flog = NULL;
 	ftraj = NULL;
 
 	//if (nframes == 0)
@@ -109,6 +109,14 @@ void FmfWriter::WriteFrame(Image img)
 
 	fwrite(&dst, sizeof(double), 1, fp);
 	fwrite(img.GetData(), img.GetDataSize(), 1, fp);
+}
+
+void FmfWriter::WriteFrame(Mat img)
+{
+	double dst = (double)nframes;
+
+	fwrite(&dst, sizeof(double), 1, fp);
+	fwrite(img.data, sizeof(unsigned char), SizeY*SizeX, fp);
 }
 
 void FmfWriter::WriteLog(TimeStamp st)
