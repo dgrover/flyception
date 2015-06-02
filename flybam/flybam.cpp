@@ -22,8 +22,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	SapAcquisition		*Acq = NULL;
 	SapBuffer			*Buffers = NULL;
 	SapTransfer			*Xfer = NULL;
-	SapView				*View = NULL;
-
+	
 	UINT32   acqDeviceNumber;
 	char*    acqServerName = new char[CORSERVER_MAX_STRLEN];
 	char*    configFilename = new char[MAX_PATH];
@@ -40,8 +39,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		Acq = new SapAcquisition(loc, configFilename);
 		Buffers = new SapBuffer(1, Acq);
-		View = new SapView(Buffers, SapHwndAutomatic);
-		Xfer = new SapAcqToBuf(Acq, Buffers, NULL, View);
+		Xfer = new SapAcqToBuf(Acq, Buffers, NULL, Buffers);
 
 		// Create acquisition object
 		if (Acq && !*Acq && !Acq->Create())
@@ -182,7 +180,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat flyDispStream, flyMaskStream;
 
 	int arena_thresh = 75;
-	int fly_thresh = 65;
+	int fly_thresh = 45;
 
 	//int fly_open = 2;
 	int fly_erode = 1;
@@ -218,22 +216,28 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		#pragma omp section
 		{
+			int last = 0, now = 0;
+			float fps;
 			//int fly_ltime = 0;
 			//int fly_fps = 0;
-			SYSTEMTIME wt;
-			
+						
 			while (true)
 			{
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
 
-				SapView *pView = (SapView *)Xfer->GetContext();
-				SapBuffer *pBuffer;
-				pBuffer = pView->GetBuffer();
+				SapBuffer *pBuffer = (SapBuffer *)Xfer->GetContext();
+
+				pBuffer->GetCounterStamp(&now);
+				int duration = now - last;
+				last = now;
+
+				if (duration > 0)
+					fps = (1.0 / duration) * 1000000;
 
 				void *pData = NULL;
 				pBuffer->GetAddress(&pData);
-
+				
 				int width = pBuffer->GetWidth();
 				int height = pBuffer->GetHeight();
 				int depth = pBuffer->GetPixelDepth();
@@ -989,7 +993,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				//fly_ltime = fly_stamp.cycleCount;
 
 				//putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
-				
+				putText(fly_frame, to_string(fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
 				if (flyview_record)
 					putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
@@ -1346,9 +1351,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (!Xfer->Wait(5000))
 		printf("Grab could not stop properly.\n");
 
-	// Destroy view object
-	if (View && *View && !View->Destroy()) return FALSE;
-
 	// Destroy transfer object
 	if (Xfer && *Xfer && !Xfer->Destroy()) return FALSE;
 
@@ -1359,7 +1361,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (Acq && *Acq && !Acq->Destroy()) return FALSE;
 
 	// Delete all objects
-	if (View)		delete View;
 	if (Xfer)		delete Xfer;
 	if (Buffers)	delete Buffers;
 	if (Acq)		delete Acq;

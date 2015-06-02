@@ -1,6 +1,6 @@
 //set Port D pins 3,5,7 as OUTPUT
 
-int fps_factor = 20;
+int fps_factor = 22;
 int count = 0;
 int incomingByte = 0;	              // for incoming serial data
 
@@ -36,10 +36,10 @@ void loop()
     PORTD = (1<<PD7); //Set pin 7 to HIGH
   }
   
-  delayMicroseconds(500);
+  delayMicroseconds(100);
     
   PORTD = (0<<PD7) && (0<<PD3); //Set pins 3 and 7 to LOW
-  delayMicroseconds(500);  
+  delayMicroseconds(800);  
   
   count++;
 }
