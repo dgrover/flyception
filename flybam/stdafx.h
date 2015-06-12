@@ -41,20 +41,20 @@
 #include "utility.h"
 
 // Disable deprecated function warnings with Visual Studio 2005
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#pragma warning(disable: 4995)
-#endif
+//#if defined(_MSC_VER) && _MSC_VER >= 1400
+//#pragma warning(disable: 4995)
+//#endif
 
 #include "conio.h"
 #include "sapclassbasic.h"
 #include "ExampleUtils.h"
 
 // Restore deprecated function warnings with Visual Studio 2005
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#pragma warning(default: 4995)
-#endif
+//#if defined(_MSC_VER) && _MSC_VER >= 1400
+//#pragma warning(default: 4995)
+//#endif
 
-#define BASE_HEIGHT 3.175			//in mm
+#define BASE_HEIGHT 7.175			//in mm
 #define GALVO_HEIGHT 65.0			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
 #define ARENA_RADIUS 20				//in mm
@@ -65,6 +65,6 @@
 
 #define NFLIES 1
 #define NLOSTFRAMES 5
-#define MAXRECFRAMES 100000
+#define MAXRECFRAMES 110000
 
 // TODO: reference additional headers your program requires here

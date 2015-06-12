@@ -12,6 +12,7 @@ bool flyview_track = false;
 bool flyview_record = false;
 
 queue <Mat> flyImageStream;
+queue <int> flyTimeStamps;
 //queue <Image> flyImageStream;
 //queue <TimeStamp> flyTimeStamps;
 queue <Point2f> laser_pt;
@@ -38,7 +39,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (SapManager::GetResourceCount(acqServerName, SapManager::ResourceAcq) > 0)
 	{
 		Acq = new SapAcquisition(loc, configFilename);
-		Buffers = new SapBuffer(1, Acq);
+		Buffers = new SapBuffer(2, Acq);
 		Xfer = new SapAcqToBuf(Acq, Buffers, NULL, Buffers);
 
 		// Create acquisition object
@@ -152,7 +153,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int i = 0; i < NFLIES; i++)
 		tkf[i].Init(galvo_center_2d);
 
-	Serial* SP = new Serial("COM4");    // adjust as needed
+	Serial* SP = new Serial("COM7");    // adjust as needed
 
 	if (SP->IsConnected())
 		printf("Connecting arduino [OK]\n");
@@ -216,24 +217,32 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		#pragma omp section
 		{
-			int last = 0, now = 0;
+			int last = 0, now = 0, duration = 0;
 			float fps;
 			//int fly_ltime = 0;
 			//int fly_fps = 0;
 						
+			SapBuffer *pBuffer = NULL;
+
 			while (true)
 			{
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
 
-				SapBuffer *pBuffer = (SapBuffer *)Xfer->GetContext();
+				while (duration == 0)
+				{
+					pBuffer = (SapBuffer *)Xfer->GetContext();
 
-				pBuffer->GetCounterStamp(&now);
-				int duration = now - last;
+					pBuffer->GetCounterStamp(&now);
+					duration = now - last;
+				}
+
 				last = now;
-
+				
 				if (duration > 0)
 					fps = (1.0 / duration) * 1000000;
+
+				duration = 0;
 
 				void *pData = NULL;
 				pBuffer->GetAddress(&pData);
@@ -1010,6 +1019,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						fly_pt.push(pt2d);
 
 						//flyTimeStamps.push(fly_stamp);
+						flyTimeStamps.push(now);
 						flyImageStream.push(fly_img);
 					}
 				}
@@ -1208,6 +1218,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		#pragma omp section
 		{
 			Mat tImage;
+			int tStamp;
 			//Image tImage;
 			//TimeStamp tStamp;
 			Point2f tlaser, tfly;
@@ -1227,18 +1238,18 @@ int _tmain(int argc, _TCHAR* argv[])
 					#pragma omp critical (flyview)
 					{
 						tImage = flyImageStream.front();
-						//tStamp = flyTimeStamps.front();
+						tStamp = flyTimeStamps.front();
 						tlaser = laser_pt.front();
 						tfly = fly_pt.front();
 					
 						flyImageStream.pop();
-						//flyTimeStamps.pop();
+						flyTimeStamps.pop();
 						laser_pt.pop();
 						fly_pt.pop();
 					}
 
 					fout.WriteFrame(tImage);
-					//fout.WriteLog(tStamp);
+					fout.WriteLog(tStamp);
 					fout.WriteTraj(tlaser, tfly);
 					fout.nframes++;
 
