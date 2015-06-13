@@ -2,14 +2,18 @@
 //
 
 #include "stdafx.h"
+#include "readerwriterqueue.h"
 
 using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
+using namespace moodycamel;
 
 bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
+
+ReaderWriterQueue<Mat> q(1000);
 
 queue <Mat> flyImageStream;
 queue <int> flyTimeStamps;
@@ -18,16 +22,16 @@ queue <int> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
-Mat frame;
-bool readframe = false;
-bool newframe = false;
+//Mat frame;
+//bool readframe = false;
+//bool newframe = false;
 
 int last = 0, now = 0;
 float fps;
 
 static void AcqCallback(SapXferCallbackInfo *pInfo)
 {
-	readframe = true;
+	//readframe = true;
 	SapView *pView = (SapView *)pInfo->GetContext();
 
 	SapBuffer *pBuffer = pView->GetBuffer();
@@ -48,12 +52,13 @@ static void AcqCallback(SapXferCallbackInfo *pInfo)
 
 	Mat tframe(height, width, CV_8U, (void*)pData);
 
-	frame = tframe.clone();
+	q.enqueue(tframe);
+	//frame = tframe.clone();
 
 	last = now;
 
-	newframe = true;
-	readframe = false;
+	//newframe = true;
+	//readframe = false;
 
 }
 
@@ -265,6 +270,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			//int fly_fps = 0;
 						
 			//SapBuffer *pBuffer = NULL;
+			Mat tframe;
 			int fly_stamp;
 
 			while (true)
@@ -299,13 +305,14 @@ int _tmain(int argc, _TCHAR* argv[])
 				//fly_frame = tframe.clone();
 				//fly_img = tframe.clone();
 
-				if (!readframe && newframe)
+				//if (!readframe && newframe)
+				if (q.try_dequeue(tframe))
 				{
-					fly_frame = frame.clone();
-					fly_img = frame.clone();
+					fly_frame = tframe.clone();
+					fly_img = tframe.clone();
 					fly_stamp = now;
 
-					newframe = false;
+					//newframe = false;
 
 					//fly_img = fly_cam.GrabFrame();
 					//fly_stamp = fly_cam.GetTimeStamp();
