@@ -16,12 +16,19 @@ bool flyview_record = false;
 //ReaderWriterQueue<Mat> q(1000);
 ReaderWriterQueue<SapBuffer *> q(1000);
 
-queue <Mat> flyImageStream;
-queue <int> flyTimeStamps;
+ReaderWriterQueue<Mat> arenaDispStream(1), arenaMaskStream(1), flyDispStream(1), flyMaskStream(1);
+
+ReaderWriterQueue<Mat> flyImageStream(1000);
+ReaderWriterQueue<int> flyTimeStamps(1000);
+ReaderWriterQueue<Point2f> laser_pt(1000);
+ReaderWriterQueue<Point2f> fly_pt(1000);
+
+//queue <Mat> flyImageStream;
+//queue <int> flyTimeStamps;
 //queue <Image> flyImageStream;
 //queue <TimeStamp> flyTimeStamps;
-queue <Point2f> laser_pt;
-queue <Point2f> fly_pt;
+//queue <Point2f> laser_pt;
+//queue <Point2f> fly_pt;
 
 //int last = 0, now = 0;
 //float fps;
@@ -216,8 +223,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_frame, arena_mask;
 	Mat fly_img, fly_frame, fly_mask;
 
-	Mat arenaDispStream, arenaMaskStream;
-	Mat flyDispStream, flyMaskStream;
+	//Mat arenaDispStream, arenaMaskStream;
+	//Mat flyDispStream, flyMaskStream;
 
 	int arena_thresh = 75;
 	int fly_thresh = 45;
@@ -252,7 +259,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Point2f edge_center;
 
 	//Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.
-	#pragma omp parallel sections num_threads(5)
+	#pragma omp parallel sections num_threads(6)
 	{
 		#pragma omp section
 		{
@@ -1047,89 +1054,39 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 					if (flyview_record)
-						putText(fly_frame, to_string(rcount++), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+						putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
-					#pragma omp critical (flyview)
-					{
-						flyMaskStream = fly_mask.clone();
-						flyDispStream = fly_frame.clone();
+					//#pragma omp critical (flyview)
+					//{
+						//flyMaskStream = fly_mask.clone();
+						//flyDispStream = fly_frame.clone();
+
+						flyDispStream.try_enqueue(fly_frame.clone());
+						flyMaskStream.try_enqueue(fly_mask.clone());
 
 						if (flyview_record)
 						{
-							laser_pt.push(wpt);
-							fly_pt.push(pt2d);
+							//laser_pt.push(wpt);
+							//fly_pt.push(pt2d);
 
 							//flyTimeStamps.push(fly_stamp);
-							flyTimeStamps.push(fly_stamp);
-							flyImageStream.push(fly_img);
+							//flyTimeStamps.push(fly_stamp);
+							//flyImageStream.push(fly_img);
+
+							laser_pt.enqueue(wpt);
+							fly_pt.enqueue(pt2d);
+
+							flyTimeStamps.enqueue(fly_stamp);
+							flyImageStream.enqueue(fly_img);
+
+							rcount++;
 						}
-					}
+					//}
 				}
 
-				if (GetAsyncKeyState(VK_F1))
-				{
-					if (!track_key_state)
-					{
-						flyview_track = !flyview_track;
-
-						if (flyview_record)
-							flyview_record = !flyview_record;
-					}
-
-					track_key_state = 1;
-				}
-				else
-					track_key_state = 0;
-
-				if (GetAsyncKeyState(VK_F2))
-				{
-					if (!record_key_state)
-					{
-						flyview_record = !flyview_record;
-						rcount = 0;
-					}
-
-					record_key_state = 1;
-				}
-				else
-					record_key_state = 0;
-
-				if (GetAsyncKeyState(VK_F3))
-				{
-					if (!flash_key_state)
-						SP->WriteData("1", 1);
-
-					flash_key_state = 1;
-				}
-				else
-					flash_key_state = 0;
-
-				//if (GetAsyncKeyState(VK_F4))
-				//{
-				//	if (!play_key_state)
-				//		PlaySound("..\\media\\flysong.wav", NULL, SND_ASYNC);
-
-				//	play_key_state = 1;
-				//}
-				//else
-				//	play_key_state = 0;
-
-				if (GetAsyncKeyState(VK_ESCAPE))
-				{
-					stream = false;
+				if (!stream)
 					break;
-				}
-
-				if (flyview_record)
-				{
-					if (rcount == MAXRECFRAMES)
-					{
-						rcount = 0;
-						flyview_record = false;
-					}
-				}
 			}
-
 		}
 
 		#pragma omp section
@@ -1155,9 +1112,9 @@ int _tmain(int argc, _TCHAR* argv[])
 				threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 				arena_mask &= outer_mask;
 
-				morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
-				//erode(arena_mask, arena_mask, arena_erodeElement, Point(-1, -1), 1);
-				//dilate(arena_mask, arena_mask, arena_dilateElement, Point(-1, -1), 1);
+				//morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
+				erode(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
+				dilate(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
 
 				vector<vector<Point>> arena_contours;
 
@@ -1244,11 +1201,14 @@ int _tmain(int argc, _TCHAR* argv[])
 				putText(arena_frame, to_string(arena_fps), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
 
-				#pragma omp critical (arenaview)
-				{
-					arenaMaskStream = arena_mask.clone();
-					arenaDispStream = arena_frame.clone();
-				}
+				//#pragma omp critical (arenaview)
+				//{
+				//	arenaMaskStream = arena_mask.clone();
+				//	arenaDispStream = arena_frame.clone();
+				//}
+
+				arenaDispStream.try_enqueue(arena_frame.clone());
+				arenaMaskStream.try_enqueue(arena_mask.clone());
 
 				if (!stream)
 					break;
@@ -1270,7 +1230,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
-				if (!flyImageStream.empty())
+				//if (!flyImageStream.empty())
+				if (flyImageStream.try_dequeue(tImage))
 				{
 					if (!fout.IsOpen())
 					{
@@ -1280,18 +1241,23 @@ int _tmain(int argc, _TCHAR* argv[])
 						printf("Recording ");
 					}
 
-					#pragma omp critical (flyview)
-					{
-						tImage = flyImageStream.front();
-						tStamp = flyTimeStamps.front();
-						tlaser = laser_pt.front();
-						tfly = fly_pt.front();
+					//#pragma omp critical (flyview)
+					//{
+						//tImage = flyImageStream.front();
+						//tStamp = flyTimeStamps.front();
+						//tlaser = laser_pt.front();
+						//tfly = fly_pt.front();
 					
-						flyImageStream.pop();
-						flyTimeStamps.pop();
-						laser_pt.pop();
-						fly_pt.pop();
-					}
+						//flyImageStream.pop();
+						//flyTimeStamps.pop();
+						//laser_pt.pop();
+						//fly_pt.pop();
+
+						//flyImageStream.try_dequeue(tImage);
+						flyTimeStamps.try_dequeue(tStamp);
+						fly_pt.try_dequeue(tfly);
+						laser_pt.try_dequeue(tlaser);
+					//}
 
 					fout.WriteFrame(tImage);
 					fout.WriteLog(tStamp);
@@ -1306,20 +1272,9 @@ int _tmain(int argc, _TCHAR* argv[])
 						fout.Close();
 						printf("[OK]\n");
 					}
-				}
-
-				if (!stream)
-				{
-					if (flyImageStream.empty())
-					{
-						if (flyview_record)
-						{
-							fout.Close();
-							printf("[OK]\n");
-						}
+				
+					if (!stream)
 						break;
-					}
-
 				}
 			}
 		}
@@ -1339,21 +1294,31 @@ int _tmain(int argc, _TCHAR* argv[])
 			createTrackbar("head", "controls", &head_center, 100);
 
 			Mat tframe, tmask;
+
 			while (true)
 			{
-				#pragma omp critical (arenaview)
-				{
-					tframe = arenaDispStream.clone();
-					tmask = arenaMaskStream.clone();
-				}
+				//#pragma omp critical (arenaview)
+				//{
+				//	tframe = arenaDispStream.clone();
+				//	tmask = arenaMaskStream.clone();
+				//}
 
-				if (!tframe.empty())
+				if (arenaDispStream.try_dequeue(tframe))
 				{
 					ellipse(tframe, arenaMask, Scalar(255, 255, 255));
 					imshow("arena image", tframe);
 				}
 
-				if (!tmask.empty())
+				//if (!tframe.empty())
+				//{
+				//	ellipse(tframe, arenaMask, Scalar(255, 255, 255));
+				//	imshow("arena image", tframe);
+				//}
+
+				//if (!tmask.empty())
+				//	imshow("arena mask", tmask);
+
+				if (arenaMaskStream.try_dequeue(tmask))
 					imshow("arena mask", tmask);
 				
 				waitKey(1);
@@ -1374,19 +1339,24 @@ int _tmain(int argc, _TCHAR* argv[])
 			Mat tframe, tmask;
 			while (true)
 			{
-				#pragma omp critical (flyview)
-				{
-					tframe = flyDispStream.clone();
-					tmask = flyMaskStream.clone();
-				}
+				//#pragma omp critical (flyview)
+				//{
+				//	tframe = flyDispStream.clone();
+				//	tmask = flyMaskStream.clone();
+				//}
 
-				if (!tframe.empty())
+				if (flyDispStream.try_dequeue(tframe))
 					imshow("fly image", tframe);
-			
-				if (!tmask.empty())
-					imshow("fly mask", tmask);
-				
 
+				//if (!tframe.empty())
+				//	imshow("fly image", tframe);
+			
+				if (flyMaskStream.try_dequeue(tmask))
+					imshow("fly mask", tmask);
+
+				//if (!tmask.empty())
+				//	imshow("fly mask", tmask);
+				
 				waitKey(1);
 
 				if (!stream)
@@ -1397,6 +1367,81 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 			}
 		}
+
+		#pragma omp section
+		{
+			while (true)
+			{
+				if (GetAsyncKeyState(VK_F1))
+				{
+					if (!track_key_state)
+					{
+						flyview_track = !flyview_track;
+
+						if (flyview_record)
+							flyview_record = !flyview_record;
+					}
+
+					track_key_state = 1;
+				}
+				else
+					track_key_state = 0;
+
+				if (GetAsyncKeyState(VK_F2))
+				{
+					if (!record_key_state)
+					{
+						flyview_record = !flyview_record;
+						rcount = 0;
+					}
+
+					record_key_state = 1;
+				}
+				else
+					record_key_state = 0;
+
+				if (GetAsyncKeyState(VK_F3))
+				{
+					if (!flash_key_state)
+						SP->WriteData("1", 1);
+
+					flash_key_state = 1;
+				}
+				else
+					flash_key_state = 0;
+
+				//if (GetAsyncKeyState(VK_F4))
+				//{
+				//	if (!play_key_state)
+				//		PlaySound("..\\media\\flysong.wav", NULL, SND_ASYNC);
+
+				//	play_key_state = 1;
+				//}
+				//else
+				//	play_key_state = 0;
+
+				if (GetAsyncKeyState(VK_ESCAPE))
+				{
+					stream = false;
+					break;
+				}
+
+				if (flyview_record)
+				{
+					if (rcount == MAXRECFRAMES)
+					{
+						rcount = 0;
+						flyview_record = false;
+					}
+				}
+			}
+		}
+	}
+
+	if (fout.IsOpen())
+	{
+		fout.Close();
+		printf("[OK]\n");
 	}
 
 	arena_cam.Stop();
