@@ -69,13 +69,6 @@ int FmfWriter::Close()
 	flog = NULL;
 	ftraj = NULL;
 
-	//if (nframes == 0)
-	//{
-	//	remove(fname);
-	//	remove(flogname);
-	//	remove(ftrajname);
-	//}
-
 	return 1;
 }
 

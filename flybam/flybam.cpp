@@ -13,7 +13,8 @@ bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
 
-ReaderWriterQueue<Mat> q(1000);
+//ReaderWriterQueue<Mat> q(1000);
+ReaderWriterQueue<SapBuffer *> q(1000);
 
 queue <Mat> flyImageStream;
 queue <int> flyTimeStamps;
@@ -22,44 +23,36 @@ queue <int> flyTimeStamps;
 queue <Point2f> laser_pt;
 queue <Point2f> fly_pt;
 
-//Mat frame;
-//bool readframe = false;
-//bool newframe = false;
-
-int last = 0, now = 0;
-float fps;
+//int last = 0, now = 0;
+//float fps;
 
 static void AcqCallback(SapXferCallbackInfo *pInfo)
 {
-	//readframe = true;
 	SapView *pView = (SapView *)pInfo->GetContext();
 
 	SapBuffer *pBuffer = pView->GetBuffer();
 
-	pBuffer->GetCounterStamp(&now);
+	//pBuffer->GetCounterStamp(&now);
 
-	int duration = now - last;
+	//int duration = now - last;
 
-	if (duration > 0)
-		fps = (1.0 / duration) * 1000000;
+	//if (duration > 0)
+	//	fps = (1.0 / duration) * 1000000;
 
-	int width = pBuffer->GetWidth();
-	int height = pBuffer->GetHeight();
-	int depth = pBuffer->GetPixelDepth();
+	//int width = pBuffer->GetWidth();
+	//int height = pBuffer->GetHeight();
+	//int depth = pBuffer->GetPixelDepth();
 
-	void *pData = NULL;
-	pBuffer->GetAddress(&pData);
+	//void *pData = NULL;
+	//pBuffer->GetAddress(&pData);
 
-	Mat tframe(height, width, CV_8U, (void*)pData);
+	//Mat tframe(height, width, CV_8U, (void*)pData);
 
-	q.enqueue(tframe);
-	//frame = tframe.clone();
+	//q.enqueue(tframe);
+	
+	//last = now;
 
-	last = now;
-
-	//newframe = true;
-	//readframe = false;
-
+	q.enqueue(pBuffer);
 }
 
 
@@ -85,7 +78,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (SapManager::GetResourceCount(acqServerName, SapManager::ResourceAcq) > 0)
 	{
 		Acq = new SapAcquisition(loc, configFilename);
-		Buffers = new SapBuffer(2, Acq);
+		Buffers = new SapBufferWithTrash(10, Acq);
 		View = new SapView(Buffers, SapHwndAutomatic);
 		Xfer = new SapAcqToBuf(Acq, Buffers, AcqCallback, View);
 
@@ -112,7 +105,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_left = 384, arena_image_top = 256;
 
 	int fly_image_width = 256, fly_image_height = 256;
-	//int fly_image_left = 512, fly_image_top = 384;
 
 	int edge_min = 1;
 	int edge_max = fly_image_width - 2;
@@ -140,13 +132,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	Point2f pt2d, wpt;
 
 	error = busMgr.GetNumOfCameras(&numCameras);
-	//printf("Number of cameras detected: %u\n", numCameras);
+	printf("Number of point grey cameras detected: %u\n", numCameras);
 
-	//if (numCameras < 1)
-	//{
-	//	printf("Insufficient number of cameras... exiting\n");
-	//	return -1;
-	//}
+	if (numCameras < 1)
+	{
+		printf("Insufficient number of cameras... exiting\n");
+		return -1;
+	}
 
 	printf("Initializing arena view camera ");
 	error = busMgr.GetCameraFromIndex(0, &guid);
@@ -253,7 +245,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	int record_key_state = 0;
 	int track_key_state = 0;
 	int flash_key_state = 0;
-	int play_key_state = 0;
+	//int play_key_state = 0;
 
 	int lost = 0;
 
@@ -264,55 +256,44 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		#pragma omp section
 		{
-			//int last = 0, now = 0, duration = 0;
-			//float fps;
+			int last = 0, now = 0;
+			float fps;
+			
 			//int fly_ltime = 0;
 			//int fly_fps = 0;
 						
-			//SapBuffer *pBuffer = NULL;
-			Mat tframe;
+			//Mat tframe;
 			int fly_stamp;
+			SapBuffer *tBuffer;
 
 			while (true)
 			{
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
 
-				//while (duration == 0)
-				//{
-				//	pBuffer = (SapBuffer *)Xfer->GetContext();
-
-				//	pBuffer->GetCounterStamp(&now);
-				//	duration = now - last;
-				//}
-
-				//last = now;
-				
-				//if (duration > 0)
-				//	fps = (1.0 / duration) * 1000000;
-
-				//duration = 0;
-
-				//void *pData = NULL;
-				//pBuffer->GetAddress(&pData);
-				//
-				//int width = pBuffer->GetWidth();
-				//int height = pBuffer->GetHeight();
-				//int depth = pBuffer->GetPixelDepth();
-
-				//Mat tframe(height, width, CV_8U, (void*)pData);
-
-				//fly_frame = tframe.clone();
-				//fly_img = tframe.clone();
-
-				//if (!readframe && newframe)
-				if (q.try_dequeue(tframe))
+				//if (q.try_dequeue(tframe))
+				if (q.try_dequeue(tBuffer))
 				{
+					tBuffer->GetCounterStamp(&now);
+
+					int duration = now - last;
+
+					if (duration > 0)
+						fps = (1.0 / duration) * 1000 * 1000;
+					
+					//int width = tBuffer->GetWidth();
+					//int height = tBuffer->GetHeight();
+					
+					void *pData = NULL;
+					tBuffer->GetAddress(&pData);
+
+					Mat tframe(fly_image_height, fly_image_width, CV_8U, (void*)pData);
+					
 					fly_frame = tframe.clone();
 					fly_img = tframe.clone();
+					
+					last = now;
 					fly_stamp = now;
-
-					//newframe = false;
 
 					//fly_img = fly_cam.GrabFrame();
 					//fly_stamp = fly_cam.GetTimeStamp();
@@ -1060,7 +1041,10 @@ int _tmain(int argc, _TCHAR* argv[])
 					//fly_ltime = fly_stamp.cycleCount;
 
 					//putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+					
 					putText(fly_frame, to_string(fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+					putText(fly_frame, to_string(q.size_approx()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
 
 					if (flyview_record)
 						putText(fly_frame, to_string(rcount++), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
@@ -1120,15 +1104,15 @@ int _tmain(int argc, _TCHAR* argv[])
 				else
 					flash_key_state = 0;
 
-				if (GetAsyncKeyState(VK_F4))
-				{
-					if (!play_key_state)
-						PlaySound("..\\media\\flysong.wav", NULL, SND_ASYNC);
+				//if (GetAsyncKeyState(VK_F4))
+				//{
+				//	if (!play_key_state)
+				//		PlaySound("..\\media\\flysong.wav", NULL, SND_ASYNC);
 
-					play_key_state = 1;
-				}
-				else
-					play_key_state = 0;
+				//	play_key_state = 1;
+				//}
+				//else
+				//	play_key_state = 0;
 
 				if (GetAsyncKeyState(VK_ESCAPE))
 				{
@@ -1278,8 +1262,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			Mat tImage;
 			int tStamp;
+			
 			//Image tImage;
 			//TimeStamp tStamp;
+		
 			Point2f tlaser, tfly;
 
 			while (true)
