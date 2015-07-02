@@ -13,25 +13,17 @@ bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
 
-//ReaderWriterQueue<Mat> q(1000);
-ReaderWriterQueue<SapBuffer *> q(1000);
+ReaderWriterQueue<SapBuffer *> q(11000);
+ReaderWriterQueue<Image> aq(3000);
 
 ReaderWriterQueue<Mat> arenaDispStream(1), arenaMaskStream(1), flyDispStream(1), flyMaskStream(1);
 
-ReaderWriterQueue<Mat> flyImageStream(1000);
-ReaderWriterQueue<int> flyTimeStamps(1000);
-ReaderWriterQueue<Point2f> laser_pt(1000);
-ReaderWriterQueue<Point2f> fly_pt(1000);
+ReaderWriterQueue<Mat> flyImageStream(MAXRECFRAMES);
+ReaderWriterQueue<int> flyTimeStamps(MAXRECFRAMES);
+ReaderWriterQueue<Point2f> laser_pt(MAXRECFRAMES);
+ReaderWriterQueue<Point2f> fly_pt(MAXRECFRAMES);
 
-//queue <Mat> flyImageStream;
-//queue <int> flyTimeStamps;
-//queue <Image> flyImageStream;
-//queue <TimeStamp> flyTimeStamps;
-//queue <Point2f> laser_pt;
-//queue <Point2f> fly_pt;
-
-//int last = 0, now = 0;
-//float fps;
+//int arena_last = 0, arena_fps = 0;
 
 static void AcqCallback(SapXferCallbackInfo *pInfo)
 {
@@ -39,27 +31,20 @@ static void AcqCallback(SapXferCallbackInfo *pInfo)
 
 	SapBuffer *pBuffer = pView->GetBuffer();
 
-	//pBuffer->GetCounterStamp(&now);
-
-	//int duration = now - last;
-
-	//if (duration > 0)
-	//	fps = (1.0 / duration) * 1000000;
-
-	//int width = pBuffer->GetWidth();
-	//int height = pBuffer->GetHeight();
-	//int depth = pBuffer->GetPixelDepth();
-
-	//void *pData = NULL;
-	//pBuffer->GetAddress(&pData);
-
-	//Mat tframe(height, width, CV_8U, (void*)pData);
-
-	//q.enqueue(tframe);
-	
-	//last = now;
-
 	q.enqueue(pBuffer);
+}
+
+void OnImageGrabbed(Image* pImage, const void* pCallbackData)
+{
+	Image img;
+
+	//arena_fps = ConvertTimeToFPS(pImage->GetTimeStamp().cycleCount, arena_last);
+	//arena_last = pImage->GetTimeStamp().cycleCount;
+
+	img.DeepCopy(pImage);
+	aq.enqueue(img);
+
+	return;
 }
 
 
@@ -104,7 +89,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 
 	// Start continous grab
-	Xfer->Grab();
+	//Xfer->Grab();
 
 	printf("[OK]\n");
 	
@@ -155,7 +140,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.SetProperty(SHUTTER, 1.003);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
-	error = arena_cam.Start();
+	//error = arena_cam.Start();
+	error = arena_cam.cam.StartCapture(OnImageGrabbed);
 
 	if (error != PGRERROR_OK)
 	{
@@ -163,25 +149,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 	}
 	printf("[OK]\n");
-
-	//printf("Initializing fly view camera ");
-	//error = busMgr.GetCameraFromIndex(1, &guid);
-	//error = fly_cam.Connect(guid);
-	//error = fly_cam.SetCameraParameters(fly_image_left, fly_image_top, fly_image_width, fly_image_height);
-	////fly_cam.GetImageSize(fly_image_width, fly_image_height);
-	//error = fly_cam.SetTrigger();
-	//error = fly_cam.SetProperty(SHUTTER, 0.498);
-	//error = fly_cam.SetProperty(GAIN, 0.0);
-	////error = fly_cam.SetHighPerformanceMode();
-
-	//error = fly_cam.Start();
-
-	//if (error != PGRERROR_OK)
-	//{
-	//	error.PrintErrorTrace();
-	//	return -1;
-	//}
-	//printf("[OK]\n\n");
 
 	FileStorage fs(filename, FileStorage::READ);
 	fs["camera_matrix"] >> cameraMatrix;
@@ -214,22 +181,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 
-	//Image fly_img, arena_img;
-	//TimeStamp fly_stamp, arena_stamp;
-
-	Image arena_img;
-	TimeStamp arena_stamp;
-
 	Mat arena_frame, arena_mask;
 	Mat fly_img, fly_frame, fly_mask;
-
-	//Mat arenaDispStream, arenaMaskStream;
-	//Mat flyDispStream, flyMaskStream;
 
 	int arena_thresh = 75;
 	int fly_thresh = 45;
 
-	//int fly_open = 2;
 	int fly_erode = 1;
 	int fly_dilate = 2;
 
@@ -240,12 +197,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Mat fly_element = getStructuringElement(MORPH_RECT, Size(7, 7), Point(3, 3));
 	Mat arena_element = getStructuringElement(MORPH_RECT, Size(3, 3), Point(1, 1));
-
-	//Mat fly_erodeElement = getStructuringElement(MORPH_RECT, Size(9, 9));
-	//Mat fly_dilateElement = getStructuringElement(MORPH_RECT, Size(9, 9));
-
-	//Mat arena_erodeElement = getStructuringElement(MORPH_RECT, Size(3, 3));
-	//Mat arena_dilateElement = getStructuringElement(MORPH_RECT, Size(3, 3));
 
 	int rcount = 0;
 
@@ -258,19 +209,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f edge_center;
 
-	//Press [F1] to start/stop tracking. [F2] to start/stop recording. Press [ESC] to exit.
+	//Press [F1] to start/stop tracking, [F2] to start/stop recording, [F3] to fire flash, [ESC] to exit.
 	#pragma omp parallel sections num_threads(6)
 	{
 		#pragma omp section
 		{
-			int last = 0, now = 0;
-			float fps;
+			Xfer->Grab();
+
+			int fly_last = 0, fly_now = 0;
+			float fly_fps;
 			
-			//int fly_ltime = 0;
-			//int fly_fps = 0;
-						
-			//Mat tframe;
-			int fly_stamp;
 			SapBuffer *tBuffer;
 
 			while (true)
@@ -281,12 +229,12 @@ int _tmain(int argc, _TCHAR* argv[])
 				//if (q.try_dequeue(tframe))
 				if (q.try_dequeue(tBuffer))
 				{
-					tBuffer->GetCounterStamp(&now);
+					tBuffer->GetCounterStamp(&fly_now);
 
-					int duration = now - last;
+					int duration = fly_now - fly_last;
 
 					if (duration > 0)
-						fps = (1.0 / duration) * 1000 * 1000;
+						fly_fps = (1.0 / duration) * 1000 * 1000;
 					
 					//int width = tBuffer->GetWidth();
 					//int height = tBuffer->GetHeight();
@@ -299,19 +247,9 @@ int _tmain(int argc, _TCHAR* argv[])
 					fly_frame = tframe.clone();
 					fly_img = tframe.clone();
 					
-					last = now;
-					fly_stamp = now;
-
-					//fly_img = fly_cam.GrabFrame();
-					//fly_stamp = fly_cam.GetTimeStamp();
-					//fly_frame = fly_cam.convertImagetoMat(fly_img);
-
+					fly_last = fly_now;
+					
 					threshold(fly_frame, fly_mask, fly_thresh, 255, THRESH_BINARY_INV);
-					//morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element);
-
-					//morphologyEx(fly_mask, fly_mask, MORPH_OPEN, fly_element, Point(-1, -1), fly_open);
-					//erode(fly_mask, fly_mask, fly_erodeElement, Point(-1, -1), fly_erode);
-					//dilate(fly_mask, fly_mask, fly_dilateElement, Point(-1, -1), fly_dilate);
 
 					erode(fly_mask, fly_mask, fly_element, Point(-1, -1), fly_erode);
 					dilate(fly_mask, fly_mask, fly_element, Point(-1, -1), fly_dilate);
@@ -1043,45 +981,26 @@ int _tmain(int argc, _TCHAR* argv[])
 						}
 					}
 
-					//Calculate frame rate
-					//fly_fps = ConvertTimeToFPS(fly_stamp.cycleCount, fly_ltime);
-					//fly_ltime = fly_stamp.cycleCount;
-
-					//putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
-					
-					putText(fly_frame, to_string(fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+					putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 					putText(fly_frame, to_string(q.size_approx()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
 
 					if (flyview_record)
 						putText(fly_frame, to_string(rcount), Point(0, 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
-					//#pragma omp critical (flyview)
-					//{
-						//flyMaskStream = fly_mask.clone();
-						//flyDispStream = fly_frame.clone();
+					flyDispStream.try_enqueue(fly_frame.clone());
+					flyMaskStream.try_enqueue(fly_mask.clone());
 
-						flyDispStream.try_enqueue(fly_frame.clone());
-						flyMaskStream.try_enqueue(fly_mask.clone());
+					if (flyview_record)
+					{
+						laser_pt.enqueue(wpt);
+						fly_pt.enqueue(pt2d);
 
-						if (flyview_record)
-						{
-							//laser_pt.push(wpt);
-							//fly_pt.push(pt2d);
+						flyTimeStamps.enqueue(fly_now);
+						flyImageStream.enqueue(fly_img);
 
-							//flyTimeStamps.push(fly_stamp);
-							//flyTimeStamps.push(fly_stamp);
-							//flyImageStream.push(fly_img);
-
-							laser_pt.enqueue(wpt);
-							fly_pt.enqueue(pt2d);
-
-							flyTimeStamps.enqueue(fly_stamp);
-							flyImageStream.enqueue(fly_img);
-
-							rcount++;
-						}
-					//}
+						rcount++;
+					}
 				}
 
 				if (!stream)
@@ -1091,9 +1010,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
-			int arena_ltime = 0;
-			int arena_fps = 0;
-
+			Image img;
+			int arena_last = 0, arena_fps = 0;
+			
 			while (true)
 			{
 				for (int i = 0; i < NFLIES; i++)
@@ -1102,113 +1021,109 @@ int _tmain(int argc, _TCHAR* argv[])
 					pt[i] = backProject(arena_pt[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
 				}
 
-				arena_img = arena_cam.GrabFrame();
-				arena_stamp = arena_cam.GetTimeStamp();
-				arena_frame = arena_cam.convertImagetoMat(arena_img);
-
-				//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
-				//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
-
-				threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
-				arena_mask &= outer_mask;
-
-				//morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
-				erode(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
-				dilate(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
-
-				vector<vector<Point>> arena_contours;
-
-				findContours(arena_mask, arena_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-				if (arena_contours.size() > 0)
+				if (aq.try_dequeue(img))
 				{
-					// Get the moments and mass centers
-					vector<Moments> arena_mu(arena_contours.size());
-					vector<Point2f> arena_mc(arena_contours.size());
+					arena_fps = ConvertTimeToFPS(img.GetTimeStamp().cycleCount, arena_last);
+					arena_last = img.GetTimeStamp().cycleCount;
 
-					vector<Point2f> arena_ctr_pts;
+					unsigned int rowBytes = (double)img.GetReceivedDataSize() / (double)img.GetRows();
+					Mat tframe = Mat(img.GetRows(), img.GetCols(), CV_8UC1, img.GetData(), rowBytes);
 
-					for (int i = 0; i < arena_contours.size(); i++)
+					arena_frame = tframe.clone();
+					
+					//Mat arena_tframe = arena_cam.convertImagetoMat(arena_img);
+					//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
+
+					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
+					arena_mask &= outer_mask;
+
+					//morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
+					erode(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
+					dilate(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
+
+					vector<vector<Point>> arena_contours;
+
+					findContours(arena_mask, arena_contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+					if (arena_contours.size() > 0)
 					{
-						//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
-						drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), FILLED, 1);
-						arena_mu[i] = moments(arena_contours[i], false);
-						arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
+						// Get the moments and mass centers
+						vector<Moments> arena_mu(arena_contours.size());
+						vector<Point2f> arena_mc(arena_contours.size());
 
-						arena_ctr_pts.push_back(arena_mc[i]);
+						vector<Point2f> arena_ctr_pts;
 
-						//circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
-						//arena_pts.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
-
-						////fly z correction code
-						//float z = 0;
-						//float flydist = 0;
-						//Point2f fly_pos;
-
-						//while (flydist < GALVO_HEIGHT)
-						//{
-						//	fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z += 0.025);
-						//	flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
-						//}
-
-						//float xang = asin(fly_pos.x / GALVO_HEIGHT);
-						//float xdiff = (z - BASE_HEIGHT) * tan(xang);
-						//fly_pos.x -= xdiff;
-
-						//float yang = asin(fly_pos.y / GALVO_HEIGHT);
-						//float ydiff = (z - BASE_HEIGHT) * tan(yang);
-						//fly_pos.y -= ydiff;
-
-						//arena_pt.push_back(fly_pos);
-
-					}
-
-					for (int i = 0; i < NFLIES; i++)
-					{
-						if (arena_ctr_pts.size() > 0)
+						for (int i = 0; i < arena_contours.size(); i++)
 						{
-							int j = findClosestPoint(arena_pt[i], arena_ctr_pts);
+							//drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), 1, 8, vector<Vec4i>(), 0, Point());
+							drawContours(arena_mask, arena_contours, i, Scalar(255, 255, 255), FILLED, 1);
+							arena_mu[i] = moments(arena_contours[i], false);
+							arena_mc[i] = Point2f(arena_mu[i].m10 / arena_mu[i].m00, arena_mu[i].m01 / arena_mu[i].m00);
 
-							Point2f est = tkf[i].Correct(arena_ctr_pts[j]);
-							pt[i] = backProject(est, cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
-							arena_pt_vec[i].push_back(est);
+							arena_ctr_pts.push_back(arena_mc[i]);
 
-							//arena_pt[i] = arena_ctr_pts[j];
-							//pt[i] = backProject(arena_pt[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
-							//arena_pt_vec[i].push_back(arena_pt[i]);
+							//circle(arena_frame, arena_mc[i], 1, Scalar(255, 255, 255), FILLED, 1);
+							//arena_pts.push_back(backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT));
 
-							for (int k = 0; k < arena_pt_vec[i].size() - 1; k++)
-								line(arena_frame, arena_pt_vec[i][k], arena_pt_vec[i][k + 1], Scalar(255, 255, 0), 1);
+							////fly z correction code
+							//float z = 0;
+							//float flydist = 0;
+							//Point2f fly_pos;
 
-							if (arena_pt_vec[i].size() > TAIL_LENGTH)
-								arena_pt_vec[i].erase(arena_pt_vec[i].begin());
+							//while (flydist < GALVO_HEIGHT)
+							//{
+							//	fly_pos = backProject(arena_mc[i], cameraMatrix, rotationMatrix, tvec, z += 0.025);
+							//	flydist = dist3d(galvo_center, Point3f(fly_pos.x, fly_pos.y, z));
+							//}
 
-							arena_ctr_pts.erase(arena_ctr_pts.begin() + j);
+							//float xang = asin(fly_pos.x / GALVO_HEIGHT);
+							//float xdiff = (z - BASE_HEIGHT) * tan(xang);
+							//fly_pos.x -= xdiff;
+
+							//float yang = asin(fly_pos.y / GALVO_HEIGHT);
+							//float ydiff = (z - BASE_HEIGHT) * tan(yang);
+							//fly_pos.y -= ydiff;
+
+							//arena_pt.push_back(fly_pos);
+
+						}
+
+						for (int i = 0; i < NFLIES; i++)
+						{
+							if (arena_ctr_pts.size() > 0)
+							{
+								int j = findClosestPoint(arena_pt[i], arena_ctr_pts);
+
+								Point2f est = tkf[i].Correct(arena_ctr_pts[j]);
+								pt[i] = backProject(est, cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
+								arena_pt_vec[i].push_back(est);
+
+								//arena_pt[i] = arena_ctr_pts[j];
+								//pt[i] = backProject(arena_pt[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
+								//arena_pt_vec[i].push_back(arena_pt[i]);
+
+								for (int k = 0; k < arena_pt_vec[i].size() - 1; k++)
+									line(arena_frame, arena_pt_vec[i][k], arena_pt_vec[i][k + 1], Scalar(255, 255, 0), 1);
+
+								if (arena_pt_vec[i].size() > TAIL_LENGTH)
+									arena_pt_vec[i].erase(arena_pt_vec[i].begin());
+
+								arena_ctr_pts.erase(arena_ctr_pts.begin() + j);
+							}
+						}
+
+						if (!flyview_track)
+						{
+							ndq.ConvertPtToDeg(pt[focal_fly]);
+							ndq.write();
 						}
 					}
 
-					if (!flyview_track)
-					{
-						ndq.ConvertPtToDeg(pt[focal_fly]);
-						ndq.write();
-					}
+					putText(arena_frame, to_string(arena_fps), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+
+					arenaDispStream.try_enqueue(arena_frame.clone());
+					arenaMaskStream.try_enqueue(arena_mask.clone());
 				}
-
-				//Calculate frame rate
-				arena_fps = ConvertTimeToFPS(arena_stamp.cycleCount, arena_ltime);
-				arena_ltime = arena_stamp.cycleCount;
-
-				putText(arena_frame, to_string(arena_fps), Point((arena_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
-
-
-				//#pragma omp critical (arenaview)
-				//{
-				//	arenaMaskStream = arena_mask.clone();
-				//	arenaDispStream = arena_frame.clone();
-				//}
-
-				arenaDispStream.try_enqueue(arena_frame.clone());
-				arenaMaskStream.try_enqueue(arena_mask.clone());
 
 				if (!stream)
 					break;
@@ -1223,14 +1138,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			Mat tImage;
 			int tStamp;
 			
-			//Image tImage;
-			//TimeStamp tStamp;
-		
 			Point2f tlaser, tfly;
 
 			while (true)
 			{
-				//if (!flyImageStream.empty())
 				if (flyImageStream.try_dequeue(tImage))
 				{
 					if (!fout.IsOpen())
@@ -1241,29 +1152,14 @@ int _tmain(int argc, _TCHAR* argv[])
 						printf("Recording ");
 					}
 
-					//#pragma omp critical (flyview)
-					//{
-						//tImage = flyImageStream.front();
-						//tStamp = flyTimeStamps.front();
-						//tlaser = laser_pt.front();
-						//tfly = fly_pt.front();
-					
-						//flyImageStream.pop();
-						//flyTimeStamps.pop();
-						//laser_pt.pop();
-						//fly_pt.pop();
-
-						//flyImageStream.try_dequeue(tImage);
-						flyTimeStamps.try_dequeue(tStamp);
-						fly_pt.try_dequeue(tfly);
-						laser_pt.try_dequeue(tlaser);
-					//}
-
+					flyTimeStamps.try_dequeue(tStamp);
+					fly_pt.try_dequeue(tfly);
+					laser_pt.try_dequeue(tlaser);
+			
 					fout.WriteFrame(tImage);
 					fout.WriteLog(tStamp);
 					fout.WriteTraj(tlaser, tfly);
 					fout.nframes++;
-
 				}
 				else
 				{
@@ -1288,7 +1184,6 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (NFLIES > 1)
 				createTrackbar("focal fly", "controls", &focal_fly, NFLIES-1);
 			
-			//createTrackbar("morph open", "controls", &fly_open, 5);
 			createTrackbar("erode", "controls", &fly_erode, 5);
 			createTrackbar("dilate", "controls", &fly_dilate, 5);
 			createTrackbar("head", "controls", &head_center, 100);
@@ -1297,26 +1192,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
-				//#pragma omp critical (arenaview)
-				//{
-				//	tframe = arenaDispStream.clone();
-				//	tmask = arenaMaskStream.clone();
-				//}
-
 				if (arenaDispStream.try_dequeue(tframe))
 				{
 					ellipse(tframe, arenaMask, Scalar(255, 255, 255));
 					imshow("arena image", tframe);
 				}
-
-				//if (!tframe.empty())
-				//{
-				//	ellipse(tframe, arenaMask, Scalar(255, 255, 255));
-				//	imshow("arena image", tframe);
-				//}
-
-				//if (!tmask.empty())
-				//	imshow("arena mask", tmask);
 
 				if (arenaMaskStream.try_dequeue(tmask))
 					imshow("arena mask", tmask);
@@ -1339,24 +1219,12 @@ int _tmain(int argc, _TCHAR* argv[])
 			Mat tframe, tmask;
 			while (true)
 			{
-				//#pragma omp critical (flyview)
-				//{
-				//	tframe = flyDispStream.clone();
-				//	tmask = flyMaskStream.clone();
-				//}
-
 				if (flyDispStream.try_dequeue(tframe))
 					imshow("fly image", tframe);
 
-				//if (!tframe.empty())
-				//	imshow("fly image", tframe);
-			
 				if (flyMaskStream.try_dequeue(tmask))
 					imshow("fly mask", tmask);
 
-				//if (!tmask.empty())
-				//	imshow("fly mask", tmask);
-				
 				waitKey(1);
 
 				if (!stream)
@@ -1445,8 +1313,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	arena_cam.Stop();
-	//fly_cam.Stop();
-
+	
 	// Stop grab
 	Xfer->Freeze();
 	if (!Xfer->Wait(5000))

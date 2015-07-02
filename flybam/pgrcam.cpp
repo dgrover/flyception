@@ -105,13 +105,13 @@ FlyCapture2::Error PGRcam::SetProperty(FlyCapture2::PropertyType type, float abs
 	return error;
 }
 
-FlyCapture2::Error PGRcam::Start()
-{
-	// Start capturing images
-	error = cam.StartCapture();
-
-	return error;
-}
+//FlyCapture2::Error PGRcam::Start()
+//{
+//	// Start capturing images
+//	error = cam.StartCapture();
+//
+//	return error;
+//}
 
 FlyCapture2::Error PGRcam::Stop()
 {
@@ -124,30 +124,30 @@ FlyCapture2::Error PGRcam::Stop()
 	return error;
 }
 
-FlyCapture2::Image PGRcam::GrabFrame()
-{
-	// Retrieve an image
-	error = cam.RetrieveBuffer(&rawImage);
+//FlyCapture2::Image PGRcam::GrabFrame()
+//{
+//	// Retrieve an image
+//	error = cam.RetrieveBuffer(&rawImage);
+//
+//	//get image timestamp
+//	timestamp = rawImage.GetTimeStamp();
+//
+//	// Convert the raw image
+//	error = rawImage.Convert(PIXEL_FORMAT_MONO8, &convertedImage);
+//
+//	return convertedImage;
+//}
 
-	//get image timestamp
-	timestamp = rawImage.GetTimeStamp();
-
-	// Convert the raw image
-	error = rawImage.Convert(PIXEL_FORMAT_MONO8, &convertedImage);
-
-	return convertedImage;
-}
-
-Mat PGRcam::convertImagetoMat(Image img)
-{
-	// convert to OpenCV Mat
-	unsigned int rowBytes = (double)img.GetReceivedDataSize() / (double)img.GetRows();
-	Mat tframe = Mat(img.GetRows(), img.GetCols(), CV_8UC1, img.GetData(), rowBytes);
-
-	Mat frame = tframe.clone();
-
-	return frame;
-}
+//Mat PGRcam::convertImagetoMat(Image img)
+//{
+//	// convert to OpenCV Mat
+//	unsigned int rowBytes = (double)img.GetReceivedDataSize() / (double)img.GetRows();
+//	Mat tframe = Mat(img.GetRows(), img.GetCols(), CV_8UC1, img.GetData(), rowBytes);
+//
+//	Mat frame = tframe.clone();
+//
+//	return frame;
+//}
 
 void PGRcam::GetImageSize(int &imageWidth, int &imageHeight)
 {
@@ -155,7 +155,7 @@ void PGRcam::GetImageSize(int &imageWidth, int &imageHeight)
 		imageHeight = fmt7ImageSettings.height;
 }
 
-FlyCapture2::TimeStamp PGRcam::GetTimeStamp()
-{
-	return timestamp;
-}
+//FlyCapture2::TimeStamp PGRcam::GetTimeStamp()
+//{
+//	return timestamp;
+//}

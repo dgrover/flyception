@@ -8,11 +8,11 @@ using namespace cv;
 class PGRcam
 {
 private:
-	Camera cam;
+	
 	CameraInfo camInfo;
 
-	Image rawImage, convertedImage;
-	TimeStamp timestamp;
+	//Image rawImage, convertedImage;
+	//TimeStamp timestamp;
 
 	FlyCapture2::Error error;
 
@@ -35,6 +35,8 @@ private:
 
 public:
 
+	Camera cam;
+
 	PGRcam();
 	~PGRcam();
 
@@ -42,11 +44,11 @@ public:
 	FlyCapture2::Error SetCameraParameters(int left, int top, int width, int height);
 	FlyCapture2::Error SetTrigger();
 	FlyCapture2::Error SetProperty(PropertyType type, float absValue);
-	FlyCapture2::Error Start();
+	//FlyCapture2::Error Start();
 	FlyCapture2::Error Stop();
-	FlyCapture2::Image GrabFrame();
-	Mat convertImagetoMat(Image img);
-	FlyCapture2::TimeStamp GetTimeStamp();
+	//FlyCapture2::Image GrabFrame();
+	//Mat convertImagetoMat(Image img);
+	//FlyCapture2::TimeStamp GetTimeStamp();
 	void GetImageSize(int &imageWidth, int &imageHeight);
 	FlyCapture2::Error SetHighPerformanceMode();
 };
