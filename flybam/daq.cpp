@@ -75,3 +75,13 @@ void Daq::reset()
 	thetax = 0.0;
 	thetay = 0.0;
 }
+
+Point2f Daq::GetGalvoAngles()
+{
+	Point2f angle;
+
+	angle.x = thetax;
+	angle.y = thetay;
+
+	return angle;
+}

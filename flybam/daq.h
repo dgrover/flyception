@@ -29,7 +29,8 @@ public:
 	void write();
 	void ConvertPtToDeg(Point2f pt);
 	void ConvertPixelToDeg(float x, float y);
-	Point2f Daq::ConvertDegToPt();
+	Point2f ConvertDegToPt();
+	Point2f GetGalvoAngles();
 };
 
 #endif
