@@ -8,8 +8,9 @@ using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 using namespace moodycamel;
+using namespace concurrency;
 
-bool stream = true;
+bool stream = false;
 bool flyview_track = false;
 bool flyview_record = false;
 
@@ -23,8 +24,11 @@ struct writedata
 	float body_angle;
 };
 
-ReaderWriterQueue<SapBuffer *> q(11000);
-ReaderWriterQueue<Image> aq(3000);
+//ReaderWriterQueue<SapBuffer *> q(11000);
+concurrent_queue<SapBuffer *> q;
+
+//ReaderWriterQueue<Image> aq(3000);
+concurrent_queue<Image> aq;
 
 ReaderWriterQueue<Mat> arenaDispStream(1), arenaMaskStream(1), flyDispStream(1), flyMaskStream(1);
 
@@ -34,8 +38,8 @@ ReaderWriterQueue<Mat> arenaDispStream(1), arenaMaskStream(1), flyDispStream(1),
 //ReaderWriterQueue<Point2f> fly_pt(MAXRECFRAMES);
 //ReaderWriterQueue<float> body_angle(MAXRECFRAMES);
 
-ReaderWriterQueue<writedata> wdata(MAXRECFRAMES);
-//concurrent_queue<writedata> wdata;
+//ReaderWriterQueue<writedata> wdata(MAXRECFRAMES);
+concurrent_queue<writedata> wdata;
 
 //int arena_last = 0, arena_fps = 0;
 
@@ -45,7 +49,9 @@ static void AcqCallback(SapXferCallbackInfo *pInfo)
 
 	SapBuffer *pBuffer = pView->GetBuffer();
 
-	q.enqueue(pBuffer);
+	if (stream)
+		q.push(pBuffer);
+		//q.enqueue(pBuffer);
 }
 
 void OnImageGrabbed(Image* pImage, const void* pCallbackData)
@@ -56,7 +62,10 @@ void OnImageGrabbed(Image* pImage, const void* pCallbackData)
 	//arena_last = pImage->GetTimeStamp().cycleCount;
 
 	img.DeepCopy(pImage);
-	aq.enqueue(img);
+	
+	if (stream)
+		aq.push(img);
+		//aq.enqueue(img);
 
 	return;
 }
@@ -103,7 +112,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		return -1;
 
 	// Start continous grab
-	//Xfer->Grab();
+	Xfer->Grab();
 
 	printf("[OK]\n");
 	
@@ -223,13 +232,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f edge_center;
 
+	stream = true;
+
 	//Press [F1] to start/stop tracking, [F2] to start/stop recording, [F3] to fire flash, [ESC] to exit.
 	#pragma omp parallel sections num_threads(6)
 	{
 		#pragma omp section
 		{
-			Xfer->Grab();
-
 			int fly_last = 0, fly_now = 0;
 			float fly_fps;
 			
@@ -244,7 +253,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				//	pt[i] = tkf[i].Predict();
 
 				//if (q.try_dequeue(tframe))
-				if (q.try_dequeue(tBuffer))
+				//if (q.try_dequeue(tBuffer))
+				if (q.try_pop(tBuffer))
 				{
 					tBuffer->GetCounterStamp(&fly_now);
 
@@ -1008,7 +1018,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 						putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
-						putText(fly_frame, to_string(q.size_approx()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+						
+						//putText(fly_frame, to_string(q.size_approx()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+						putText(fly_frame, to_string(q.unsafe_size()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 
 
 						if (flyview_record)
@@ -1026,8 +1038,8 @@ int _tmain(int argc, _TCHAR* argv[])
 							in.galvo_angle = galvo_mirror_angle;
 							in.body_angle = fly_body_angle;
 
-							wdata.enqueue(in);
-							//wdata.push(in);
+							//wdata.enqueue(in);
+							wdata.push(in);
 
 							//laser_pt.enqueue(wpt);
 							//fly_pt.enqueue(pt2d);
@@ -1059,7 +1071,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					pt[i] = backProject(arena_pt[i], cameraMatrix, rotationMatrix, tvec, BASE_HEIGHT);
 				}
 
-				if (aq.try_dequeue(img))
+				//if (aq.try_dequeue(img))
+				if (aq.try_pop(img))
 				{
 					arena_fps = ConvertTimeToFPS(img.GetTimeStamp().cycleCount, arena_last);
 					arena_last = img.GetTimeStamp().cycleCount;
@@ -1229,8 +1242,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
-				//wdata.try_pop(out)
-				if (wdata.try_dequeue(out))
+				//if (wdata.try_dequeue(out))
+				if (wdata.try_pop(out))
 				{
 					if (!fout.IsOpen())
 					{

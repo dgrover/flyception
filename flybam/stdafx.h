@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <numeric>
 #include <mmsystem.h>
-//#include <concurrent_queue.h>
+#include <concurrent_queue.h>
 
 #include "FlyCapture2.h"
 
