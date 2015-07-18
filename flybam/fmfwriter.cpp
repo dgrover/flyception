@@ -59,7 +59,7 @@ int FmfWriter::Close()
 {
 	//seek to location in file where nframes is stored and replace
 	fseek (fp, 20, SEEK_SET );	
-	fwrite(&nframes, sizeof(unsigned __int64), 1, fp);
+	_fwrite_nolock(&nframes, sizeof(unsigned __int64), 1, fp);
 
 	fclose(fp);
 	fclose(flog);
@@ -87,11 +87,11 @@ void FmfWriter::InitHeader(unsigned __int32 x, unsigned __int32 y)
 void FmfWriter::WriteHeader()
 {
 	//write FMF header data
-	fwrite(&fmfVersion, sizeof(unsigned __int32), 1, fp);
-	fwrite(&SizeY, sizeof(unsigned __int32), 1, fp);
-	fwrite(&SizeX, sizeof(unsigned __int32), 1, fp);
-	fwrite(&bytesPerChunk, sizeof(unsigned __int64), 1, fp);
-	fwrite(&nframes, sizeof(unsigned __int64), 1, fp);
+	_fwrite_nolock(&fmfVersion, sizeof(unsigned __int32), 1, fp);
+	_fwrite_nolock(&SizeY, sizeof(unsigned __int32), 1, fp);
+	_fwrite_nolock(&SizeX, sizeof(unsigned __int32), 1, fp);
+	_fwrite_nolock(&bytesPerChunk, sizeof(unsigned __int64), 1, fp);
+	_fwrite_nolock(&nframes, sizeof(unsigned __int64), 1, fp);
 }
 
 //void FmfWriter::WriteFrame(TimeStamp st, Image img)
@@ -100,16 +100,16 @@ void FmfWriter::WriteFrame(Image img)
 	//double dst = (double) st.seconds;
 	double dst = (double)nframes;
 
-	fwrite(&dst, sizeof(double), 1, fp);
-	fwrite(img.GetData(), img.GetDataSize(), 1, fp);
+	_fwrite_nolock(&dst, sizeof(double), 1, fp);
+	_fwrite_nolock(img.GetData(), img.GetDataSize(), 1, fp);
 }
 
 void FmfWriter::WriteFrame(Mat img)
 {
 	double dst = (double)nframes;
 
-	fwrite(&dst, sizeof(double), 1, fp);
-	fwrite(img.data, sizeof(unsigned char), SizeY*SizeX, fp);
+	_fwrite_nolock(&dst, sizeof(double), 1, fp);
+	_fwrite_nolock(img.data, sizeof(unsigned char), SizeY*SizeX, fp);
 }
 
 //void FmfWriter::WriteLog(TimeStamp st)

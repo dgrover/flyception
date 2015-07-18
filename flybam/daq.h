@@ -13,9 +13,6 @@ private:
 	TaskHandle	taskHandleX;
 	TaskHandle	taskHandleY;
 
-	float voltperdeg;
-	float galvoheight;
-
 	float thetax, thetay;
 
 	float64     dataX[STEP_SIZE];

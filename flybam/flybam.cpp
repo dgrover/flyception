@@ -35,6 +35,7 @@ ReaderWriterQueue<Mat> arenaDispStream(1), arenaMaskStream(1), flyDispStream(1),
 //ReaderWriterQueue<float> body_angle(MAXRECFRAMES);
 
 ReaderWriterQueue<writedata> wdata(MAXRECFRAMES);
+//concurrent_queue<writedata> wdata;
 
 //int arena_last = 0, arena_fps = 0;
 
@@ -172,7 +173,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	fs.release();
 
 	//calculating galvo center position in pixel coordinates
-	Point3f galvo_center_3d(0, 0, (BASE_HEIGHT - sqrt((GALVO_HEIGHT * GALVO_HEIGHT) - (ARENA_RADIUS * ARENA_RADIUS))));
+	//Point3f galvo_center_3d(0, 0, (BASE_HEIGHT - sqrt((GALVO_Y_HEIGHT * GALVO_Y_HEIGHT) - (ARENA_RADIUS * ARENA_RADIUS))));
 	Point2f galvo_center_2d = project3d2d(Point2f(0, 0), cameraMatrix, distCoeffs, rvec, tvec);
 
 	//initializing galvo to arena center in pixel coordinates
@@ -1026,6 +1027,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							in.body_angle = fly_body_angle;
 
 							wdata.enqueue(in);
+							//wdata.push(in);
 
 							//laser_pt.enqueue(wpt);
 							//fly_pt.enqueue(pt2d);
@@ -1227,6 +1229,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
+				//wdata.try_pop(out)
 				if (wdata.try_dequeue(out))
 				{
 					if (!fout.IsOpen())

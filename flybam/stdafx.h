@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <numeric>
 #include <mmsystem.h>
+//#include <concurrent_queue.h>
 
 #include "FlyCapture2.h"
 
@@ -55,13 +56,17 @@
 //#endif
 
 #define BASE_HEIGHT 7.175			//in mm
-#define GALVO_HEIGHT 65.0			//in mm
+#define GALVO_Y_HEIGHT 68.167			//in mm
+#define GALVO_XY_DIST 15.174			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
 #define ARENA_RADIUS 20				//in mm
 #define TAIL_LENGTH 100
 
-#define SCALEX 0.00075
-#define SCALEY 0.00075
+#define XVOLTPERDEGREE 0.55
+#define YVOLTPERDEGREE 0.53
+
+#define SCALEX 0.0008
+#define SCALEY 0.0008
 
 #define NFLIES 1
 #define NLOSTFRAMES 5
