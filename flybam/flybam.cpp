@@ -14,6 +14,8 @@ bool stream = false;
 bool flyview_track = false;
 bool flyview_record = false;
 
+bool manual_track = false;
+
 struct writedata
 {
 	Mat img;
@@ -199,9 +201,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 
+	int arena_radius = ARENA_RADIUS;
+	
 	//create arena mask
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
-	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
+	RotatedRect arenaMask = createArenaMask(arena_radius, cameraMatrix, distCoeffs, rvec, tvec);
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 
 	Mat arena_frame, arena_mask;
@@ -222,12 +226,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_element = getStructuringElement(MORPH_RECT, Size(3, 3), Point(1, 1));
 
 	int rcount = 0;
-
-	int record_key_state = 0;
-	int track_key_state = 0;
-	int flash_key_state = 0;
-	//int play_key_state = 0;
-
 	int lost = 0;
 
 	Point2f edge_center;
@@ -1003,6 +1001,7 @@ int _tmain(int argc, _TCHAR* argv[])
 								{
 									flyview_track = false;
 									flyview_record = false;
+									manual_track = false;
 									ndq.reset();
 
 									//pt2d = Point2f(0, 0);
@@ -1063,6 +1062,8 @@ int _tmain(int argc, _TCHAR* argv[])
 			Image img;
 			int arena_last = 0, arena_fps = 0;
 			
+			int arena_last_radius = arena_radius;
+
 			while (true)
 			{
 				for (int i = 0; i < NFLIES; i++)
@@ -1086,7 +1087,18 @@ int _tmain(int argc, _TCHAR* argv[])
 					//undistort(arena_tframe, arena_frame, cameraMatrix, distCoeffs);
 
 					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
-					arena_mask &= outer_mask;
+					
+					if (arena_last_radius != arena_radius)
+					{
+						//create arena mask
+						outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
+						arenaMask = createArenaMask(arena_radius, cameraMatrix, distCoeffs, rvec, tvec);
+						ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
+
+						arena_last_radius = arena_radius;
+					}
+					else
+						arena_mask &= outer_mask;
 
 					//morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
 					erode(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
@@ -1163,7 +1175,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 						}
 
-						if (!flyview_track)
+						if (!flyview_track && !manual_track)
 						{
 							ndq.ConvertPtToDeg(pt[focal_fly]);
 							ndq.write();
@@ -1275,6 +1287,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		#pragma omp section
 		{
 			namedWindow("controls", WINDOW_AUTOSIZE);
+			createTrackbar("arena radius", "controls", &arena_radius, 25);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
 			createTrackbar("fly thresh", "controls", &fly_thresh, 255);
 			
@@ -1335,13 +1348,95 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		#pragma omp section
 		{
+			int record_key_state = 0;
+			int track_key_state = 0;
+			int flash_key_state = 0;
+			//int play_key_state = 0;
+
+			int arena_track_key_state = 0;
+			
+			int left_key_state = 0;
+			int right_key_state = 0;
+			int up_key_state = 0;
+			int down_key_state = 0;
+
 			while (true)
 			{
+				if (GetAsyncKeyState(VK_HOME))
+				{
+					if (!arena_track_key_state)
+						manual_track = !manual_track;
+
+					arena_track_key_state = 1;
+				}
+				else
+					arena_track_key_state = 0;
+
+
+				if (GetAsyncKeyState(VK_LEFT))
+				{
+					if (!left_key_state)
+					{
+						manual_track = true;
+						ndq.MoveLeft();
+						ndq.write();
+					}
+
+					left_key_state = 1;
+				}
+				else
+					left_key_state = 0;
+
+				if (GetAsyncKeyState(VK_RIGHT))
+				{
+					if (!right_key_state)
+					{
+						manual_track = true;
+						ndq.MoveRight();
+						ndq.write();
+					}
+
+					right_key_state = 1;
+				}
+				else
+					right_key_state = 0;
+
+				if (GetAsyncKeyState(VK_UP))
+				{
+					if (!up_key_state)
+					{
+						manual_track = true;
+						ndq.MoveUp();
+						ndq.write();
+					}
+
+					up_key_state = 1;
+				}
+				else
+					up_key_state = 0;
+
+				if (GetAsyncKeyState(VK_DOWN))
+				{
+					if (!down_key_state)
+					{
+						manual_track = true;
+						ndq.MoveDown();
+						ndq.write();
+					}
+
+					down_key_state = 1;
+				}
+				else
+					down_key_state = 0;
+								
+
 				if (GetAsyncKeyState(VK_F1))
 				{
 					if (!track_key_state)
 					{
 						flyview_track = !flyview_track;
+
+						manual_track = false;
 
 						if (flyview_record)
 							flyview_record = !flyview_record;

@@ -82,3 +82,23 @@ Point2f Daq::GetGalvoAngles()
 
 	return angle;
 }
+
+void Daq::MoveLeft()
+{
+	thetax += 0.1;
+}
+
+void Daq::MoveRight()
+{
+	thetax -= 0.1;
+}
+
+void Daq::MoveUp()
+{
+	thetay += 0.1;
+}
+
+void Daq::MoveDown()
+{
+	thetay -= 0.1;
+}

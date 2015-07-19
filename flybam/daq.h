@@ -28,6 +28,10 @@ public:
 	void ConvertPixelToDeg(float x, float y);
 	Point2f ConvertDegToPt();
 	Point2f GetGalvoAngles();
+	void MoveLeft();
+	void MoveRight();
+	void MoveUp();
+	void MoveDown();
 };
 
 #endif

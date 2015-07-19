@@ -62,7 +62,7 @@ Point2f project3d2d(Point2f pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat 
 	return p2d[0];
 }
 
-RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+RotatedRect createArenaMask(int arena_radius, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
 	Point2f center(0, 0);
 
@@ -72,7 +72,7 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	RotatedRect circleMask;
 
 	for (double angle = 0; angle <= 2 * CV_PI; angle += 0.001) //You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + ARENA_RADIUS*cos(angle), center.y + ARENA_RADIUS*sin(angle), BASE_HEIGHT));
+		c3d.push_back(Point3f(center.x + arena_radius*cos(angle), center.y + arena_radius*sin(angle), BASE_HEIGHT));
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 

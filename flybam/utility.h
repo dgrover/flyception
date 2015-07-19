@@ -10,7 +10,7 @@ bool myfnx(Point p1, Point p2);
 Point2f rotateFlyCenter(Point2f p, int image_width, int image_height);
 Point2f backProject(Point2f p, Mat cameraMatrix, Mat rotationMatrix, Mat tvec, float height);
 Point2f project3d2d(Point2f pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec);
-RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec);
+RotatedRect createArenaMask(int arena_radius, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec);
 float dist(Point2f p1, Point2f p2);
 float dist3d(Point3f p1, Point3f p2);
 int findClosestPoint(Point2f pt, vector<Point2f> nbor);
