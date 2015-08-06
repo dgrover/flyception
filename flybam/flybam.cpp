@@ -201,11 +201,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	ndq.configure();
 	ndq.start();
 
-	int arena_radius = ARENA_RADIUS;
+	//int arena_radius = ARENA_RADIUS;
 	
 	//create arena mask
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
-	RotatedRect arenaMask = createArenaMask(arena_radius, cameraMatrix, distCoeffs, rvec, tvec);
+	//RotatedRect arenaMask = createArenaMask(ARENA_RADIUS, cameraMatrix, distCoeffs, rvec, tvec);
+	RotatedRect arenaMask = createArenaMask(cameraMatrix, distCoeffs, rvec, tvec);
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 
 	Mat arena_frame, arena_mask;
@@ -1062,7 +1063,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			Image img;
 			int arena_last = 0, arena_fps = 0;
 			
-			int arena_last_radius = arena_radius;
+			//int arena_last_radius = arena_radius;
 
 			while (true)
 			{
@@ -1088,17 +1089,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					threshold(arena_frame, arena_mask, arena_thresh, 255, THRESH_BINARY_INV);
 					
-					if (arena_last_radius != arena_radius)
-					{
-						//create arena mask
-						outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
-						arenaMask = createArenaMask(arena_radius, cameraMatrix, distCoeffs, rvec, tvec);
-						ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
+					//if (arena_last_radius != arena_radius)
+					//{
+					//	//create arena mask
+					//	outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
+					//	arenaMask = createArenaMask(arena_radius, cameraMatrix, distCoeffs, rvec, tvec);
+					//	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 
-						arena_last_radius = arena_radius;
-					}
-					else
-						arena_mask &= outer_mask;
+					//	arena_last_radius = arena_radius;
+					//}
+					//else
+					arena_mask &= outer_mask;
 
 					//morphologyEx(arena_mask, arena_mask, MORPH_OPEN, arena_element);
 					erode(arena_mask, arena_mask, arena_element, Point(-1, -1), 1);
@@ -1287,7 +1288,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		#pragma omp section
 		{
 			namedWindow("controls", WINDOW_AUTOSIZE);
-			createTrackbar("arena radius", "controls", &arena_radius, 25);
+			//createTrackbar("arena radius", "controls", &arena_radius, 25);
 			createTrackbar("arena thresh", "controls", &arena_thresh, 255);
 			createTrackbar("fly thresh", "controls", &fly_thresh, 255);
 			

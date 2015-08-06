@@ -59,14 +59,15 @@
 #define GALVO_Y_HEIGHT 68.167			//in mm
 #define GALVO_XY_DIST 15.174			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
-#define ARENA_RADIUS 20				//in mm
+#define ARENA_X_RADIUS 22.159				//in mm
+#define ARENA_Y_RADIUS 20				//in mm
 #define TAIL_LENGTH 100
 
-#define XVOLTPERDEGREE 0.555
-#define YVOLTPERDEGREE 0.535
+#define XVOLTPERDEGREE 0.55
+#define YVOLTPERDEGREE 0.525
 
-#define SCALEX 0.0008
-#define SCALEY 0.0008
+#define SCALEX 0.001
+#define SCALEY 0.001
 
 #define NFLIES 1
 #define NLOSTFRAMES 5

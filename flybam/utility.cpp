@@ -62,23 +62,62 @@ Point2f project3d2d(Point2f pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat 
 	return p2d[0];
 }
 
-RotatedRect createArenaMask(int arena_radius, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+//RotatedRect createArenaMask(int arena_radius, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+//{
+//	Point2f center(0, 0);
+//
+//	vector<Point3f> c3d;
+//	vector<Point2f> c2d;
+//
+//	RotatedRect circleMask;
+//
+//	for (double angle = 0; angle <= 2 * CV_PI; angle += 0.001) //You are using radians so you will have to increase by a very small amount
+//		c3d.push_back(Point3f(center.x + arena_radius*cos(angle), center.y + arena_radius*sin(angle), BASE_HEIGHT));
+//
+//	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
+//
+//	circleMask = fitEllipse(c2d);
+//
+//	return circleMask;
+//}
+
+RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
 	Point2f center(0, 0);
+
+	Point3f ellipsePath;
 
 	vector<Point3f> c3d;
 	vector<Point2f> c2d;
 
-	RotatedRect circleMask;
+	RotatedRect ellipseMask;
 
 	for (double angle = 0; angle <= 2 * CV_PI; angle += 0.001) //You are using radians so you will have to increase by a very small amount
-		c3d.push_back(Point3f(center.x + arena_radius*cos(angle), center.y + arena_radius*sin(angle), BASE_HEIGHT));
+	{
+		if ( (angle >= 0 && angle < 90) || (angle > 270 && angle <= 360) )
+		{
+			ellipsePath.x = (ARENA_X_RADIUS*ARENA_Y_RADIUS) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
+			ellipsePath.y = (ARENA_X_RADIUS*ARENA_Y_RADIUS*tan(angle)) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
+			ellipsePath.z = BASE_HEIGHT;
+
+			c3d.push_back(ellipsePath);
+		}
+
+		if (angle > 90 && angle < 270)
+		{
+			ellipsePath.x = -(ARENA_X_RADIUS*ARENA_Y_RADIUS) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
+			ellipsePath.y = -(ARENA_X_RADIUS*ARENA_Y_RADIUS*tan(angle)) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
+			ellipsePath.z = BASE_HEIGHT;
+
+			c3d.push_back(ellipsePath);
+		}
+	}
 
 	projectPoints(c3d, rvec, tvec, cameraMatrix, distCoeffs, c2d);
 
-	circleMask = fitEllipse(c2d);
+	ellipseMask = fitEllipse(c2d);
 
-	return circleMask;
+	return ellipseMask;
 }
 
 float dist(Point2f p1, Point2f p2)
