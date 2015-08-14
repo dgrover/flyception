@@ -10,10 +10,9 @@ using namespace cv;
 using namespace moodycamel;
 using namespace concurrency;
 
-bool stream = false;
+bool stream = true;
 bool flyview_track = false;
 bool flyview_record = false;
-
 bool manual_track = false;
 
 struct writedata
@@ -27,7 +26,10 @@ struct writedata
 };
 
 //ReaderWriterQueue<SapBuffer *> q(11000);
-concurrent_queue<SapBuffer *> q;
+//concurrent_queue<SapBuffer *> q;
+
+concurrent_queue<Mat> q;
+concurrent_queue<int> sq;
 
 //ReaderWriterQueue<Image> aq(3000);
 concurrent_queue<Image> aq;
@@ -45,15 +47,31 @@ concurrent_queue<writedata> wdata;
 
 //int arena_last = 0, arena_fps = 0;
 
+Mat frame;
+int stamp;
+
 static void AcqCallback(SapXferCallbackInfo *pInfo)
 {
 	SapView *pView = (SapView *)pInfo->GetContext();
-
 	SapBuffer *pBuffer = pView->GetBuffer();
 
-	if (stream)
-		q.push(pBuffer);
-		//q.enqueue(pBuffer);
+	pBuffer->GetCounterStamp(&stamp);
+
+	int width = pBuffer->GetWidth();
+	int height = pBuffer->GetHeight();
+	int depth = pBuffer->GetPixelDepth();
+
+	void *pData = NULL;
+	pBuffer->GetAddress(&pData);
+
+	Mat tframe(height, width, CV_8U, (void*)pData);
+	frame = tframe.clone();
+
+	sq.push(stamp);
+	q.push(frame);
+
+	//q.push(pBuffer);
+	//q.enqueue(pBuffer);
 }
 
 void OnImageGrabbed(Image* pImage, const void* pCallbackData)
@@ -65,9 +83,8 @@ void OnImageGrabbed(Image* pImage, const void* pCallbackData)
 
 	img.DeepCopy(pImage);
 	
-	if (stream)
-		aq.push(img);
-		//aq.enqueue(img);
+	aq.push(img);
+	//aq.enqueue(img);
 
 	return;
 }
@@ -95,7 +112,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (SapManager::GetResourceCount(acqServerName, SapManager::ResourceAcq) > 0)
 	{
 		Acq = new SapAcquisition(loc, configFilename);
-		Buffers = new SapBufferWithTrash(10, Acq);
+		
+		//Buffers = new SapBufferWithTrash(10, Acq);
+		Buffers = new SapBuffer(10, Acq);
+
 		View = new SapView(Buffers, SapHwndAutomatic);
 		Xfer = new SapAcqToBuf(Acq, Buffers, AcqCallback, View);
 
@@ -231,8 +251,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f edge_center;
 
-	stream = true;
-
 	//Press [F1] to start/stop tracking, [F2] to start/stop recording, [F3] to fire flash, [ESC] to exit.
 	#pragma omp parallel sections num_threads(6)
 	{
@@ -241,7 +259,9 @@ int _tmain(int argc, _TCHAR* argv[])
 			int fly_last = 0, fly_now = 0;
 			float fly_fps;
 			
-			SapBuffer *tBuffer;
+			//SapBuffer *tBuffer;
+
+			Mat tframe;
 
 			while (true)
 			{
@@ -253,23 +273,26 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				//if (q.try_dequeue(tframe))
 				//if (q.try_dequeue(tBuffer))
-				if (q.try_pop(tBuffer))
+				//if (q.try_pop(tBuffer))
+				if (q.try_pop(tframe))
 				{
-					tBuffer->GetCounterStamp(&fly_now);
+					//tBuffer->GetCounterStamp(&fly_now);
+
+					sq.try_pop(fly_now);
 
 					int duration = fly_now - fly_last;
 
-					if (duration > 0)
+					if (duration != 0)
 					{
 						fly_fps = (1.0 / duration) * 1000 * 1000;
 
 						//int width = tBuffer->GetWidth();
 						//int height = tBuffer->GetHeight();
 
-						void *pData = NULL;
-						tBuffer->GetAddress(&pData);
+						//void *pData = NULL;
+						//tBuffer->GetAddress(&pData);
 
-						Mat tframe(fly_image_height, fly_image_width, CV_8U, (void*)pData);
+						//Mat tframe(fly_image_height, fly_image_width, CV_8U, (void*)pData);
 
 						fly_frame = tframe.clone();
 						fly_img = tframe.clone();

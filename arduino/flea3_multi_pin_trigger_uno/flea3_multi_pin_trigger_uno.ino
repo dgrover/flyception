@@ -2,6 +2,9 @@
 
 int fps_factor = 22;
 int count = 0;
+bool flash_fired = false;
+int flash_count = 0;
+
 int incomingByte = 0;	              // for incoming serial data
 
 void setup()
@@ -25,11 +28,24 @@ void loop()
     {
       PORTD = B10101000; //Set pins 3, 5, 7 to HIGH
       incomingByte = 0;
+      flash_fired = true;
     }
     else
       PORTD = B10100000; //Set pins 5, 7 to HIGH
    
     count = 0;
+    
+    if (flash_fired)
+    {
+      flash_count++;
+    }
+    
+    if (flash_count == 3000)
+    {
+      PORTD = B10101000; //Set pins 3, 5, 7 to HIGH
+      flash_fired = false;
+      flash_count = 0;
+    }
   }
   else
   {

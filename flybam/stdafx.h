@@ -66,8 +66,8 @@
 #define XVOLTPERDEGREE 0.55
 #define YVOLTPERDEGREE 0.525
 
-#define SCALEX 0.001
-#define SCALEY 0.001
+#define SCALEX 0.0008
+#define SCALEY 0.0008
 
 #define NFLIES 1
 #define NLOSTFRAMES 5
