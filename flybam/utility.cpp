@@ -81,7 +81,7 @@ Point2f project3d2d(Point2f pt, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat 
 //	return circleMask;
 //}
 
-RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
+RotatedRect createArenaMask(float x_rad, float y_rad, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec)
 {
 	Point2f center(0, 0);
 
@@ -96,8 +96,8 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 	{
 		if ( (angle >= 0 && angle < 90) || (angle > 270 && angle <= 360) )
 		{
-			ellipsePath.x = (ARENA_X_RADIUS*ARENA_Y_RADIUS) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
-			ellipsePath.y = (ARENA_X_RADIUS*ARENA_Y_RADIUS*tan(angle)) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
+			ellipsePath.x = (x_rad*y_rad) / (sqrt((y_rad*y_rad) + x_rad*x_rad*tan(angle)*tan(angle)));
+			ellipsePath.y = (x_rad*y_rad*tan(angle)) / (sqrt((y_rad*y_rad) + x_rad*x_rad*tan(angle)*tan(angle)));
 			ellipsePath.z = BASE_HEIGHT;
 
 			c3d.push_back(ellipsePath);
@@ -105,8 +105,8 @@ RotatedRect createArenaMask(Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec
 
 		if (angle > 90 && angle < 270)
 		{
-			ellipsePath.x = -(ARENA_X_RADIUS*ARENA_Y_RADIUS) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
-			ellipsePath.y = -(ARENA_X_RADIUS*ARENA_Y_RADIUS*tan(angle)) / (sqrt((ARENA_Y_RADIUS*ARENA_Y_RADIUS) + ARENA_X_RADIUS*ARENA_X_RADIUS*tan(angle)*tan(angle)));
+			ellipsePath.x = -(x_rad*y_rad) / (sqrt((y_rad*y_rad) + x_rad*x_rad*tan(angle)*tan(angle)));
+			ellipsePath.y = -(x_rad*y_rad*tan(angle)) / (sqrt((y_rad*y_rad) + x_rad*x_rad*tan(angle)*tan(angle)));
 			ellipsePath.z = BASE_HEIGHT;
 
 			c3d.push_back(ellipsePath);

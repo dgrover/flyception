@@ -44,7 +44,7 @@ filename = 'testsong.wav';
 %test some basic values
 meanIPI         = 35;   %msec
 IPIOscPeriod    = 55;   %sec
-IPIOscAmp       = .1;   % assumed: 10%
+IPIOscAmp       = 0.1;   % assumed: 10%
 IPIJitter       = 0;    %try 0.25; %sd of pulse onset time jitter (in ms)
 
 pulseFreq       = 220;  %Hz

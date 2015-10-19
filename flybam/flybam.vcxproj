@@ -147,10 +147,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="arduino.h" />
+    <ClInclude Include="avfmfwriter.h" />
     <ClInclude Include="daq.h" />
     <ClInclude Include="ExampleUtils.h" />
     <ClInclude Include="fmfreader.h" />
-    <ClInclude Include="fmfwriter.h" />
+    <ClInclude Include="fvfmfwriter.h" />
     <ClInclude Include="pgrcam.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -159,11 +160,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="arduino.cpp" />
+    <ClCompile Include="avfmfwriter.cpp" />
     <ClCompile Include="daq.cpp" />
     <ClCompile Include="ExampleUtils.cpp" />
     <ClCompile Include="flybam.cpp" />
     <ClCompile Include="fmfreader.cpp" />
-    <ClCompile Include="fmfwriter.cpp" />
+    <ClCompile Include="fvfmfwriter.cpp" />
     <ClCompile Include="pgrcam.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

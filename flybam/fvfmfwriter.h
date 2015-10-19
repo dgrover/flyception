@@ -1,11 +1,11 @@
-#ifndef FMFWRITER_H
-#define FMFWRITER_H
+#ifndef FVFMFWRITER_H
+#define FVFMFWRITER_H
 
 using namespace std;
 using namespace FlyCapture2;
 using namespace cv;
 
-class FmfWriter
+class FVFmfWriter
 {
 	private:
 		FILE *fp;
@@ -20,11 +20,10 @@ class FmfWriter
 		unsigned __int64 bytesPerChunk;
 		char *buf;
 
-		
 	public:
 		unsigned __int64 nframes;
 
-		FmfWriter();
+		FVFmfWriter();
 
 		int Open();
 		int Close();

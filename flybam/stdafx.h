@@ -16,10 +16,9 @@
 #include <queue>
 #include <algorithm>
 #include <numeric>
+#include "conio.h"
 #include <mmsystem.h>
 #include <concurrent_queue.h>
-
-#include "FlyCapture2.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -29,39 +28,30 @@
 #include <opencv2/video/background_segm.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
+#include "FlyCapture2.h"
 #include <NIDAQmx.h>
 
 #include "pgrcam.h"
-
 #include "fmfreader.h"
-#include "fmfwriter.h"
-
+#include "fvfmfwriter.h"
+#include "avfmfwriter.h"
 #include "tracker.h"
 #include "daq.h"
 #include "arduino.h"
 #include "utility.h"
 
-// Disable deprecated function warnings with Visual Studio 2005
-//#if defined(_MSC_VER) && _MSC_VER >= 1400
-//#pragma warning(disable: 4995)
-//#endif
-
-#include "conio.h"
 #include "sapclassbasic.h"
 #include "ExampleUtils.h"
-
-// Restore deprecated function warnings with Visual Studio 2005
-//#if defined(_MSC_VER) && _MSC_VER >= 1400
-//#pragma warning(default: 4995)
-//#endif
 
 #define BASE_HEIGHT 7.175			//in mm
 #define GALVO_Y_HEIGHT 68.167			//in mm
 #define GALVO_XY_DIST 15.174			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
+
 #define ARENA_X_RADIUS 22.159				//in mm
 #define ARENA_Y_RADIUS 20				//in mm
-#define TAIL_LENGTH 100
+
+//#define TAIL_LENGTH 100
 
 #define XVOLTPERDEGREE 0.55
 #define YVOLTPERDEGREE 0.525
@@ -69,8 +59,9 @@
 #define SCALEX 0.0008
 #define SCALEY 0.0008
 
-#define NFLIES 1
+#define NFLIES 2
 #define NLOSTFRAMES 5
-#define MAXRECFRAMES 110000
+#define MAXFVRECFRAMES 110000
+#define MAXAVRECFRAMES 10000
 
 // TODO: reference additional headers your program requires here

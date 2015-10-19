@@ -30,9 +30,6 @@
     <ClInclude Include="fmfreader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fmfwriter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="pgrcam.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -46,6 +43,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ExampleUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avfmfwriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fvfmfwriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,9 +65,6 @@
     <ClCompile Include="fmfreader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fmfwriter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="pgrcam.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -78,6 +78,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ExampleUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="avfmfwriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fvfmfwriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

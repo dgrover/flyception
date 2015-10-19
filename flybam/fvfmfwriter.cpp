@@ -1,15 +1,16 @@
 #include "stdafx.h"
-#include "fmfwriter.h"
+#include "fvfmfwriter.h"
 
-FmfWriter::FmfWriter()
+FVFmfWriter::FVFmfWriter()
 {
 	fp = NULL;
 	flog = NULL;
 	ftraj = NULL;
+
 	nframes = 0;
 }
 
-int FmfWriter::Open()
+int FVFmfWriter::Open()
 {
 	fp = new FILE;
 	flog = new FILE;
@@ -18,20 +19,20 @@ int FmfWriter::Open()
 	SYSTEMTIME st;
 	GetLocalTime(&st);
 
-	sprintf_s(fname, "D:\\flyception-%d%02d%02dT%02d%02d%02d.fmf", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	sprintf_s(fname, "D:\\fv-%d%02d%02dT%02d%02d%02d.fmf", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(fname);
 
-	sprintf_s(flogname, "D:\\flyception-log-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	sprintf_s(flogname, "D:\\fv-log-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(flogname);
 
-	sprintf_s(ftrajname, "D:\\flyception-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	sprintf_s(ftrajname, "D:\\fv-traj-%d%02d%02dT%02d%02d%02d.txt", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 	remove(ftrajname);
 	
 	fopen_s(&fp, fname, "wb");
 
 	if(fp == NULL) // Cannot open File
 	{
-		printf("\nError opening FMF writer. Recording terminated.");
+		printf("\nError opening fly-view FMF writer. Recording terminated.");
 		return -1;	
 	}
 
@@ -39,7 +40,7 @@ int FmfWriter::Open()
 		
 	if(flog == NULL)
 	{
-		printf("\nError creating log file. Recording terminated.");
+		printf("\nError creating fly-view log file. Recording terminated.");
 		return -1;
 	}
 
@@ -47,7 +48,7 @@ int FmfWriter::Open()
 
 	if (ftraj == NULL)
 	{
-		printf("\nError creating trajectory file. Recording terminated.");
+		printf("\nError creating fly-view trajectory file. Recording terminated.");
 		return -1;
 	}
 
@@ -55,7 +56,7 @@ int FmfWriter::Open()
 
 }
 
-int FmfWriter::Close()
+int FVFmfWriter::Close()
 {
 	//seek to location in file where nframes is stored and replace
 	fseek (fp, 20, SEEK_SET );	
@@ -72,7 +73,7 @@ int FmfWriter::Close()
 	return 1;
 }
 
-void FmfWriter::InitHeader(unsigned __int32 x, unsigned __int32 y)
+void FVFmfWriter::InitHeader(unsigned __int32 x, unsigned __int32 y)
 {
 	//settings for version 1.0 fmf header, take image dimensions as input with number of frames set to zero
 	fmfVersion = 1;
@@ -84,7 +85,7 @@ void FmfWriter::InitHeader(unsigned __int32 x, unsigned __int32 y)
 }
 
 
-void FmfWriter::WriteHeader()
+void FVFmfWriter::WriteHeader()
 {
 	//write FMF header data
 	_fwrite_nolock(&fmfVersion, sizeof(unsigned __int32), 1, fp);
@@ -95,7 +96,7 @@ void FmfWriter::WriteHeader()
 }
 
 //void FmfWriter::WriteFrame(TimeStamp st, Image img)
-void FmfWriter::WriteFrame(Image img)
+void FVFmfWriter::WriteFrame(Image img)
 {
 	//double dst = (double) st.seconds;
 	double dst = (double)nframes;
@@ -104,7 +105,7 @@ void FmfWriter::WriteFrame(Image img)
 	_fwrite_nolock(img.GetData(), img.GetDataSize(), 1, fp);
 }
 
-void FmfWriter::WriteFrame(Mat img)
+void FVFmfWriter::WriteFrame(Mat img)
 {
 	double dst = (double)nframes;
 
@@ -120,17 +121,17 @@ void FmfWriter::WriteFrame(Mat img)
 //	fprintf(flog, "Frame %d - System Time [%02d:%02d:%02d:%d] - TimeStamp [%d %d %d]\n", nframes, wt.wHour, wt.wMinute, wt.wSecond, wt.wMilliseconds, st.cycleSeconds, st.cycleCount, st.cycleOffset);
 //}
 
-void FmfWriter::WriteLog(int st)
+void FVFmfWriter::WriteLog(int st)
 {
 	fprintf(flog, "Frame %d - TimeStamp %d\n", nframes, st);
 }
 
-void FmfWriter::WriteTraj(Point2f pt1, Point2f pt2, float body_angle, Point2f galvo_angle)
+void FVFmfWriter::WriteTraj(Point2f pt1, Point2f pt2, float body_angle, Point2f galvo_angle)
 {
 	fprintf(ftraj, "%d %f %f %f %f %f %f %f\n", nframes, pt1.x, pt1.y, pt2.x, pt2.y, body_angle, galvo_angle.x, galvo_angle.y);
 }
 
-int FmfWriter::IsOpen()
+int FVFmfWriter::IsOpen()
 {
 	if (fp == NULL) // Cannot open File
 		return 0;
