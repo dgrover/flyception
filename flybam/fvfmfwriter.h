@@ -35,7 +35,7 @@ class FVFmfWriter
 		void WriteFrame(Mat img);
 		//void WriteLog(TimeStamp st);
 		void WriteLog(int st);
-		void WriteTraj(Point2f pt1, Point2f pt2, float body_angle, Point2f galvo_angle);
+		void WriteTraj(Point2f world, Point2f head, Point2f edge, Point2f galvo_angle);
 		int IsOpen();
 		
 };

@@ -21,9 +21,10 @@ struct fvwritedata
 	Mat img;
 	int stamp;
 	Point2f laser;
-	Point2f pt;
+	Point2f head;
+	Point2f edge;
 	Point2f galvo_angle;
-	float body_angle;
+	//float body_angle;
 };
 
 struct avwritedata
@@ -137,8 +138,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	acqServerName = "Xcelera-CL_PX4_1";
 	acqDeviceNumber = 0;
-	configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_256x256.ccf";
-	//configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_240x240.ccf";
+	//configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_256x256.ccf";
+	configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_240x240.ccf";
 	
 	printf("Initializing camera link fly view camera ");
 
@@ -176,8 +177,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	int arena_image_width = 512, arena_image_height = 512;
 	int arena_image_left = 384, arena_image_top = 256;
 
-	int fly_image_width = 256, fly_image_height = 256;
-	//int fly_image_width = 240, fly_image_height = 240;
+	//int fly_image_width = 256, fly_image_height = 256;
+	int fly_image_width = 240, fly_image_height = 240;
 
 	int edge_min = 1;
 	int edge_max = fly_image_width - 2;
@@ -312,8 +313,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			while (true)
 			{
-				Point2f pt2d, wpt, galvo_mirror_angle;
-				float fly_body_angle = 0.0;
+				Point2f pt2d, wpt, edgept, galvo_mirror_angle;
+				//float fly_body_angle = 0.0;
 
 				//for (int i = 0; i < NFLIES; i++)
 				//	pt[i] = tkf[i].Predict();
@@ -347,7 +348,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							
 							vector<vector<Point>> fly_contours = findLargestContour(fly_mask, j, max_size, contour_count, fly_contour_center);
 
-							if ((contour_count < last_contour_count) && ((max_size - last_contour_size) > 1000.0))
+							if ((contour_count < last_contour_count) && ((max_size - last_contour_size) > 1500.0))
 							{
 								fly_mask &= last_mask;
 								fly_contours = findLargestContour(fly_mask, j, max_size, contour_count, fly_contour_center);
@@ -1032,7 +1033,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 										circle(fly_frame, h, 1, Scalar(255, 255, 255), FILLED, 1);
 										pt2d = h;
-										fly_body_angle = m;
+										edgept = edge_center;
+										//fly_body_angle = m;
 
 										Point2f rotpt = rotateFlyCenter(pt2d, fly_image_width, fly_image_height);
 
@@ -1091,10 +1093,11 @@ int _tmain(int argc, _TCHAR* argv[])
 						{
 							fvin.img = fly_img;
 							fvin.stamp = fly_now;
-							fvin.pt = pt2d;
+							fvin.head = pt2d;
+							fvin.edge = edgept;
 							fvin.laser = wpt;
 							fvin.galvo_angle = galvo_mirror_angle;
-							fvin.body_angle = fly_body_angle;
+							//fvin.body_angle = fly_body_angle;
 
 							//wdata.enqueue(in);
 							fvwdata.push(fvin);
@@ -1314,7 +1317,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					fvfout.WriteFrame(out.img);
 					fvfout.WriteLog(out.stamp);
-					fvfout.WriteTraj(out.laser, out.pt, out.body_angle, out.galvo_angle);
+					fvfout.WriteTraj(out.laser, out.head, out.edge, out.galvo_angle);
 					fvfout.nframes++;
 				}
 				else

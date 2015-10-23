@@ -59,7 +59,7 @@
 #define SCALEX 0.0008
 #define SCALEY 0.0008
 
-#define NFLIES 2
+#define NFLIES 1
 #define NLOSTFRAMES 5
 #define MAXFVRECFRAMES 110000
 #define MAXAVRECFRAMES 10000
