@@ -126,9 +126,9 @@ void FVFmfWriter::WriteLog(int st)
 	fprintf(flog, "Frame %d - TimeStamp %d\n", nframes, st);
 }
 
-void FVFmfWriter::WriteTraj(Point2f world, Point2f head, Point2f edge, Point2f galvo_angle)
+void FVFmfWriter::WriteTraj(Point2f world, Point2f head, Point2f edge, Point2f galvo_angle, int odor)
 {
-	fprintf(ftraj, "%d %f %f %f %f %f %f %f %f\n", nframes, world.x, world.y, head.x, head.y, edge.x, edge.y, galvo_angle.x, galvo_angle.y);
+	fprintf(ftraj, "%d %f %f %f %f %f %f %f %f %d\n", nframes, world.x, world.y, head.x, head.y, edge.x, edge.y, galvo_angle.x, galvo_angle.y, odor);
 }
 
 int FVFmfWriter::IsOpen()

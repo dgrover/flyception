@@ -15,6 +15,7 @@ bool flyview_track = false;
 bool flyview_record = false;
 bool arenaview_record = false;
 bool manual_track = false;
+bool odor_present = false;
 
 struct fvwritedata
 {
@@ -24,6 +25,7 @@ struct fvwritedata
 	Point2f head;
 	Point2f edge;
 	Point2f galvo_angle;
+	int odor;
 	//float body_angle;
 };
 
@@ -221,7 +223,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	error = arena_cam.Connect(guid);
 	error = arena_cam.SetCameraParameters(arena_image_left, arena_image_top, arena_image_width, arena_image_height);
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
-	error = arena_cam.SetProperty(SHUTTER, 1.003);
+
+	error = arena_cam.SetTrigger();
+	//error = arena_cam.SetProperty(SHUTTER, 1.003);
+	//error = arena_cam.SetProperty(SHUTTER, 0.498);
+	error = arena_cam.SetProperty(SHUTTER, 0.249);
+	
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
 	//error = arena_cam.Start();
@@ -253,10 +260,17 @@ int _tmain(int argc, _TCHAR* argv[])
 		//tkf[i].Init(galvo_center_2d);
 	//}
 
-	Serial* SP = new Serial("COM8");    // adjust as needed
+	Serial* SP = new Serial("COM6");    // adjust as needed
 
 	if (SP->IsConnected())
 		printf("Connecting arduino [OK]\n");
+
+	//Serial* SPA = new Serial("COM7");    // adjust as needed
+
+	//if (SPA->IsConnected())
+	//	printf("Connecting odor delivery arduino [OK]\n");
+
+	//SPA->WriteData("1", 1);
 
 	//configure and start NIDAQ
 	Daq ndq;
@@ -273,7 +287,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_img, fly_frame, fly_fg, fly_mask;
 
 	int arena_thresh = 75;
-	int fly_thresh = 45;
+	int fly_thresh = 40;
 
 	int fly_erode = 1;
 	int fly_dilate = 2;
@@ -1077,7 +1091,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							last_contour_size = 0;
 						}
 
-						putText(fly_frame, to_string(fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
+						putText(fly_frame, to_string((int)fly_fps), Point((fly_image_width - 50), 10), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 						
 						//putText(fly_frame, to_string(q.size_approx()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
 						putText(fly_frame, to_string(q.unsafe_size()), Point((fly_image_width - 50), 20), FONT_HERSHEY_COMPLEX, 0.4, Scalar(255, 255, 255));
@@ -1091,6 +1105,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						if (flyview_record)
 						{
+							if (odor_present)
+							{
+								fvin.odor = 1;
+								odor_present = false;
+							}
+							else
+								fvin.odor = 0;
+
 							fvin.img = fly_img;
 							fvin.stamp = fly_now;
 							fvin.head = pt2d;
@@ -1317,7 +1339,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					fvfout.WriteFrame(out.img);
 					fvfout.WriteLog(out.stamp);
-					fvfout.WriteTraj(out.laser, out.head, out.edge, out.galvo_angle);
+					fvfout.WriteTraj(out.laser, out.head, out.edge, out.galvo_angle, out.odor);
 					fvfout.nframes++;
 				}
 				else
@@ -1432,7 +1454,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			int record_key_state = 0;
 			int track_key_state = 0;
 			int flash_key_state = 0;
-			//int play_key_state = 0;
+			//int odor_key_state = 0;
 			int arena_track_key_state = 0;
 			
 			int left_key_state = 0;
@@ -1558,13 +1580,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				//if (GetAsyncKeyState(VK_F4))
 				//{
-				//	if (!play_key_state)
-				//		PlaySound("..\\media\\testsong.wav", NULL, SND_ASYNC);
+				//	if (!odor_key_state)
+				//	{
+				//		SPA->WriteData("2", 1);
+				//		odor_present = true;
+				//	}
+				//		//PlaySound("..\\media\\testsong.wav", NULL, SND_ASYNC);
 
-				//	play_key_state = 1;
+				//	odor_key_state = 1;
 				//}
 				//else
-				//	play_key_state = 0;
+				//	odor_key_state = 0;
 
 				if (GetAsyncKeyState(VK_ESCAPE))
 				{

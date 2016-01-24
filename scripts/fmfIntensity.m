@@ -28,7 +28,7 @@ for i = 1:nframes,
   waitbar( i/nframes, wb, 'computing pixel intensities' )
   data = fmf_read_frame(fp,f_height,f_width,bytes_per_chunk, data_format);
   
-  binaryImage = data >= 140;
+  binaryImage = data; % >= 140;
   
   out(i) = sum(binaryImage(:)) / (f_height*f_width);
 end

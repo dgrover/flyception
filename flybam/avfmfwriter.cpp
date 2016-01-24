@@ -115,7 +115,7 @@ void AVFmfWriter::WriteFrame(Mat img)
 
 void AVFmfWriter::WriteLog(TimeStamp st)
 {
-	fprintf(flog, "Frame %d - TimeStamp [%d %d %d]\n", nframes, st.cycleSeconds, st.cycleCount, st.cycleOffset);
+	fprintf(flog, "Frame %d - TimeStamp %d %d %d\n", nframes, st.cycleSeconds, st.cycleCount, st.cycleOffset);
 }
 
 void AVFmfWriter::WriteTraj(vector<Point2f> pt)
@@ -123,7 +123,7 @@ void AVFmfWriter::WriteTraj(vector<Point2f> pt)
 	fprintf(ftraj, "%d ", nframes);
 
 	for (int i = 0; i < NFLIES; i++)
-		fprintf(ftraj, "[%f %f] ", pt[i].x, pt[i].y);
+		fprintf(ftraj, "%f %f ", pt[i].x, pt[i].y);
 
 	fprintf(ftraj, "\n");
 }

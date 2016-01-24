@@ -61,7 +61,7 @@
 
 #define NFLIES 1
 #define NLOSTFRAMES 5
-#define MAXFVRECFRAMES 110000
-#define MAXAVRECFRAMES 10000
+#define MAXFVRECFRAMES 1000*30
+#define MAXAVRECFRAMES 100*30
 
 // TODO: reference additional headers your program requires here
