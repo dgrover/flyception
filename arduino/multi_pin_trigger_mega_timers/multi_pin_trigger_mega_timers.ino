@@ -26,8 +26,9 @@ void setup()
  
  OCR1A = 624;  //100Hz 
  //OCR1A = 1249;  //50Hz  
- //OCR1B = 312;  //5ms duty cycle
- OCR1B = 500;  //8ms duty cycle
+ OCR1B = 312;  //5ms duty cycle
+ //OCR1B = 500;  //8ms duty cycle
+ //OCR1B = 1125;  //18ms duty cycle
  
  TCCR3A = _BV(COM3A0) | _BV(COM3B1) | _BV(WGM31) | _BV(WGM30);
  TCCR3B = _BV(WGM33) | _BV(WGM32) | _BV(CS32);

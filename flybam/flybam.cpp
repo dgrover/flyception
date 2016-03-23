@@ -17,6 +17,10 @@ bool arenaview_record = false;
 bool manual_track = false;
 bool odor_present = false;
 
+struct {
+	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
+} mycomp_dsize;
+
 struct fvwritedata
 {
 	Mat img;
@@ -310,7 +314,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Point2f edge_center;
 
-	Mat last_mask = Mat::ones(Size(fly_image_width, fly_image_height), CV_8UC1);
 	int last_contour_count = 0;
 	float last_contour_size = 0;
 	int contour_count = 0;
@@ -364,18 +367,37 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							if ((contour_count < last_contour_count) && ((max_size - last_contour_size) > 1500.0))
 							{
-								fly_mask &= last_mask;
-								fly_contours = findLargestContour(fly_mask, j, max_size, contour_count, fly_contour_center);
+								vector<vector<Point>> hull(1);
+								vector<vector<int>> hull2(1);
+								vector<vector<Vec4i>> defects(1);
+
+								convexHull(Mat(fly_contours[j]), hull[0], false);
+								convexHull(Mat(fly_contours[j]), hull2[0], false);
+								convexityDefects(Mat(fly_contours[j]), hull2[0], defects[0]);
+
+								std::sort(defects[0].begin(), defects[0].end(), mycomp_dsize);
+
+								if (defects[0].size() >= 2)
+								{
+									int ind1 = defects[0][1][2];
+									int ind2 = defects[0][2][2];
+
+									line(fly_mask, fly_contours[j][ind1], fly_contours[j][ind2], Scalar(0, 0, 0), 5);
+
+									drawContours(fly_frame, hull, 0, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
+
+									fly_contours.clear();
+									fly_contours = findLargestContour(fly_mask, j, max_size, contour_count, fly_contour_center);
+								}
+								else
+									contour_count = -1;		//to distinguish from the case when tracking fails due to no contours detected and tracking automatically stops
 							}
-							else
+
+							if (contour_count > 0)
 							{
 								last_contour_count = contour_count;
 								last_contour_size = max_size;
-								last_mask = fly_mask.clone();
-							}
 
-							if (fly_contours.size() > 0)
-							{
 								vector<Point> hull;
 
 								lost = 0;
@@ -1064,29 +1086,31 @@ int _tmain(int argc, _TCHAR* argv[])
 							}
 							else
 							{
-								lost++;
-
-								if (lost > NLOSTFRAMES)
+								if (contour_count == 0)
 								{
-									flyview_track = false;
-									flyview_record = false;
-									arenaview_record = false;
-									manual_track = false;
-									ndq.reset();
+									lost++;
 
-									//pt2d = Point2f(0, 0);
-									//wpt = Point2f(0, 0);
-									//galvo_mirror_angle = Point2f(0, 0);
-									//fly_body_angle = 0.0;
+									if (lost > NLOSTFRAMES)
+									{
+										flyview_track = false;
+										flyview_record = false;
+										arenaview_record = false;
+										manual_track = false;
+										ndq.reset();
 
-									//for (int i = 0; i < NFLIES; i++)
-									//	tkf[i].Init();
+										//pt2d = Point2f(0, 0);
+										//wpt = Point2f(0, 0);
+										//galvo_mirror_angle = Point2f(0, 0);
+										//fly_body_angle = 0.0;
+
+										//for (int i = 0; i < NFLIES; i++)
+										//	tkf[i].Init();
+									}
 								}
 							}
 						}
 						else
 						{
-							last_mask = Mat::ones(Size(fly_image_width, fly_image_height), CV_8UC1);
 							last_contour_count = 0;
 							last_contour_size = 0;
 						}
