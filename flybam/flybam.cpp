@@ -145,7 +145,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	acqServerName = "Xcelera-CL_PX4_1";
 	acqDeviceNumber = 0;
 	//configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_256x256.ccf";
-	configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_240x240.ccf";
+	configFilename = "..\\ccf\\P_GZL-CL-20C5M_Gazelle_240x240.ccf";
 	
 	printf("Initializing camera link fly view camera ");
 
