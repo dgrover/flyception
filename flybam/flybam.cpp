@@ -230,8 +230,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	error = arena_cam.SetTrigger();
 	//error = arena_cam.SetProperty(SHUTTER, 1.003);
-	//error = arena_cam.SetProperty(SHUTTER, 0.498);
-	error = arena_cam.SetProperty(SHUTTER, 0.249);
+	error = arena_cam.SetProperty(SHUTTER, 0.747);
+	//error = arena_cam.SetProperty(SHUTTER, 2.498);
+	//error = arena_cam.SetProperty(SHUTTER, 0.249);
 	
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
@@ -264,10 +265,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		//tkf[i].Init(galvo_center_2d);
 	//}
 
-	Serial* SP = new Serial("COM6");    // adjust as needed
+	//Serial* SP = new Serial("COM6");    // adjust as needed
 
-	if (SP->IsConnected())
-		printf("Connecting arduino [OK]\n");
+	//if (SP->IsConnected())
+	//	printf("Connecting arduino [OK]\n");
 
 	//Serial* SPA = new Serial("COM7");    // adjust as needed
 
@@ -291,7 +292,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat fly_img, fly_frame, fly_fg, fly_mask;
 
 	int arena_thresh = 75;
-	int fly_thresh = 40;
+	int fly_thresh = 50;
 
 	int fly_erode = 1;
 	int fly_dilate = 2;
@@ -1592,15 +1593,15 @@ int _tmain(int argc, _TCHAR* argv[])
 				else
 					record_key_state = 0;
 
-				if (GetAsyncKeyState(VK_F3))
-				{
-					if (!flash_key_state)
-						SP->WriteData("1", 1);
+				//if (GetAsyncKeyState(VK_F3))
+				//{
+				//	if (!flash_key_state)
+				//		SP->WriteData("1", 1);
 
-					flash_key_state = 1;
-				}
-				else
-					flash_key_state = 0;
+				//	flash_key_state = 1;
+				//}
+				//else
+				//	flash_key_state = 0;
 
 				//if (GetAsyncKeyState(VK_F4))
 				//{
