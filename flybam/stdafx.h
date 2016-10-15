@@ -43,7 +43,7 @@
 #include "sapclassbasic.h"
 #include "ExampleUtils.h"
 
-#define BASE_HEIGHT 7.175			//in mm
+#define BASE_HEIGHT -7.175			//in mm
 #define GALVO_Y_HEIGHT 68.167			//in mm
 #define GALVO_XY_DIST 15.174			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
@@ -55,6 +55,9 @@
 
 #define XVOLTPERDEGREE 0.55
 #define YVOLTPERDEGREE 0.525
+
+#define XOFFSET 0.0		// x-offset for centering galvo to target (in volts)
+#define YOFFSET 0.0		// y-offset for centering galvo to target (in volts)
 
 #define SCALEX 0.0008
 #define SCALEY 0.0008

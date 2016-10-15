@@ -38,7 +38,7 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	string infilename = "..\\arena\\out_camera_data.xml";
 	string outfilename = "..\\arena\\camera_projection_data.xml";
-	string imgfile = "..\\arena\\cbview.jpg";
+	string imgfile = "..\\arena\\cbview_09192016.jpg";
 
 	int boardHeight, boardWidth;
 	float squareSize;
@@ -98,8 +98,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		fs.release();
 	}
+	else
+	{
+		cout << "could not find";
+		imshow("image", img);
+	}
 
-	waitKey(0);
+	waitKey();
 
 	return 0;
 }

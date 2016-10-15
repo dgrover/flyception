@@ -11,11 +11,14 @@ using namespace moodycamel;
 using namespace concurrency;
 
 bool stream = true;
+
 bool flyview_track = false;
+bool manual_track = false;
+
 bool flyview_record = false;
 bool arenaview_record = false;
-bool manual_track = false;
-bool odor_present = false;
+
+//bool odor_present = false;
 
 struct {
 	bool operator() (cv::Vec4i pt1, cv::Vec4i pt2) { return (pt1[3] > pt2[3]); }
@@ -29,7 +32,7 @@ struct fvwritedata
 	Point2f head;
 	Point2f edge;
 	Point2f galvo_angle;
-	int odor;
+	//int odor;
 	//float body_angle;
 };
 
@@ -144,7 +147,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	acqServerName = "Xcelera-CL_PX4_1";
 	acqDeviceNumber = 0;
-	//configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_256x256.ccf";
+	//configFilename = "C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\P_GZL-CL-20C5M_Gazelle_240x240.ccf";
 	configFilename = "..\\ccf\\P_GZL-CL-20C5M_Gazelle_240x240.ccf";
 	
 	printf("Initializing camera link fly view camera ");
@@ -229,8 +232,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
 
 	error = arena_cam.SetTrigger();
-	//error = arena_cam.SetProperty(SHUTTER, 1.003);
-	error = arena_cam.SetProperty(SHUTTER, 0.747);
+	error = arena_cam.SetProperty(SHUTTER, 1.003);
+	//error = arena_cam.SetProperty(SHUTTER, 0.498);
 	//error = arena_cam.SetProperty(SHUTTER, 2.498);
 	//error = arena_cam.SetProperty(SHUTTER, 0.249);
 	
@@ -284,15 +287,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	//create arena mask
 	Mat outer_mask = Mat::zeros(Size(arena_image_width, arena_image_height), CV_8UC1);
-	//RotatedRect arenaMask = createArenaMask(ARENA_RADIUS, cameraMatrix, distCoeffs, rvec, tvec);
-	RotatedRect arenaMask = createArenaMask(ARENA_X_RADIUS + 2.0, ARENA_Y_RADIUS + 2.0, cameraMatrix, distCoeffs, rvec, tvec);
+	RotatedRect arenaMask = createArenaMask(ARENA_X_RADIUS, ARENA_Y_RADIUS, cameraMatrix, distCoeffs, rvec, tvec);
+	//RotatedRect arenaMask = createArenaMask(ARENA_X_RADIUS + 2.0, ARENA_Y_RADIUS + 2.0, cameraMatrix, distCoeffs, rvec, tvec);
 	ellipse(outer_mask, arenaMask, Scalar(255, 255, 255), FILLED);
 
 	Mat arena_img, arena_frame, arena_mask;
 	Mat fly_img, fly_frame, fly_fg, fly_mask;
 
-	int arena_thresh = 75;
-	int fly_thresh = 50;
+	int arena_thresh = 65;
+	int fly_thresh = 45;
 
 	int fly_erode = 1;
 	int fly_dilate = 2;
@@ -376,10 +379,10 @@ int _tmain(int argc, _TCHAR* argv[])
 								convexHull(Mat(fly_contours[j]), hull2[0], false);
 								convexityDefects(Mat(fly_contours[j]), hull2[0], defects[0]);
 
-								std::sort(defects[0].begin(), defects[0].end(), mycomp_dsize);
-
 								if (defects[0].size() >= 2)
 								{
+									std::sort(defects[0].begin(), defects[0].end(), mycomp_dsize);
+
 									int ind1 = defects[0][1][2];
 									int ind2 = defects[0][2][2];
 
@@ -1094,8 +1097,11 @@ int _tmain(int argc, _TCHAR* argv[])
 									if (lost > NLOSTFRAMES)
 									{
 										flyview_track = false;
-										flyview_record = false;
-										arenaview_record = false;
+										
+										// Enable the next two lines to stop recording when flyview tracking is lost
+										//flyview_record = false;
+										//arenaview_record = false;
+										
 										manual_track = false;
 										ndq.reset();
 
@@ -1130,13 +1136,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						if (flyview_record)
 						{
-							if (odor_present)
-							{
-								fvin.odor = 1;
-								odor_present = false;
-							}
-							else
-								fvin.odor = 0;
+							//if (odor_present)
+							//{
+							//	fvin.odor = 1;
+							//	odor_present = false;
+							//}
+							//else
+							//	fvin.odor = 0;
 
 							fvin.img = fly_img;
 							fvin.stamp = fly_now;
@@ -1364,7 +1370,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					fvfout.WriteFrame(out.img);
 					fvfout.WriteLog(out.stamp);
-					fvfout.WriteTraj(out.laser, out.head, out.edge, out.galvo_angle, out.odor);
+					
+					//fvfout.WriteTraj(out.laser, out.head, out.edge, out.galvo_angle, out.odor);
+					fvfout.WriteTraj(out.laser, out.head, out.edge, out.galvo_angle);
+					
 					fvfout.nframes++;
 				}
 				else
@@ -1478,7 +1487,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			int record_key_state = 0;
 			int track_key_state = 0;
-			int flash_key_state = 0;
+			//int flash_key_state = 0;
 			//int odor_key_state = 0;
 			int arena_track_key_state = 0;
 			
@@ -1565,11 +1574,12 @@ int _tmain(int argc, _TCHAR* argv[])
 
 						manual_track = false;
 						
-						if (flyview_record)
-							flyview_record = !flyview_record;
+						//Enable next few lines to stop recording when flyview loses track of fly
+						//if (flyview_record)
+						//	flyview_record = !flyview_record;
 
-						if (arenaview_record)
-							arenaview_record = !arenaview_record;
+						//if (arenaview_record)
+						//	arenaview_record = !arenaview_record;
 					}
 
 					track_key_state = 1;

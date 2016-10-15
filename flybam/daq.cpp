@@ -32,8 +32,8 @@ void Daq::start()
 void Daq::write()
 {
 
-	dataX[0] = thetax * XVOLTPERDEGREE;
-	dataY[0] = thetay * YVOLTPERDEGREE;
+	dataX[0] = XOFFSET + (thetax * XVOLTPERDEGREE);
+	dataY[0] = YOFFSET + (thetay * YVOLTPERDEGREE);
 	
 	// DAQmx Write Code
 	DAQmxWriteAnalogF64(taskHandleX, STEP_SIZE, 0, 10.0, DAQmx_Val_GroupByChannel, dataX, NULL, NULL);
