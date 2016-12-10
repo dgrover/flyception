@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <numeric>
 #include "conio.h"
-#include <mmsystem.h>
+//#include <mmsystem.h>
 #include <concurrent_queue.h>
 
 #include <opencv2/core/core.hpp>
@@ -37,7 +37,7 @@
 #include "avfmfwriter.h"
 #include "tracker.h"
 #include "daq.h"
-#include "arduino.h"
+//#include "arduino.h"
 #include "utility.h"
 
 #include "sapclassbasic.h"
@@ -48,7 +48,7 @@
 #define GALVO_XY_DIST 15.174			//in mm
 #define GALVO_X_MIRROR_ANGLE 15		//in degrees
 
-#define ARENA_X_RADIUS 22.159				//in mm
+#define ARENA_X_RADIUS 22.159			//in mm
 #define ARENA_Y_RADIUS 20				//in mm
 
 //#define TAIL_LENGTH 100

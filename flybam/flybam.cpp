@@ -232,11 +232,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
 
 	error = arena_cam.SetTrigger();
-	error = arena_cam.SetProperty(SHUTTER, 1.003);
-	//error = arena_cam.SetProperty(SHUTTER, 0.498);
-	//error = arena_cam.SetProperty(SHUTTER, 2.498);
-	//error = arena_cam.SetProperty(SHUTTER, 0.249);
-	
+	error = arena_cam.SetProperty(SHUTTER, 0.498);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
 	//error = arena_cam.Start();
@@ -294,8 +290,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	Mat arena_img, arena_frame, arena_mask;
 	Mat fly_img, fly_frame, fly_fg, fly_mask;
 
-	int arena_thresh = 65;
-	int fly_thresh = 45;
+	int arena_thresh = 75;
+	int fly_thresh = 50;
 
 	int fly_erode = 1;
 	int fly_dilate = 2;
@@ -371,30 +367,34 @@ int _tmain(int argc, _TCHAR* argv[])
 
 							if ((contour_count < last_contour_count) && ((max_size - last_contour_size) > 1500.0))
 							{
-								vector<vector<Point>> hull(1);
-								vector<vector<int>> hull2(1);
-								vector<vector<Vec4i>> defects(1);
+								// uncomment the following code to enable convex hull defect calculation for separating merged flies
+								
+								//vector<vector<Point>> hull(1);
+								//vector<vector<int>> hull2(1);
+								//vector<vector<Vec4i>> defects(1);
 
-								convexHull(Mat(fly_contours[j]), hull[0], false);
-								convexHull(Mat(fly_contours[j]), hull2[0], false);
-								convexityDefects(Mat(fly_contours[j]), hull2[0], defects[0]);
+								//convexHull(Mat(fly_contours[j]), hull[0], false);
+								//convexHull(Mat(fly_contours[j]), hull2[0], false);
+								//convexityDefects(Mat(fly_contours[j]), hull2[0], defects[0]);
 
-								if (defects[0].size() >= 2)
-								{
-									std::sort(defects[0].begin(), defects[0].end(), mycomp_dsize);
+								//if (defects[0].size() >= 2)
+								//{
+								//	std::sort(defects[0].begin(), defects[0].end(), mycomp_dsize);
 
-									int ind1 = defects[0][1][2];
-									int ind2 = defects[0][2][2];
+								//	int ind1 = defects[0][1][2];
+								//	int ind2 = defects[0][2][2];
 
-									line(fly_mask, fly_contours[j][ind1], fly_contours[j][ind2], Scalar(0, 0, 0), 5);
+								//	line(fly_mask, fly_contours[j][ind1], fly_contours[j][ind2], Scalar(0, 0, 0), 5);
 
-									drawContours(fly_frame, hull, 0, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
+								//	drawContours(fly_frame, hull, 0, Scalar::all(255), 1, 8, vector<Vec4i>(), 0, Point());
 
-									fly_contours.clear();
-									fly_contours = findLargestContour(fly_mask, j, max_size, contour_count, fly_contour_center);
-								}
-								else
-									contour_count = -1;		//to distinguish from the case when tracking fails due to no contours detected and tracking automatically stops
+								//	fly_contours.clear();
+								//	fly_contours = findLargestContour(fly_mask, j, max_size, contour_count, fly_contour_center);
+								//}
+								//else
+								//	contour_count = -1;		//to distinguish from the case when tracking fails due to no contours detected and tracking automatically stops
+
+								contour_count = -1;	// do nothing when flies merge
 							}
 
 							if (contour_count > 0)
