@@ -1081,6 +1081,14 @@ int _tmain(int argc, _TCHAR* argv[])
 										float diffx = rotpt.x - (fly_image_width / 2);
 										float diffy = rotpt.y - (fly_image_height / 2);
 
+										float mag = dist(rotpt, Point2f(fly_image_width / 2, fly_image_height / 2));
+
+										if (mag > PX_MOVE_THRESH)
+										{
+											diffx = diffx / mag * PX_MOVE_THRESH;
+											diffy = diffy / mag * PX_MOVE_THRESH;
+										}
+
 										ndq.ConvertPixelToDeg(diffx*SCALEX, diffy*SCALEY);
 										wpt = ndq.ConvertDegToPt();
 										galvo_mirror_angle = ndq.GetGalvoAngles();
