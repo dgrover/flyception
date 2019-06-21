@@ -232,7 +232,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//arena_cam.GetImageSize(arena_image_width, arena_image_height);
 
 	error = arena_cam.SetTrigger();
-	error = arena_cam.SetProperty(SHUTTER, 0.498);
+	error = arena_cam.SetProperty(SHUTTER, 0.1);
 	error = arena_cam.SetProperty(GAIN, 0.0);
 
 	//error = arena_cam.Start();
@@ -1489,81 +1489,160 @@ int _tmain(int argc, _TCHAR* argv[])
 			int track_key_state = 0;
 			//int flash_key_state = 0;
 			//int odor_key_state = 0;
-			int arena_track_key_state = 0;
+			//int arena_track_key_state = 0;
 			
-			int left_key_state = 0;
-			int right_key_state = 0;
-			int up_key_state = 0;
-			int down_key_state = 0;
+			//int left_key_state = 0;
+			//int right_key_state = 0;
+			//int up_key_state = 0;
+			//int down_key_state = 0;
+
+			int reset_galvo_state = 0;
+			int fly_key_state = 0;
 
 			while (true)
 			{
+
+				//if (GetAsyncKeyState(VK_HOME))
+				//{
+				//	if (!arena_track_key_state)
+				//		manual_track = !manual_track;
+
+				//	arena_track_key_state = 1;
+				//}
+				//else
+				//	arena_track_key_state = 0;
+
+
 				if (GetAsyncKeyState(VK_HOME))
 				{
-					if (!arena_track_key_state)
-						manual_track = !manual_track;
-
-					arena_track_key_state = 1;
-				}
-				else
-					arena_track_key_state = 0;
-
-
-				if (GetAsyncKeyState(VK_LEFT))
-				{
-					if (!left_key_state)
+					if (!reset_galvo_state)
 					{
+						flyview_track = false;
 						manual_track = true;
-						ndq.MoveLeft();
+						ndq.reset();
 						ndq.write();
 					}
 
-					left_key_state = 1;
+					reset_galvo_state = 1;
 				}
 				else
-					left_key_state = 0;
+					reset_galvo_state = 0;
 
-				if (GetAsyncKeyState(VK_RIGHT))
+				if (GetAsyncKeyState(VK_TAB))
 				{
-					if (!right_key_state)
+					if (!fly_key_state)
 					{
-						manual_track = true;
-						ndq.MoveRight();
-						ndq.write();
+						int tfocal = focal_fly + 1;
+
+						if (tfocal == NFLIES)
+							focal_fly = 0;
+						else
+							focal_fly = tfocal;
+
+						manual_track = false;
+						flyview_track = false;
 					}
 
-					right_key_state = 1;
+					fly_key_state = 1;
 				}
 				else
-					right_key_state = 0;
+					fly_key_state = 0;
 
-				if (GetAsyncKeyState(VK_UP))
+				//if (GetAsyncKeyState(VK_LEFT))
+				//{
+				//	if (!left_key_state)
+				//	{
+				//		manual_track = true;
+				//		ndq.MoveLeft();
+				//		ndq.write();
+				//	}
+
+				//	left_key_state = 1;
+				//}
+				//else
+				//	left_key_state = 0;
+
+				//if (GetAsyncKeyState(VK_RIGHT))
+				//{
+				//	if (!right_key_state)
+				//	{
+				//		manual_track = true;
+				//		ndq.MoveRight();
+				//		ndq.write();
+				//	}
+
+				//	right_key_state = 1;
+				//}
+				//else
+				//	right_key_state = 0;
+
+				//if (GetAsyncKeyState(VK_UP))
+				//{
+				//	if (!up_key_state)
+				//	{
+				//		manual_track = true;
+				//		ndq.MoveUp();
+				//		ndq.write();
+				//	}
+
+				//	up_key_state = 1;
+				//}
+				//else
+				//	up_key_state = 0;
+
+				//if (GetAsyncKeyState(VK_DOWN))
+				//{
+				//	if (!down_key_state)
+				//	{
+				//		manual_track = true;
+				//		ndq.MoveDown();
+				//		ndq.write();
+				//	}
+
+				//	down_key_state = 1;
+				//}
+				//else
+				//	down_key_state = 0;
+
+				SHORT leftKeyState = GetAsyncKeyState(VK_LEFT);
+
+				if ((1 << 15) & leftKeyState)
 				{
-					if (!up_key_state)
-					{
-						manual_track = true;
-						ndq.MoveUp();
-						ndq.write();
-					}
-
-					up_key_state = 1;
+					flyview_track = false;
+					manual_track = true;
+					ndq.MoveLeft();
+					ndq.write();
 				}
-				else
-					up_key_state = 0;
 
-				if (GetAsyncKeyState(VK_DOWN))
+				SHORT rightKeyState = GetAsyncKeyState(VK_RIGHT);
+
+				if ((1 << 15) & rightKeyState)
 				{
-					if (!down_key_state)
-					{
-						manual_track = true;
-						ndq.MoveDown();
-						ndq.write();
-					}
-
-					down_key_state = 1;
+					flyview_track = false;
+					manual_track = true;
+					ndq.MoveRight();
+					ndq.write();
 				}
-				else
-					down_key_state = 0;
+
+				SHORT upKeyState = GetAsyncKeyState(VK_UP);
+
+				if ((1 << 15) & upKeyState)
+				{
+					flyview_track = false;
+					manual_track = true;
+					ndq.MoveUp();
+					ndq.write();
+				}
+
+				SHORT downKeyState = GetAsyncKeyState(VK_DOWN);
+
+				if ((1 << 15) & downKeyState)
+				{
+					flyview_track = false;
+					manual_track = true;
+					ndq.MoveDown();
+					ndq.write();
+				}
 								
 
 				if (GetAsyncKeyState(VK_F1))

@@ -85,20 +85,24 @@ Point2f Daq::GetGalvoAngles()
 
 void Daq::MoveLeft()
 {
-	thetax += 0.1;
+	//thetax += 0.1;
+	thetax += GALVO_STEP_SIZE;
 }
 
 void Daq::MoveRight()
 {
-	thetax -= 0.1;
+	//thetax -= 0.1;
+	thetax -= GALVO_STEP_SIZE;
 }
 
 void Daq::MoveUp()
 {
-	thetay += 0.1;
+	//thetay += 0.1;
+	thetay += GALVO_STEP_SIZE;
 }
 
 void Daq::MoveDown()
 {
-	thetay -= 0.1;
+	//thetay -= 0.1;
+	thetay -= GALVO_STEP_SIZE;
 }
